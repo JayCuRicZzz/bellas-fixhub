@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './authprovider';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 
 interface ImageUploadProps {

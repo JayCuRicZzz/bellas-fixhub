@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './authprovider';
 import { ChatMessage } from '@/types';
 import { Send, Bot, User, Sparkles, Loader2, Ticket, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { BRANCHES } from '@/types';

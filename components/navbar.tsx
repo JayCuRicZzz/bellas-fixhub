@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './authprovider';
 import { useI18n } from '@/lib/i18n/i18n';
 import { getDepartmentByCode } from '@/types';
 import { Menu, Bell, LogOut } from 'lucide-react';

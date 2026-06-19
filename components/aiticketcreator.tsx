@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './authprovider';
 import { BRANCHES } from '@/types';
 import { Sparkles, Send, Loader2, CheckCircle2, AlertCircle, Ticket } from 'lucide-react';
 

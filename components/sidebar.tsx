@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './authprovider';
 import { useI18n } from '@/lib/i18n/i18n';
 import { DEPARTMENTS, getDepartmentByCode } from '@/types';
-import Logo from './Logo';
+import Logo from './logo';
 import {
   LayoutDashboard,
   PlusCircle,
