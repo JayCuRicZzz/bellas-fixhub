@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth';
-import { uploadImage } from '@/lib/upload';
-import pool from '@/lib/db';
+import { getUserFromRequest } from '../../../lib/auth';
+import { uploadImage } from '../../../lib/upload';
+import pool from '../../../lib/db';
 
 export async function POST(req: NextRequest) {
   const user = getUserFromRequest(req);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth';
-import { getLineConfig, setLineConfig } from '@/lib/line-config';
+import { getUserFromRequest } from '../../../../lib/auth';
+import { getLineConfig, setLineConfig } from '../../../../lib/line-config';
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from './authprovider';
-import { BRANCHES } from '@/types';
+import { BRANCHES } from '../types';
 import { Sparkles, Send, Loader2, CheckCircle2, AlertCircle, Ticket } from 'lucide-react';
 
 export default function AITicketCreator() {

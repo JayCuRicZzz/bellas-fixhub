@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth';
+import pool from '../../../../lib/db';
+import { getUserFromRequest } from '../../../../lib/auth';
 
 export async function GET(
   req: NextRequest,

@@ -1,7 +1,7 @@
 'use client';
 
-import TicketForm from '@/components/ticketform';
-import AITicketCreator from '@/components/aiticketcreator';
+import TicketForm from '../../../components/ticketform';
+import AITicketCreator from '../../../components/aiticketcreator';
 import { PlusCircle, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useI18n, tStatus } from '@/lib/i18n/i18n';
+import { useI18n, tStatus } from '../lib/i18n/i18n';
 import { Clock, CheckCircle2, Loader2, XCircle, Star } from 'lucide-react';
 
 const statusConfig: Record<string, { icon: React.ReactNode; dotColor: string; bgClass: string; borderClass: string; textClass: string; animation: string }> = {

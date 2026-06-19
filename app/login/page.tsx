@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { I18nProvider, useI18n } from '@/lib/i18n/i18n';
+import { I18nProvider, useI18n } from '../../lib/i18n/i18n';
 import { Eye, EyeOff } from 'lucide-react';
 
 function LoginContent({ hasError }: { hasError: boolean }) {

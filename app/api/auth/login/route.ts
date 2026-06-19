@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { signToken } from '@/lib/auth';
+import pool from '../../../../lib/db';
+import { signToken } from '../../../../lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {

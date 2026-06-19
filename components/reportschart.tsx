@@ -1,7 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { DailyReport } from '@/types';
+import { DailyReport } from '../types';
 
 const COLORS = ['#d4a825', '#4168b4', '#22c55e', '#ef4444', '#f59e0b', '#8b5cf6'];
 

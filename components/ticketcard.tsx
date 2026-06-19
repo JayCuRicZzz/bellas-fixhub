@@ -1,8 +1,8 @@
 'use client';
 
-import { Ticket, BRANCHES, DEPARTMENTS, getDepartmentByCode, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '@/types';
+import { Ticket, BRANCHES, DEPARTMENTS, getDepartmentByCode, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '../types';
 import { StatusBadge } from './statusbadge';
-import { useI18n } from '@/lib/i18n/i18n';
+import { useI18n } from '../lib/i18n/i18n';
 import { Calendar, MapPin, Wrench, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 

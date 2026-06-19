@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
-import { User } from '@/types';
+import { User } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'hotel-fix-jwt-secret-key-2024';
 
@@ -110,7 +110,7 @@ export function getDepartmentFromRole(role: string): string | null {
  * Admin/GM see all branches. Other roles only see their assigned branches from user_branches table.
  */
 export async function getUserBranches(userId: number, role: string): Promise<string[]> {
-  const { default: db } = await import('@/lib/db');
+  const { default: db } = await import('./db');
 
   // Admin and GM see all branches
   if (role === 'admin' || role === 'gm') {

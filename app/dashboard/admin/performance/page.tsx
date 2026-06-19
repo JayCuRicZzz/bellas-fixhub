@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/components/authprovider';
+import { useAuth } from '../../../../components/authprovider';
 import { BarChart3, Users, Star, TrendingUp, Loader2, Wrench } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { getUserFromRequest, getUserBranches } from '@/lib/auth';
+import pool from '../../../lib/db';
+import { getUserFromRequest, getUserBranches } from '../../../lib/auth';
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Send LINE notification — route to correct group by work type
-    const { sendLineMessage } = await import('@/lib/line');
+    const { sendLineMessage } = await import('../../../lib/line');
     sendLineMessage(
       `📢 มีงานแจ้งซ่อมใหม่!\n🔢 ${ticketNumber}\n🏨 ${branch_code}\n📍 ${location_detail}\n📝 ${description}`,
       deptType

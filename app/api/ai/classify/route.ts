@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth';
-import { classifyRequestAI } from '@/lib/ai';
+import { getUserFromRequest } from '../../../../lib/auth';
+import { classifyRequestAI } from '../../../../lib/ai';
 
 export async function POST(req: NextRequest) {
   const user = getUserFromRequest(req);

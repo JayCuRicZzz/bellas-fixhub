@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/components/authprovider';
-import { useI18n } from '@/lib/i18n/i18n';
+import { useAuth } from '../../../../components/authprovider';
+import { useI18n } from '../../../../lib/i18n/i18n';
 import { Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
