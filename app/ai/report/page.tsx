@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/components/authprovider';
-import { DailyReport } from '@/types';
+import { useAuth } from '../../../components/authprovider';
+import { DailyReport } from '../../../types';
 import { FileText, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 
 export default function AIReportPage() {
