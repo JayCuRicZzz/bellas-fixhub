@@ -62,11 +62,11 @@ export default function AITicketCreator() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          branch_code: user?.branch_code,
+          branch_code: user?.branch_code || 'BV',
           category_id: categoryId,
-          location_detail: result.room_number || '',
+          location_detail: result.room_number || result.location || 'ไม่ระบุ',
           description: description,
-          priority: result.priority,
+          priority: result.priority || 'MEDIUM',
         }),
       });
 
@@ -75,9 +75,11 @@ export default function AITicketCreator() {
         setTicketNumber(ticketData.ticket_number);
         setResult(null);
         setDescription('');
+      } else {
+        setError(ticketData.error || 'สร้างใบงานไม่สำเร็จ');
       }
     } catch {
-      // silent
+      setError('เกิดข้อผิดพลาดในการสร้างใบงาน');
     } finally {
       setCreating(false);
     }
