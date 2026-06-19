@@ -1,7 +1,7 @@
 'use client';
 
-import { AuthProvider } from '@/components/AuthProvider';
-import AIChat from '@/components/AIChat';
+import { AuthProvider } from '@/components/authprovider';
+import AIChat from '@/components/aichat';
 import { Bot, Sparkles } from 'lucide-react';
 
 export default function AIPage() {

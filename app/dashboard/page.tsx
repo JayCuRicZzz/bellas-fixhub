@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/authprovider';
 import { useI18n } from '@/lib/i18n/i18n';
-import FilterBar from '@/components/FilterBar';
-import TicketCard from '@/components/TicketCard';
+import FilterBar from '@/components/filterbar';
+import TicketCard from '@/components/ticketcard';
 import { Ticket, DEPARTMENTS } from '@/types';
 import { LayoutDashboard, Clock, Wrench, CheckCircle2, AlertTriangle, PlusCircle, BarChart3 } from 'lucide-react';
 import Link from 'next/link';

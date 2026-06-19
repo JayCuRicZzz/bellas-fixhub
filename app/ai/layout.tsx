@@ -1,8 +1,8 @@
 'use client';
 
-import { useAuth } from '@/components/AuthProvider';
-import Navbar from '@/components/Navbar';
-import Sidebar from '@/components/Sidebar';
+import { useAuth } from '@/components/authprovider';
+import Navbar from '@/components/navbar';
+import Sidebar from '@/components/sidebar';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 

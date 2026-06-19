@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/authprovider';
 import { useI18n } from '@/lib/i18n/i18n';
 import { useRouter } from 'next/navigation';
 import { Lock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';

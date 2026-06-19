@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BRANCHES } from '@/types';
 import { useI18n, tStatus } from '@/lib/i18n/i18n';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/authprovider';
 import { Search } from 'lucide-react';
 
 interface FilterBarProps {

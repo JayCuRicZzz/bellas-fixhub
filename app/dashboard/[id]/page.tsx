@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/authprovider';
 import { Ticket, BRANCHES, STATUS_LABELS, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '@/types';
-import { StatusBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '@/components/statusbadge';
 import {
   ArrowLeft,
   MapPin,

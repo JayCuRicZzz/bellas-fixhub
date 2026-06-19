@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { AuthProvider } from '@/components/AuthProvider';
+import { AuthProvider } from '@/components/authprovider';
 import { I18nProvider } from '@/lib/i18n/i18n';
-import Navbar from '@/components/Navbar';
-import Sidebar from '@/components/Sidebar';
+import Navbar from '@/components/navbar';
+import Sidebar from '@/components/sidebar';
 
 export default function DashboardLayout({
   children,
