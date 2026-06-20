@@ -25,6 +25,19 @@ export async function GET(req: NextRequest) {
       else dateCondition = 'DATE(t.created_at) = CURDATE()';
     }
 
+    // Auto-filter by department for non-supervisor users
+    let autoDept = department;
+    const supervisorRoles = ['admin', 'gm', 'sup', 'supit'];
+    if (!supervisorRoles.includes(user.role)) {
+      const deptByRole: Record<string, string> = {
+        'tech': 'MAINT',
+        'it': 'IT',
+        'front': 'MAINT',
+        'house': 'MAINT',
+      };
+      autoDept = department || user.department || deptByRole[user.role] || '';
+    }
+
     // Build WHERE clauses
     let branchClause = '', deptClause = '', workJoin = '', workClause = '';
     const params: any[] = [];
@@ -35,9 +48,9 @@ export async function GET(req: NextRequest) {
       branchClause = `AND t.branch_code IN (${userBranches.map(() => '?').join(',')})`;
       params.push(...userBranches);
     }
-    if (department) {
+    if (autoDept && (autoDept === 'MAINT' || autoDept === 'IT')) {
       deptClause = 'AND t.reporter_department = ?';
-      params.push(department);
+      params.push(autoDept);
     }
     if (workType) {
       workJoin = 'JOIN categories c ON t.category_id = c.category_id';
