@@ -8,7 +8,7 @@ interface AIClassificationResult {
 }
 
 interface AIChatResult {
-  action: 'create_ticket' | 'ask_clarify' | 'general_chat';
+  action: 'create_ticket' | 'ask_clarify' | 'general_chat' | 'troubleshoot';
   ticket?: {
     branch_code: string;
     room_number: string;
@@ -22,189 +22,228 @@ interface AIChatResult {
   missing_fields?: string[];
 }
 
-// Rule-based ticket creation parser
+// ============================================================
+// TROUBLESHOOTING KNOWLEDGE BASE
+// ============================================================
+
+interface TroubleshootEntry {
+  keywords: string[];
+  category: string;
+  steps: string[];
+}
+
+const TROUBLESHOOT_KB: TroubleshootEntry[] = [
+  {
+    keywords: ['แอร์ไม่เย็น','แอร์ไม่ติด','แอร์','ac','air','เครื่องปรับอากาศ','แอร์ร้อน','แอร์ดัง'],
+    category: 'แอร์',
+    steps: [
+      'ตรวจสอบรีโมท — ตั้งอุณหภูมิ 24-25°C และโหมด COOL',
+      'ตรวจสอบเบรกเกอร์ — ถ้าสับลงให้สับขึ้น',
+      'เช็คฟิลเตอร์ — ถ้าสกปรก ถอดมาล้างน้ำเปล่า ผึ่งให้แห้งใส่กลับ',
+      'ดูท่อน้ำทิ้ง — ตรวจว่ามีน้ำหยดหรือตันไหม',
+      'ถ้ายังไม่หาย → แจ้งช่างผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['ไฟดับ','ไฟกระพริบ','ไฟ','ไฟฟ้า','หลอด','light','lamp','ไฟเสีย','ปลั๊ก','plug','สวิตช์','switch','เบรกเกอร์'],
+    category: 'ไฟฟ้า',
+    steps: [
+      'ตรวจสอบเบรกเกอร์ที่ตู้ไฟ — สับขึ้นถ้าสับลง',
+      'ลองเปลี่ยนหลอดไฟ — อาจแค่หลอดขาด',
+      'เช็คปลั๊ก — เสียบแน่นไหม ขาปลั๊กงอหรือเปล่า',
+      'ลองเสียบกับปลั๊กอื่น — แยกว่าปัญหาที่ปลั๊กหรืออุปกรณ์',
+      'ถ้าหลายจุดเสียพร้อมกัน → แจ้งช่างผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['น้ำรั่ว','น้ำ','ประปา','น้ำไม่ไหล','ท่อ','pipe','leak','รั่ว','ก๊อก','faucet','sink','ซิงค์','toilet','ห้องน้ำ','ชักโครก','ฝักบัว','water','น้ำซึม','น้ำหยด'],
+    category: 'ประปา',
+    steps: [
+      'ปิดวาล์วน้ำที่ใกล้ที่สุด — กันน้ำกระจายเพิ่ม',
+      'ตรวจสอบรอยรั่ว — เช็ดให้แห้ง สังเกตจุดที่น้ำซึม',
+      'เช็คก๊อก — ปิดสนิทไหม ลองหมุนให้แน่น',
+      'เช็คชักโครก — กดแล้วน้ำไหลตลอดไหม (ยางในเสื่อม)',
+      'ใช้ถัง/ผ้ารองน้ำไว้ก่อน → แจ้งช่างผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['wifi','wi-fi','เน็ต','internet','net','เน็ตเวิร์ค','network','router','เราเตอร์','สัญญาณ','signal','เชื่อมต่อ','connect','อ่อน','หลุด','disconnect'],
+    category: 'WiFi/เน็ตเวิร์ค',
+    steps: [
+      'รีสตาร์ทเราเตอร์ — ถอดปลั๊ก 30 วิ แล้วเสียบใหม่',
+      'ลองลืม WiFi แล้วเชื่อมต่อใหม่ — ใส่รหัสผ่านใหม่',
+      'ลองเชื่อมต่ออุปกรณ์อื่น — แยกว่าปัญหาที่อุปกรณ์หรือเน็ต',
+      'เช็คสาย LAN — ที่เสียบเราเตอร์หลวมหรือเปล่า',
+      'ถ้าทั้งชั้น/ตึกใช้ไม่ได้ → แจ้งไอทีผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['ทีวี','tv','television','จอ','ภาพ','เสียง','รีโมท','remote','ช่อง'],
+    category: 'ทีวี',
+    steps: [
+      'เช็คปลั๊กทีวี — เสียบแน่นไหม',
+      'ลองเปลี่ยนถ่านรีโมท — รีโมทอาจถ่านหมด',
+      'เช็คสาย HDMI/สายอากาศ — หลวมหรือเปล่า',
+      'รีเซ็ตทีวี — ถอดปลั๊ก 1 นาที แล้วเสียบใหม่',
+      'ถ้ายังไม่ติด → แจ้งไอทีผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['คอม','computer','pc','notebook','laptop','โน๊ตบุ๊ค','เครื่อง','เปิดไม่ติด','จอฟ้า','blue screen','ค้าง','hang','ช้า','slow','โปรแกรม','keyboard','mouse','เมาส์','คีย์บอร์ด'],
+    category: 'คอมพิวเตอร์',
+    steps: [
+      'รีสตาร์ทเครื่อง — กดปุ่ม Power ค้าง 10 วิ แล้วเปิดใหม่',
+      'เช็คสายไฟ/อแดปเตอร์ — เสียบแน่นไหม ไฟติดไหม',
+      'ถ้าจอฟ้า — จด error code ที่ขึ้น แล้วรีสตาร์ท',
+      'ถ้าเครื่องช้า — ปิดโปรแกรมที่ไม่ใช้, ลบไฟล์ขยะ',
+      'ถ้ายังใช้ไม่ได้ → แจ้งไอทีผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['ปริ้น','printer','print','เครื่องพิมพ์','พิมพ์','กระดาษ','หมึก','ink','toner'],
+    category: 'ปริ้นเตอร์',
+    steps: [
+      'เช็คกระดาษ — ใส่กระดาษ, เอากระดาษติดออก',
+      'เช็คหมึก/โทนเนอร์ — เปลี่ยนถ้าหมด',
+      'รีสตาร์ทปริ้นเตอร์ — ปิด-เปิดใหม่',
+      'เช็คสาย USB/เน็ตเวิร์ค — เสียบแน่นไหม',
+      'ลองพิมพ์ Test Page จากคอม → ถ้าไม่ได้แจ้งไอทีผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['ตู้เย็น','fridge','refrigerator','freezer','ช่องแข็ง','เย็น','ไม่เย็น','น้ำแข็ง','ice'],
+    category: 'เครื่องใช้ไฟฟ้า',
+    steps: [
+      'เช็คปลั๊ก — เสียบแน่นไหม',
+      'ปรับอุณหภูมิ — ตั้งให้เย็นขึ้น (เลขต่ำ = เย็นมาก)',
+      'เช็คขอบยางประตู — ปิดสนิทไหม',
+      'ละลายน้ำแข็ง — ถ้าน้ำแข็งเกาะหนา ให้ละลายก่อน',
+      'ถ้ายังไม่เย็น → แจ้งช่างผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['ประตู','door','หน้าต่าง','window','ลูกบิด','กุญแจ','key','lock','ล็อค','ปิดไม่สนิท','บานพับ','hinge','เลื่อน'],
+    category: 'โครงสร้าง',
+    steps: [
+      'ตรวจสอบบานพับ — หยอดน้ำมันหล่อลื่นถ้าฝืด',
+      'เช็คลูกบิด/มือจับ — ขันสกรูให้แน่น',
+      'เช็คกุญแจ — ลองใช้กุญแจสำรอง',
+      'ถ้าบัตรคีย์การ์ด — ทำความสะอาดแถบแม่เหล็ก/ช่องเสียบ',
+      'ถ้ายังปิดไม่ได้ → แจ้งช่างผ่านระบบ',
+    ],
+  },
+  {
+    keywords: ['กลิ่น','smell','เหม็น','เสียงดัง','noise','เสียง','ดัง','รบกวน','แปลก','ผิดปกติ'],
+    category: 'ทั่วไป',
+    steps: [
+      'ระบุแหล่งที่มา — กลิ่น/เสียงมาจากไหน (แอร์, ห้องน้ำ, หน้าต่าง)',
+      'ถ้ากลิ่น — เปิดหน้าต่างระบายอากาศ, เช็คท่อระบายน้ำ',
+      'ถ้าเสียง — มาจากอุปกรณ์ไฟฟ้าไหม, ปิด-เปิดทดสอบ',
+      'แจ้งรายละเอียดให้ชัด — ห้องไหน, เสียง/กลิ่นแบบไหน',
+      'แจ้งแผนกที่เกี่ยวข้องผ่านระบบ',
+    ],
+  },
+];
+
+function matchTroubleshoot(text: string): TroubleshootEntry | null {
+  const lower = text.toLowerCase();
+  let bestMatch: TroubleshootEntry | null = null;
+  let bestScore = 0;
+  for (const entry of TROUBLESHOOT_KB) {
+    let score = 0;
+    for (const kw of entry.keywords) {
+      if (lower.includes(kw.toLowerCase())) score += 1;
+    }
+    if (score > bestScore) { bestScore = score; bestMatch = entry; }
+  }
+  return bestScore >= 1 ? bestMatch : null;
+}
+
+function isAskingForHelp(text: string): boolean {
+  const helpPhrases = [
+    'ทำไง','ทำยังไง','วิธี','แก้','แก้ไข','ซ่อม','ช่วย','แนะนำ','บอก','how','fix','help',
+    'ต้องทำ','ควรทำ','ลอง','เช็ค','ตรวจ','ดู','เป็นอะไร','เกิดจาก','สาเหตุ','ทำไม','why',
+    'ไม่รู้','ไม่ทราบ','สงสัย','ถาม','question','ปัญหา','problem',
+  ];
+  const lower = text.toLowerCase();
+  return helpPhrases.some(p => lower.includes(p));
+}
+
 function parseTicketFromText(text: string, branchCode: string): AIChatResult {
   const textLower = text.toLowerCase();
-  const textThai = text;
-
-  // Extract room number
   let roomNumber: string | null = null;
-  const roomMatches = text.match(/ห้อง\s*(\d+[a-zA-Z]?)/i) || text.match(/room\s*(\d+[a-zA-Z]?)/i) || text.match(/(\d{3,4})/);
-  if (roomMatches) roomNumber = roomMatches[1];
+  const rm = text.match(/ห้อง\s*(\d+[a-zA-Z]?)/i) || text.match(/room\s*(\d+[a-zA-Z]?)/i) || text.match(/(\d{3,4})/);
+  if (rm) roomNumber = rm[1];
 
-  // Determine department
   let department = 'ช่าง';
-  const itKeywords = [
-    'ไอที', 'it', 'เน็ต', 'net', 'internet', 'computer', 'คอม', 'wifi', 'wi-fi', 'software',
-    'ซอฟต์แวร์', 'โปรแกรม', 'printer', 'เครื่องพิมพ์', 'พิมพ์', 'network', 'เน็ตเวิร์ค',
-    'server', 'เซิร์ฟเวอร์', 'email', 'อีเมล', 'password', 'รหัสผ่าน', 'login', 'virus', 'ไวรัส',
-    'notebook', 'laptop', 'โน๊ตบุ๊ค', 'monitor', 'จอ', 'keyboard', 'คีย์บอร์ด', 'mouse', 'เมาส์',
-    'router', 'เราเตอร์', 'access point', 'pabx', 'โทรศัพท์', 'phone system',
-  ];
-  const itFound = itKeywords.some(kw => textLower.includes(kw));
-  if (itFound) department = 'ไอที';
+  const itKw = ['ไอที','it','เน็ต','net','internet','computer','คอม','wifi','wi-fi','software','printer','เครื่องพิมพ์','พิมพ์','network','เน็ตเวิร์ค','server','email','อีเมล','password','รหัสผ่าน','login','virus','notebook','laptop','โน๊ตบุ๊ค','monitor','จอ','keyboard','mouse','เมาส์','router','เราเตอร์','โทรศัพท์','phone'];
+  if (itKw.some(kw => textLower.includes(kw))) department = 'ไอที';
 
-  // Determine category
+  const maintCat: Record<string,string> = {
+    'ไฟ':'ไฟฟ้า','ไฟฟ้า':'ไฟฟ้า','หลอด':'ไฟฟ้า','light':'ไฟฟ้า','lamp':'ไฟฟ้า','switch':'ไฟฟ้า','สวิตช์':'ไฟฟ้า','ปลั๊ก':'ไฟฟ้า','plug':'ไฟฟ้า',
+    'น้ำ':'ประปา','ประปา':'ประปา','ท่อ':'ประปา','pipe':'ประปา','leak':'ประปา','รั่ว':'ประปา','ก๊อก':'ประปา','sink':'ประปา','toilet':'ประปา','ห้องน้ำ':'ประปา',
+    'แอร์':'แอร์','air':'แอร์','ac':'แอร์','เครื่องปรับอากาศ':'แอร์','เย็น':'แอร์',
+    'โครงสร้าง':'โครงสร้าง','wall':'โครงสร้าง','ผนัง':'โครงสร้าง','เพดาน':'โครงสร้าง','ceiling':'โครงสร้าง','door':'โครงสร้าง','ประตู':'โครงสร้าง','หน้าต่าง':'โครงสร้าง','window':'โครงสร้าง','พื้น':'โครงสร้าง','floor':'โครงสร้าง',
+    'ตู้เย็น':'เครื่องใช้ไฟฟ้า','fridge':'เครื่องใช้ไฟฟ้า',
+  };
+  const itCat: Record<string,string> = {
+    'เน็ต':'เน็ตเวิร์ค','net':'เน็ตเวิร์ค','network':'เน็ตเวิร์ค','wifi':'เน็ตเวิร์ค','internet':'เน็ตเวิร์ค','router':'เน็ตเวิร์ค',
+    'คอม':'คอมพิวเตอร์','computer':'คอมพิวเตอร์','pc':'คอมพิวเตอร์','notebook':'คอมพิวเตอร์','laptop':'คอมพิวเตอร์','monitor':'คอมพิวเตอร์',
+    'printer':'ปริ้นเตอร์','เครื่องพิมพ์':'ปริ้นเตอร์','ปริ้น':'ปริ้นเตอร์','tv':'ทีวี','ทีวี':'ทีวี','โทรศัพท์':'โทรศัพท์',
+  };
+  const catMap = department === 'ไอที' ? itCat : maintCat;
   let category = '';
-  const maintCategories: Record<string, string> = {
-    'ไฟ': 'ไฟฟ้า', 'ไฟฟ้า': 'ไฟฟ้า', 'หลอด': 'ไฟฟ้า', 'light': 'ไฟฟ้า', 'lamp': 'ไฟฟ้า', 'switch': 'ไฟฟ้า', 'สวิตช์': 'ไฟฟ้า', 'ปลั๊ก': 'ไฟฟ้า', 'plug': 'ไฟฟ้า',
-    'น้ำ': 'ประปา', 'ประปา': 'ประปา', 'ท่อ': 'ประปา', 'pipe': 'ประปา', 'leak': 'ประปา', 'รั่ว': 'ประปา', 'ก๊อก': 'ประปา', 'ซิงค์': 'ประปา', 'sink': 'ประปา', 'toilet': 'ประปา', 'ห้องน้ำ': 'ประปา',
-    'แอร์': 'แอร์', 'air': 'แอร์', 'ac': 'แอร์', 'เครื่องปรับอากาศ': 'แอร์', 'เย็น': 'แอร์', 'cool': 'แอร์', 'ร้อน': 'แอร์',
-    'โครงสร้าง': 'โครงสร้าง', 'structure': 'โครงสร้าง', 'wall': 'โครงสร้าง', 'ผนัง': 'โครงสร้าง', 'เพดาน': 'โครงสร้าง', 'ceiling': 'โครงสร้าง', 'door': 'โครงสร้าง', 'ประตู': 'โครงสร้าง', 'หน้าต่าง': 'โครงสร้าง', 'window': 'โครงสร้าง', 'floor': 'โครงสร้าง', 'พื้น': 'โครงสร้าง',
-  };
-  const itCategories: Record<string, string> = {
-    'เน็ต': 'เน็ตเวิร์ค', 'net': 'เน็ตเวิร์ค', 'network': 'เน็ตเวิร์ค', 'wifi': 'เน็ตเวิร์ค', 'internet': 'เน็ตเวิร์ค', 'router': 'เน็ตเวิร์ค', 'access point': 'เน็ตเวิร์ค',
-    'คอม': 'คอมพิวเตอร์', 'computer': 'คอมพิวเตอร์', 'pc': 'คอมพิวเตอร์', 'notebook': 'คอมพิวเตอร์', 'laptop': 'คอมพิวเตอร์', 'โน๊ตบุ๊ค': 'คอมพิวเตอร์', 'monitor': 'คอมพิวเตอร์', 'keyboard': 'คอมพิวเตอร์', 'mouse': 'คอมพิวเตอร์', 'printer': 'คอมพิวเตอร์',
-    'software': 'ซอฟต์แวร์', 'ซอฟต์แวร์': 'ซอฟต์แวร์', 'program': 'ซอฟต์แวร์', 'โปรแกรม': 'ซอฟต์แวร์', 'virus': 'ซอฟต์แวร์', 'error': 'ซอฟต์แวร์', 'bug': 'ซอฟต์แวร์', 'window': 'ซอฟต์แวร์', 'password': 'ซอฟต์แวร์', 'email': 'ซอฟต์แวร์',
-  };
-
-  const catMap = department === 'ไอที' ? itCategories : maintCategories;
-  for (const [key, val] of Object.entries(catMap)) {
-    if (textLower.includes(key)) {
-      category = val;
-      break;
-    }
-  }
+  for (const [k,v] of Object.entries(catMap)) { if (textLower.includes(k)) { category = v; break; } }
   if (!category) category = department === 'ไอที' ? 'เน็ตเวิร์ค' : 'ไฟฟ้า';
 
-  // Determine priority
-  let priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium';
-  const urgentKeywords = ['ด่วน', 'urgent', 'emergency', 'immediate', 'asap', 'ทันที', 'ตอนนี้', 'now', 'ด่วนมาก'];
-  const highKeywords = ['high', 'สำคัญ', 'important', 'critical', 'พัง', 'broke', 'เสียหาย', 'damage'];
-  const lowKeywords = ['low', 'เล็กน้อย', 'minor', 'เล็ก', 'น้อย', 'small', 'cosmetic'];
+  let priority: 'low'|'medium'|'high'|'urgent' = 'medium';
+  if (['ด่วน','urgent','emergency','immediate','asap','ทันที','ตอนนี้','now','ด่วนมาก'].some(k=>textLower.includes(k))) priority='urgent';
+  else if (['high','สำคัญ','important','critical','พัง','broke','เสียหาย','damage'].some(k=>textLower.includes(k))) priority='high';
+  else if (['low','เล็กน้อย','minor','เล็ก','น้อย','small'].some(k=>textLower.includes(k))) priority='low';
 
-  if (urgentKeywords.some(k => textLower.includes(k))) priority = 'urgent';
-  else if (highKeywords.some(k => textLower.includes(k))) priority = 'high';
-  else if (lowKeywords.some(k => textLower.includes(k))) priority = 'low';
-
-  // Check for missing critical fields
-  const missingFields: string[] = [];
-  if (!roomNumber) missingFields.push('room_number');
-  if (text.length < 10) missingFields.push('description');
-
-  if (missingFields.length > 0 && !roomNumber) {
-    return {
-      action: 'ask_clarify',
-      message: 'กรุณาระบุข้อมูลเพิ่มเติม:\n- หมายเลขห้องที่พบปัญหา\n- รายละเอียดอาการเสีย',
-      missing_fields: missingFields,
-      suggestions: ['ห้อง 301 แอร์ไม่เย็น', 'ห้อง 205 ไฟเสีย', 'ห้อง 1102 เน็ตใช้ไม่ได้'],
-    };
+  if (!roomNumber) {
+    return { action:'ask_clarify', message:'กรุณาระบุหมายเลขห้องที่พบปัญหาครับ', missing_fields:['room_number'], suggestions:['ห้อง 301 แอร์ไม่เย็น','ห้อง 205 ไฟเสีย','ห้อง 1102 เน็ตใช้ไม่ได้'] };
   }
-
+  if (text.length < 10) {
+    return { action:'ask_clarify', message:'ช่วยอธิบายอาการเสียเพิ่มอีกนิดนะครับ', missing_fields:['description'] };
+  }
   return {
-    action: 'create_ticket',
-    ticket: {
-      branch_code: branchCode,
-      room_number: roomNumber || '',
-      department,
-      category,
-      description: text,
-      priority,
-    },
-    message: `ตรวจพบข้อมูลการแจ้งซ่อม:\n• ห้อง: ${roomNumber || 'ไม่ระบุ'}\n• แผนก: ${department}\n• หมวดหมู่: ${category}\n• ระดับความสำคัญ: ${priority.toUpperCase()}\n\nกรุณาตรวจสอบและยืนยัน`,
-    suggestions: undefined,
+    action:'create_ticket',
+    ticket:{ branch_code:branchCode, room_number:roomNumber, department, category, description:text, priority },
+    message:`ตรวจพบข้อมูลการแจ้งซ่อม:\n• ห้อง: ${roomNumber}\n• แผนก: ${department}\n• หมวดหมู่: ${category}\n• ระดับความสำคัญ: ${priority.toUpperCase()}\n\nต้องการยืนยันสร้างใบงานไหมครับ?`,
   };
 }
 
-// AI-assisted classification
 function classifyRequest(text: string): AIClassificationResult {
-  const result = parseTicketFromText(text, '');
-  
-  return {
-    department: result.ticket?.department || 'ช่าง',
-    category: result.ticket?.category || 'ไฟฟ้า',
-    priority: result.ticket?.priority || 'medium',
-    room_number: result.ticket?.room_number || null,
-    summary: text.substring(0, 100),
-    confidence: result.action === 'create_ticket' ? 0.85 : 0.5,
-  };
+  const r = parseTicketFromText(text, '');
+  return { department:r.ticket?.department||'ช่าง', category:r.ticket?.category||'ไฟฟ้า', priority:r.ticket?.priority||'medium', room_number:r.ticket?.room_number||null, summary:text.substring(0,100), confidence:r.action==='create_ticket'?0.85:0.5 };
 }
 
-// Generate daily report
-interface ReportData {
-  total: number;
-  completed: number;
-  pending: number;
-  inProgress: number;
-  byDepartment: { name: string; count: number }[];
-  byBranch: { name: string; count: number }[];
-  byCategory: { name: string; count: number }[];
-}
+interface ReportData { total:number; completed:number; pending:number; inProgress:number; byDepartment:{name:string;count:number}[]; byBranch:{name:string;count:number}[]; byCategory:{name:string;count:number}[]; }
 
 function generateReportSummary(data: ReportData): string {
-  const date = new Date().toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  });
-
-  const completionRate = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-
-  let summary = `📊 **รายงานประจำวันที่ ${date}**\n\n`;
-  summary += `**สรุปภาพรวม**\n`;
-  summary += `• งานแจ้งซ่อมทั้งหมด: ${data.total} รายการ\n`;
-  summary += `• ดำเนินการเสร็จแล้ว: ${data.completed} รายการ (${completionRate}%)\n`;
-  summary += `• อยู่ระหว่างดำเนินการ: ${data.inProgress} รายการ\n`;
-  summary += `• รอดำเนินการ: ${data.pending} รายการ\n\n`;
-
-  if (data.byDepartment.length > 0) {
-    summary += `**แยกตามแผนก:**\n`;
-    data.byDepartment.forEach(d => {
-      summary += `• ${d.name}: ${d.count} รายการ\n`;
-    });
-  }
-
-  if (data.byBranch.length > 0) {
-    summary += `\n**แยกตามสาขา:**\n`;
-    data.byBranch.forEach(b => {
-      summary += `• ${b.name}: ${b.count} รายการ\n`;
-    });
-  }
-
-  if (completionRate >= 80) {
-    summary += `\n✅ **สรุป:** ผลการดำเนินงานวันนี้อยู่ในเกณฑ์ดีมาก อัตราการซ่อมสำเร็จสูงถึง ${completionRate}%`;
-  } else if (completionRate >= 50) {
-    summary += `\n⚠️ **สรุป:** ผลการดำเนินงานอยู่ในเกณฑ์ปานกลาง ควรเร่งดำเนินการงานที่ค้างอยู่`;
-  } else if (data.total > 0) {
-    summary += `\n🔴 **สรุป:** มีงานค้างจำนวนมาก ควรจัดลำดับความสำคัญและเพิ่มกำลังคน`;
-  } else {
-    summary += `\n✅ **สรุป:** วันนี้ยังไม่มีรายการแจ้งซ่อม`;
-  }
-
-  return summary;
+  const d = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const rate = data.total>0?Math.round((data.completed/data.total)*100):0;
+  let s = `📊 **รายงานประจำวันที่ ${d}**\n\n**สรุปภาพรวม**\n• งานทั้งหมด: ${data.total} รายการ\n• เสร็จแล้ว: ${data.completed} (${rate}%)\n• กำลังทำ: ${data.inProgress}\n• รอ: ${data.pending}\n`;
+  if (data.byDepartment.length>0) { s+=`\n**แยกตามแผนก:**\n`; data.byDepartment.forEach(x=>{s+=`• ${x.name}: ${x.count}\n`;}); }
+  if (rate>=80) s+=`\n✅ อยู่ในเกณฑ์ดีมาก`;
+  else if (rate>=50) s+=`\n⚠️ อยู่ในเกณฑ์ปานกลาง`;
+  else if (data.total>0) s+=`\n🔴 มีงานค้างจำนวนมาก`;
+  else s+=`\n✅ ยังไม่มีรายการแจ้งซ่อม`;
+  return s;
 }
 
-// OpenAI-compatible API client
-async function callAIAPI(messages: any[]): Promise<string | null> {
+async function callAIAPI(messages: any[]): Promise<string|null> {
   const apiUrl = process.env.AI_API_URL;
   const apiKey = process.env.AI_API_KEY;
   const model = process.env.AI_MODEL || 'gpt-3.5-turbo';
-
   if (!apiUrl || !apiKey) return null;
-
   try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: 1000,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) return null;
-    const data = await response.json();
+    const res = await fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`},body:JSON.stringify({model,messages,max_tokens:1000,temperature:0.7})});
+    if (!res.ok) return null;
+    const data = await res.json();
     return data.choices?.[0]?.message?.content || null;
-  } catch (err) {
-    console.error('[AI] API call failed:', err);
-    return null;
-  }
+  } catch { return null; }
 }
 
 export async function chatWithAI(
@@ -212,85 +251,60 @@ export async function chatWithAI(
   branchCode: string,
   history: { role: 'user' | 'assistant'; content: string }[]
 ): Promise<AIChatResult> {
-  // Try AI API first
-  const systemPrompt = `You are a hotel maintenance assistant. Analyze the user's message and extract maintenance ticket information.
-Return a JSON response with this format:
-{
-  "action": "create_ticket" | "ask_clarify" | "general_chat",
-  "ticket": {
-    "room_number": "string or null",
-    "department": "ช่าง or ไอที",
-    "category": "string (one of: ไฟฟ้า, ประปา, แอร์, โครงสร้าง, เน็ตเวิร์ค, คอมพิวเตอร์, ซอฟต์แวร์)",
-    "description": "string",
-    "priority": "low" | "medium" | "high" | "urgent"
-  },
-  "message": "Thai language response to user",
-  "missing_fields": ["field names if any"],
-  "suggestions": ["3 suggested example queries"]
-}`;
-
-  const apiResult = await callAIAPI([
-    { role: 'system', content: systemPrompt },
-    ...history,
-    { role: 'user', content: message },
-  ]);
-
-  if (apiResult) {
-    try {
-      const parsed = JSON.parse(apiResult);
-      if (parsed.ticket) {
-        parsed.ticket.branch_code = branchCode;
-      }
-      return parsed;
-    } catch {
-      // Fall through to rule-based
+  // STEP 1: Troubleshooting intent
+  if (isAskingForHelp(message)) {
+    const ts = matchTroubleshoot(message);
+    if (ts) {
+      const steps = ts.steps.map((s,i)=>`${i+1}. ${s}`).join('\n');
+      return {
+        action:'troubleshoot',
+        message:`🔧 **${ts.category} — แก้ไขเบื้องต้น:**\n\n${steps}\n\n💡 ทำตามแล้วยังไม่หาย — พิมพ์ "แจ้งซ่อม ห้อง XXX" เพื่อสร้างใบงานครับ`,
+      };
     }
+    return {
+      action:'general_chat',
+      message:'ยังไม่มีข้อมูลการแก้ไขสำหรับปัญหานี้ครับ\n\n📝 แนะนำให้แจ้งผ่านระบบ — พิมพ์ "แจ้งซ่อม ห้อง [เลขห้อง] [อาการ]" เช่น "แจ้งซ่อม ห้อง 301 แอร์ไม่เย็น"',
+    };
   }
 
-  // Rule-based fallback
+  // STEP 2: AI API
+  const sysPrompt = `You are Somtamuay, a hotel maintenance consultant at Bellas FixHub, BellaVilla Pattaya. Speak Thai.
+
+If the user describes a problem → extract ticket info.
+If the user asks how to fix → give SHORT troubleshooting steps (numbered, 3-5 steps max).
+Keep responses SHORT (2-4 sentences for chat, numbered list for troubleshooting).
+
+Return JSON:
+{"action":"create_ticket"|"ask_clarify"|"troubleshoot"|"general_chat","ticket":{"room_number":"string","department":"ช่าง or ไอที","category":"string","description":"string","priority":"low"|"medium"|"high"|"urgent"},"message":"SHORT Thai response","missing_fields":[],"suggestions":[]}`;
+
+  const aiRes = await callAIAPI([{role:'system',content:sysPrompt},...history.slice(-6),{role:'user',content:message}]);
+  if (aiRes) {
+    try {
+      const parsed = JSON.parse(aiRes);
+      if (parsed.ticket) parsed.ticket.branch_code = branchCode;
+      return parsed;
+    } catch {}
+  }
+
+  // STEP 3: Rule-based fallback
+  if (isAskingForHelp(message)) {
+    const ts = matchTroubleshoot(message);
+    if (ts) {
+      const steps = ts.steps.map((s,i)=>`${i+1}. ${s}`).join('\n');
+      return { action:'troubleshoot', message:`🔧 **${ts.category} — แก้ไขเบื้องต้น:**\n\n${steps}\n\n💡 ยังไม่หาย — แจ้งซ่อมผ่านระบบ` };
+    }
+  }
   return parseTicketFromText(message, branchCode);
 }
 
 export async function classifyRequestAI(text: string): Promise<AIClassificationResult> {
-  // Try AI API
-  const systemPrompt = `Classify this maintenance request. Return JSON:
-{
-  "department": "ช่าง or ไอที",
-  "category": "string",
-  "priority": "low" | "medium" | "high" | "urgent",
-  "room_number": "string or null",
-  "summary": "brief summary",
-  "confidence": 0.0-1.0
-}`;
-
-  const apiResult = await callAIAPI([
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: text },
-  ]);
-
-  if (apiResult) {
-    try {
-      return JSON.parse(apiResult);
-    } catch {
-      // Fall through
-    }
-  }
-
+  const sys = 'Classify maintenance request. Return JSON:{"department":"ช่าง or ไอที","category":"string","priority":"low"|"medium"|"high"|"urgent","room_number":"string or null","summary":"brief","confidence":0.0-1.0}';
+  const r = await callAIAPI([{role:'system',content:sys},{role:'user',content:text}]);
+  if (r) { try { return JSON.parse(r); } catch {} }
   return classifyRequest(text);
 }
 
 export async function generateAIReport(data: ReportData): Promise<string> {
-  // Try AI API
-  const systemPrompt = `Generate a daily maintenance report summary in Thai language. Be professional and concise.`;
-
-  const apiResult = await callAIAPI([
-    { role: 'system', content: systemPrompt },
-    {
-      role: 'user',
-      content: `Generate a report summary for: Total: ${data.total}, Completed: ${data.completed}, Pending: ${data.pending}, In Progress: ${data.inProgress}, By Department: ${JSON.stringify(data.byDepartment)}, By Branch: ${JSON.stringify(data.byBranch)}`,
-    },
-  ]);
-
-  if (apiResult) return apiResult;
-  return generateReportSummary(data);
+  const r = await callAIAPI([{role:'system',content:'Generate a daily maintenance report in Thai. Professional and concise.'},{role:'user',content:`Report: Total=${data.total}, Done=${data.completed}`}]);
+  return r || generateReportSummary(data);
 }

@@ -19,7 +19,7 @@ export default function AIChat() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: `สวัสดี${user?.full_name ? ` คุณ${user.full_name}` : ''}! 👋\n\nผมคือ AI ผู้ช่วยแจ้งซ่อม คุณสามารถบอกปัญหาให้ผมฟังได้เลย เช่น "ห้อง 301 แอร์ไม่เย็น" และผมจะช่วยสร้างใบแจ้งซ่อมให้คุณโดยอัตโนมัติ\n\nสาขาปัจจุบัน: ${BRANCHES.find(b => b.branch_code === user?.branch_code)?.branch_name || user?.branch_code}`,
+      content: `สวัสดี${user?.full_name ? ` คุณ${user.full_name}` : ''}! 👋\n\nผมคือที่ปรึกษางานซ่อม 🦞 — ถามวิธีแก้ไขเบื้องต้น หรือบอกปัญหาให้ผมช่วยสร้างใบงานให้\n\nสาขาปัจจุบัน: ${BRANCHES.find(b => b.branch_code === user?.branch_code)?.branch_name || user?.branch_code}`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -319,7 +319,7 @@ export default function AIChat() {
           </button>
         </form>
         <p className="text-xs text-gray-600 mt-2 text-center">
-          🤖 AI จะช่วยแยกประเภทงานและสร้างใบแจ้งซ่อมให้อัตโนมัติ
+          🔧 ถามวิธีซ่อมง่ายๆ — หรือบอกปัญหาเพื่อสร้างใบงาน
         </p>
       </div>
     </div>

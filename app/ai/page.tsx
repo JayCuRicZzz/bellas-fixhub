@@ -15,10 +15,10 @@ export default function AIPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
-              AI Maintenance Assistant
+              ที่ปรึกษางานซ่อม 🦞
               <Sparkles className="w-4 h-4 text-gold-500" />
             </h1>
-            <p className="text-xs text-gray-500">แจ้งซ่อมด้วยภาษาธรรมชาติ - AI ช่วยจัดการให้</p>
+            <p className="text-xs text-gray-500">ถามวิธีแก้ไขเบื้องต้น — หรือแจ้งซ่อมด้วยข้อความ</p>
           </div>
         </header>
 
