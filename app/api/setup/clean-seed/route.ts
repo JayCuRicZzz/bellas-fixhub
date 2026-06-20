@@ -27,11 +27,17 @@ export async function POST(req: NextRequest) {
     const [countBefore]: any = await pool.query('SELECT COUNT(*) as cnt FROM tickets');
     const totalBefore = countBefore[0].cnt;
 
-    // 2. Delete all related data
-    await pool.query('DELETE FROM ticket_images');
-    await pool.query('DELETE FROM ticket_comments');
-    await pool.query('DELETE FROM pm_logs');
-    await pool.query('DELETE FROM sla_logs');
+    // 2. Delete all related data (skip tables that may not exist)
+    const skip = new Set<string>();
+    const tables = ['ticket_images', 'ticket_comments', 'pm_logs', 'sla_logs'];
+    for (const t of tables) {
+      try {
+        await pool.query(`DELETE FROM ${t}`);
+      } catch (e: any) {
+        if (e.code === 'ER_NO_SUCH_TABLE') { skip.add(t); }
+        else throw e;
+      }
+    }
     await pool.query('DELETE FROM tickets');
 
     // 3. Seed 14 test tickets
