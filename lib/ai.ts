@@ -45,7 +45,7 @@ const TROUBLESHOOT_KB: TroubleshootEntry[] = [
     ],
   },
   {
-    keywords: ['ไฟดับ','ไฟกระพริบ','ไฟ','ไฟฟ้า','หลอด','light','lamp','ไฟเสีย','ปลั๊ก','plug','สวิตช์','switch','เบรกเกอร์'],
+    keywords: ['ไฟดับ','ไฟกระพริบ','ไฟไม่ติด','ไฟ','ไฟฟ้า','หลอด','light','lamp','ไฟเสีย','ปลั๊ก','plug','สวิตช์','switch','เบรกเกอร์','ไม่ติด','เปิดไม่ติด'],
     category: 'ไฟฟ้า',
     steps: [
       'ตรวจสอบเบรกเกอร์ที่ตู้ไฟ — สับขึ้นถ้าสับลง',
@@ -281,19 +281,13 @@ export async function chatWithAI(
   branchCode: string,
   history: { role: 'user' | 'assistant'; content: string }[]
 ): Promise<AIChatResult> {
-  // STEP 1: Troubleshooting intent
-  if (isAskingForHelp(message)) {
-    const ts = matchTroubleshoot(message);
-    if (ts) {
-      const steps = ts.steps.map((s,i)=>`${i+1}. ${s}`).join('\n');
-      return {
-        action:'troubleshoot',
-        message:`🔧 **${ts.category} — แก้ไขเบื้องต้น:**\n\n${steps}\n\n💡 ทำตามแล้วยังไม่หาย — พิมพ์ "แจ้งซ่อม ห้อง XXX" เพื่อสร้างใบงานครับ`,
-      };
-    }
+  // STEP 1: Always check troubleshooting KB first
+  const ts = matchTroubleshoot(message);
+  if (ts) {
+    const steps = ts.steps.map((s,i)=>`${i+1}. ${s}`).join('\n');
     return {
-      action:'general_chat',
-      message:'ยังไม่มีข้อมูลการแก้ไขสำหรับปัญหานี้ครับ\n\n📝 แนะนำให้แจ้งผ่านระบบ — พิมพ์ "แจ้งซ่อม ห้อง [เลขห้อง] [อาการ]" เช่น "แจ้งซ่อม ห้อง 301 แอร์ไม่เย็น"',
+      action:'troubleshoot',
+      message:`🔧 **${ts.category} — แก้ไขเบื้องต้น:**\n\n${steps}\n\n💡 ทำตามแล้วยังไม่หาย — พิมพ์ "แจ้งซ่อม ห้อง XXX" เพื่อสร้างใบงานครับ`,
     };
   }
 
@@ -316,14 +310,7 @@ Return JSON:
     } catch {}
   }
 
-  // STEP 3: Rule-based fallback
-  if (isAskingForHelp(message)) {
-    const ts = matchTroubleshoot(message);
-    if (ts) {
-      const steps = ts.steps.map((s,i)=>`${i+1}. ${s}`).join('\n');
-      return { action:'troubleshoot', message:`🔧 **${ts.category} — แก้ไขเบื้องต้น:**\n\n${steps}\n\n💡 ยังไม่หาย — แจ้งซ่อมผ่านระบบ` };
-    }
-  }
+  // STEP 3: Rule-based fallback — parse ticket from text
   return parseTicketFromText(message, branchCode);
 }
 
