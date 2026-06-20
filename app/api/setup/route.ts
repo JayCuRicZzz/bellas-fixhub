@@ -9,7 +9,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid setup key' }, { status: 403 });
     }
 
-    // Always run migrations first
+
+    // Ensure user_branches table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_branches (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        branch_code VARCHAR(10) NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id),
+        UNIQUE KEY uk_user_branch (user_id, branch_code)
+      )
+    `);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pm_schedules (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -34,7 +44,14 @@ export async function POST(req: NextRequest) {
 
     const [rows]: any = await pool.query('SELECT * FROM users WHERE username = ?', ['admin']);
     if (rows.length > 0) {
-      return NextResponse.json({ success: true, message: 'Migration complete — admin already exists' });
+      
+    // Ensure admin has user_branches entry
+    const [ubCheck]: any = await pool.query("SELECT user_id FROM users WHERE username = ?", ["admin"]);
+    if (ubCheck.length > 0) {
+      await pool.query("INSERT IGNORE INTO user_branches (user_id, branch_code) VALUES (?, ?)", [ubCheck[0].user_id, "BV"]);
+    }
+   
+    return NextResponse.json({ success: true, message: 'Migration complete — admin already exists' });
     }
 
     const hashed = bcrypt.hashSync('admin123', 10);
