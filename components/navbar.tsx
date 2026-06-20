@@ -1,11 +1,25 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './authprovider';
 import { useI18n } from '../lib/i18n/i18n';
 import { getDepartmentByCode } from '../types';
 import { Menu, Bell, LogOut } from 'lucide-react';
 import Link from 'next/link';
+
+// Track seen notification IDs in localStorage
+function getSeenIds(): Set<number> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem('notif_seen_ids');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
+function saveSeenIds(ids: Set<number>) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('notif_seen_ids', JSON.stringify(Array.from(ids)));
+}
 
 export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout, token } = useAuth();
@@ -13,24 +27,57 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [seenIds, setSeenIds] = useState<Set<number>>(getSeenIds);
   const notifRef = useRef<HTMLDivElement>(null);
 
   const userDept = user?.department ? getDepartmentByCode(user.department) : null;
 
-  useEffect(() => {
+  // Fetch notifications and compute unseen count
+  const fetchNotifications = useCallback(async () => {
     if (!token) return;
-    // Fetch pending/assigned tickets for notification count
-    fetch('/api/tickets?status=PENDING,IN_PROGRESS&limit=5', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then(d => {
-        const arr = Array.isArray(d) ? d : [];
-        setNotifCount(arr.length);
-        setNotifications(arr.slice(0, 5));
-      })
-      .catch(() => {});
+    try {
+      const res = await fetch('/api/tickets?status=PENDING,IN_PROGRESS&limit=20', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : [];
+      setNotifications(arr.slice(0, 10));
+      // Count unseen: tickets NOT in seenIds
+      const currentSeen = getSeenIds();
+      const unseen = arr.filter((t: any) => !currentSeen.has(t.ticket_id));
+      setNotifCount(unseen.length);
+    } catch {}
   }, [token]);
+
+  useEffect(() => {
+    fetchNotifications();
+    // Poll every 30s
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  // Mark all as seen when bell is opened
+  const handleBellClick = () => {
+    setNotifOpen(!notifOpen);
+    if (!notifOpen) {
+      // Opening — mark all current as seen
+      const newSeen = getSeenIds();
+      notifications.forEach((n: any) => newSeen.add(n.ticket_id));
+      saveSeenIds(newSeen);
+      setSeenIds(newSeen);
+      setNotifCount(0);
+    }
+  };
+
+  // Mark single notification as read
+  const handleNotifClick = (ticketId: number) => {
+    const newSeen = getSeenIds();
+    newSeen.add(ticketId);
+    saveSeenIds(newSeen);
+    setSeenIds(newSeen);
+    setNotifCount(prev => Math.max(0, prev - 1));
+    setNotifOpen(false);
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -71,7 +118,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
           {/* Notification Bell */}
           <div ref={notifRef} className="relative">
             <button
-              onClick={() => setNotifOpen(!notifOpen)}
+              onClick={handleBellClick}
               className="p-2 rounded-lg hover:bg-navy-700 text-gray-400 relative transition-all duration-200"
             >
               <Bell className="w-5 h-5" />
@@ -101,7 +148,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                       <Link
                         key={n.ticket_id}
                         href={`/dashboard/${n.ticket_id}`}
-                        onClick={() => setNotifOpen(false)}
+                        onClick={(e) => { e.preventDefault(); handleNotifClick(n.ticket_id); window.location.href = `/dashboard/${n.ticket_id}`; }}
                         className="block px-4 py-3 hover:bg-navy-700/50 transition-colors border-b border-navy-700/50 last:border-0"
                       >
                         <div className="flex items-start justify-between">
