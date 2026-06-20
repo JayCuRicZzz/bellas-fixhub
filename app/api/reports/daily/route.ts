@@ -79,8 +79,13 @@ export async function GET(req: NextRequest) {
       `SELECT COUNT(*) as cnt FROM tickets t ${workJoin} WHERE ${dateCondition} AND t.status='RESOLVED' ${branchClause} ${deptClause} ${workClause}`, params
     );
     const [byDept]: any = await pool.query(
-      `SELECT COALESCE(t.reporter_department,'MAINTENANCE') as name, COUNT(*) as count FROM tickets t ${workJoin} WHERE ${baseWhere} GROUP BY t.reporter_department ORDER BY count DESC`, params
+      `SELECT COALESCE(t.reporter_department,'MAINT') as name, COUNT(*) as count FROM tickets t ${workJoin} WHERE ${baseWhere} GROUP BY t.reporter_department ORDER BY count DESC`, params
     );
+    // Normalize dept names: MAINT→MAINTENANCE to match frontend DEPARTMENTS
+    const normalizedByDept = byDept.map((d: any) => ({
+      ...d,
+      name: d.name === 'MAINT' ? 'MAINTENANCE' : d.name,
+    }));
     const [byBranch]: any = await pool.query(
       `SELECT t.branch_code as name, COUNT(*) as count FROM tickets t ${workJoin} WHERE ${baseWhere} GROUP BY t.branch_code ORDER BY count DESC`, params
     );
@@ -95,7 +100,7 @@ export async function GET(req: NextRequest) {
       total: totalResult[0].cnt, pending: pendingResult[0].cnt,
       inProgress: inProgressResult[0].cnt, completed: completedResult[0].cnt,
       resolved: resolvedResult[0].cnt,
-      byDepartment: byDept, byBranch, byStatus,
+      byDepartment: normalizedByDept, byBranch, byStatus,
       slaCompliance: slaCompliance[0] || { total: 0, on_time: 0, overdue: 0 },
     });
   } catch (err: any) {
