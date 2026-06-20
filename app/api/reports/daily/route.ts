@@ -27,11 +27,13 @@ export async function GET(req: NextRequest) {
 
     // Auto-filter by department for non-supervisor users
     let autoDept = department;
-    const supervisorRoles = ['admin', 'gm', 'sup', 'supit'];
+    const supervisorRoles = ['admin', 'gm'];
     if (!supervisorRoles.includes(user.role)) {
       const deptByRole: Record<string, string> = {
         'tech': 'MAINT',
+        'sup': 'MAINT',
         'it': 'IT',
+        'supit': 'IT',
         'front': 'MAINT',
         'house': 'MAINT',
       };
