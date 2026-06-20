@@ -72,7 +72,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="px-4 py-3 border-b border-navy-700/50">
           <Link href="/dashboard" className="block group">
             <div className="rounded-xl bg-white/90 p-2 inline-block mb-2 shadow-lg shadow-gold-500/10">
-              <img src="/logo.png" alt="Bellas FixHub" className="h-10 w-auto" />
+              <img src="/logo.jpg" alt="Bellas FixHub" className="h-10 w-auto" />
             </div>
             <p className="text-base font-extrabold tracking-tight text-white group-hover:text-gold-400 transition-colors">
               Bellas <span className="text-gold-400">Fix</span>Hub

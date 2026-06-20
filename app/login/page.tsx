@@ -69,7 +69,7 @@ function LoginContent() {
             borderRadius: '16px',
             boxShadow: '0 4px 32px rgba(212,168,37,0.15)',
           }}>
-            <img src="/logo.png" alt="Bellas FixHub" style={{ height: '64px', width: 'auto', display: 'block', margin: '0 auto' }} />
+            <img src="/logo.jpg" alt="Bellas FixHub" style={{ height: '64px', width: 'auto', display: 'block', margin: '0 auto' }} />
           </div>
           <h1 style={{
             color: 'white', fontSize: '1.75rem', fontWeight: 700,

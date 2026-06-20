@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Allow these paths without auth
-const publicPaths = ['/login', '/api/auth/login', '/login/set-password', '/api/auth/set-password', '/api/setup', '/api/categories'];
-const staticPrefixes = ['/_next', '/favicon.ico', '/uploads', '/manifest.json', '/icon-', '/logo.jpg'];
+const publicPaths = ['/login', '/api/auth/login', '/api/auth/logout', '/login/set-password', '/api/auth/set-password', '/api/setup', '/api/categories'];
+const staticPrefixes = ['/_next', '/favicon.ico', '/uploads', '/manifest.json', '/icon-', '/logo.jpg', '/logo.png'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

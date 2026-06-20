@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/logo.png',
+    apple: '/logo.jpg',
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -33,8 +33,8 @@ export default function RootLayout({
     <html lang="th">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/logo.png" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="icon" href="/logo.jpg" />
+        <link rel="apple-touch-icon" href="/logo.jpg" />
       </head>
       <body className="min-h-screen antialiased" suppressHydrationWarning>
         {children}

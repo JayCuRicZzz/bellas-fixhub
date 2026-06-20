@@ -99,11 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
-    document.cookie = 'token=; Path=/; Max-Age=0';
+    // Clear HttpOnly cookie via server
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     router.push('/login');
   }, [router]);
 
