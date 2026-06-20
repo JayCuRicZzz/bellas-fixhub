@@ -1,15 +1,45 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { I18nProvider, useI18n } from '../../lib/i18n/i18n';
+import { AuthProvider, useAuth } from '../../components/authprovider';
 import { Eye, EyeOff } from 'lucide-react';
 
-function LoginContent({ hasError }: { hasError: boolean }) {
+function LoginContent() {
   const { t, lang, toggleLang } = useI18n();
+  const { login } = useAuth();
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const result = await login({ username, password });
+      if (result.success) {
+        if (result.passwordResetRequired) {
+          router.push('/login/set-password');
+        } else {
+          router.push('/dashboard');
+        }
+      } else {
+        setError(result.message || t.auth.invalidCredentials);
+      }
+    } catch {
+      setError(t.auth.invalidCredentials);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{
@@ -39,7 +69,7 @@ function LoginContent({ hasError }: { hasError: boolean }) {
             borderRadius: '16px',
             boxShadow: '0 4px 32px rgba(212,168,37,0.15)',
           }}>
-            <img src="/logo.jpg" alt="Bellas FixHub" style={{ height: '64px', width: 'auto', display: 'block', margin: '0 auto' }} />
+            <img src="/logo.png" alt="Bellas FixHub" style={{ height: '64px', width: 'auto', display: 'block', margin: '0 auto' }} />
           </div>
           <h1 style={{
             color: 'white', fontSize: '1.75rem', fontWeight: 700,
@@ -51,12 +81,12 @@ function LoginContent({ hasError }: { hasError: boolean }) {
        
         </div>
 
-        <form method="POST" action="/api/auth/login" style={{
+        <form onSubmit={handleSubmit} style={{
           background: 'rgba(17, 26, 46, 0.9)', backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px',
           padding: '1.75rem', boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
         }}>
-          {hasError && (
+          {error && (
             <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '12px 16px', marginBottom: '1rem', color: '#fca5a5', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
               ⚠️ {t.auth.invalidCredentials}
             </div>
@@ -64,7 +94,7 @@ function LoginContent({ hasError }: { hasError: boolean }) {
 
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', color: '#8da4d2', fontSize: '0.8rem', fontWeight: 500, marginBottom: '6px' }}>{t.auth.username}</label>
-            <input name="username" required placeholder={t.auth.usernamePlaceholder}
+            <input value={username} onChange={e => setUsername(e.target.value)} required placeholder={t.auth.usernamePlaceholder}
               style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px 14px', color: 'white', fontSize: '0.95rem', outline: 'none', transition: 'border 0.2s' }}
               onFocus={e => e.target.style.borderColor = '#d4a825'}
               onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
@@ -74,7 +104,7 @@ function LoginContent({ hasError }: { hasError: boolean }) {
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ display: 'block', color: '#8da4d2', fontSize: '0.8rem', fontWeight: 500, marginBottom: '6px' }}>{t.auth.password}</label>
             <div style={{ position: 'relative' }}>
-              <input name="password" type={showPassword ? 'text' : 'password'} required placeholder={t.auth.passwordPlaceholder}
+              <input value={password} onChange={e => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} required placeholder={t.auth.passwordPlaceholder}
                 style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px 14px', color: 'white', fontSize: '0.95rem', outline: 'none', paddingRight: '44px', transition: 'border 0.2s' }}
                 onFocus={e => e.target.style.borderColor = '#d4a825'}
                 onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
@@ -86,13 +116,13 @@ function LoginContent({ hasError }: { hasError: boolean }) {
             </div>
           </div>
 
-          <button type="submit" style={{
-            width: '100%', background: 'linear-gradient(135deg, #d4a825, #e5b840)', border: 'none',
+          <button type="submit" disabled={loading} style={{
+            width: '100%', background: loading ? '#8a8a5a' : 'linear-gradient(135deg, #d4a825, #e5b840)', border: 'none',
             borderRadius: '10px', padding: '13px', color: '#0a0f1a', fontSize: '0.95rem', fontWeight: 700,
-            cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.5px',
-          }} onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 8px 25px rgba(212,168,37,0.4)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none'; }}>
-            {t.auth.login}
+            cursor: loading ? 'wait' : 'pointer', transition: 'all 0.2s', letterSpacing: '0.5px', opacity: loading ? 0.7 : 1,
+          }} onMouseEnter={e => { if(!loading) { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 8px 25px rgba(212,168,37,0.4)'; }}}
+            onMouseLeave={e => { if(!loading) { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none'; }}}>
+            {loading ? '⏳ กำลังเข้าสู่ระบบ...' : t.auth.login}
           </button>
 
         </form>
@@ -109,7 +139,32 @@ function LoginContent({ hasError }: { hasError: boolean }) {
 export default function LoginPage() {
   return (
     <I18nProvider>
-      <LoginContent hasError={false} />
+      <AuthProvider>
+        <AuthProviderWrapper />
+      </AuthProvider>
     </I18nProvider>
   );
+}
+
+function AuthProviderWrapper() {
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [loading, isAuthenticated, router]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0f1a' }}>
+        <div style={{ color: '#d4a825', fontSize: '1rem' }}>⏳ กำลังโหลด...</div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) return null; // will redirect
+
+  return <LoginContent />;
 }

@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(storedToken);
       fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${storedToken}` },
+        credentials: 'include',
       })
         .then(res => res.json())
         .then(data => {
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .finally(() => setLoading(false));
     } else {
       // No token in JS-accessible storage — try HttpOnly cookie via /api/auth/me
-      fetch('/api/auth/me')
+      fetch('/api/auth/me', { credentials: 'include' })
         .then(res => res.json())
         .then(data => {
           if (data.user) {
@@ -82,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
       const result = await res.json();
