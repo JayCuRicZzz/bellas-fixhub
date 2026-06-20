@@ -11,6 +11,11 @@ export default function LineSettingsPage() {
   const { lang } = useI18n();
   const router = useRouter();
 
+  // Block non-admin (including GM)
+  useEffect(() => {
+    if (user && user.role !== 'admin') router.push('/dashboard');
+  }, [user, router]);
+
   const [accessToken, setAccessToken] = useState('');
   const [targetIdMaint, setTargetIdMaint] = useState('');
   const [targetIdIT, setTargetIdIT] = useState('');

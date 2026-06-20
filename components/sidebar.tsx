@@ -44,8 +44,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // PM link for all users
   navItems.push({ href: '/dashboard/pm', label: '📅 ตาราง PM', icon: ClipboardList });
 
-  // Add admin links for admin/GM users
-  if (['admin', 'gm'].includes(user?.role || '')) {
+  // Add admin links for admin only (not GM)
+  if (user?.role === 'admin') {
     navItems.push({ href: '/dashboard/admin/pm', label: '⚙️ จัดการ PM', icon: Wrench });
     navItems.push({ href: '/dashboard/admin', label: t.nav.admin || 'Admin', icon: Shield });
     navItems.push({ href: '/dashboard/admin/line-settings', label: '⚙️ LINE Bot', icon: Shield });

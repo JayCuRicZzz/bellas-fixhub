@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../../components/authprovider';
 import { BRANCHES } from '../../../../types';
 import { Plus, Trash2, Calendar, Clock, RefreshCw } from 'lucide-react';
@@ -31,6 +32,13 @@ interface PmItem {
 
 export default function AdminPMPage() {
   const { user, token } = useAuth();
+  const router = useRouter();
+
+  // Block non-admin (including GM)
+  useEffect(() => {
+    if (user && user.role !== 'admin') router.push('/dashboard');
+  }, [user, router]);
+
   const [pmList, setPmList] = useState<PmItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

@@ -4,7 +4,7 @@ import { getLineConfig, setLineConfig } from '../../../../lib/line-config';
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
-  if (!user || !['admin', 'gm'].includes(user.role)) {
+  if (!user || user.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const token = getLineConfig().accessToken;
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = getUserFromRequest(req);
-  if (!user || !['admin', 'gm'].includes(user.role)) {
+  if (!user || user.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/authprovider';
 import { useI18n } from '../../../lib/i18n/i18n';
 import { BRANCHES } from '../../../types';
@@ -40,6 +41,13 @@ const DEPT_OPTIONS = [
 export default function AdminPage() {
   const { user, token } = useAuth();
   const { t } = useI18n();
+  const router = useRouter();
+
+  // Block non-admin (including GM)
+  useEffect(() => {
+    if (user && user.role !== 'admin') router.push('/dashboard');
+  }, [user, router]);
+
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
