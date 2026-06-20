@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     await pool.query(
       `INSERT INTO users (username, password, full_name, role, branch_code, department) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      ['admin', hashed, 'ผู้ดูแลระบบ', 'admin', 'BVP1', 'ADMIN']
+      ['admin', hashed, 'ผู้ดูแลระบบ', 'admin', 'BV', 'ADMIN']
     );
 
     const [cats]: any = await pool.query('SELECT COUNT(*) as cnt FROM categories');

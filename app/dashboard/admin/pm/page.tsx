@@ -39,7 +39,7 @@ export default function AdminPMPage() {
   const [msg, setMsg] = useState('');
 
   // Form state
-  const [branch, setBranch] = useState('BVP1');
+  const [branch, setBranch] = useState('BV');
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [catId, setCatId] = useState<number>(1);
