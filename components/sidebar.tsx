@@ -41,8 +41,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { href: '/ai/report', label: t.nav.aiReport, icon: FileText },
   ];
 
+  // PM link for all users
+  navItems.push({ href: '/dashboard/pm', label: '📅 ตาราง PM', icon: ClipboardList });
+
   // Add admin links for admin/GM users
   if (['admin', 'gm'].includes(user?.role || '')) {
+    navItems.push({ href: '/dashboard/admin/pm', label: '⚙️ จัดการ PM', icon: Wrench });
     navItems.push({ href: '/dashboard/admin', label: t.nav.admin || 'Admin', icon: Shield });
     navItems.push({ href: '/dashboard/admin/line-settings', label: '⚙️ LINE Bot', icon: Shield });
   }
