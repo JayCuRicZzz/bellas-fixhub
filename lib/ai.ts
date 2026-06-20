@@ -316,8 +316,21 @@ export async function chatWithAI(
     } catch {}
   }
 
-  // STEP 3: Rule-based fallback — parse ticket from text
-  return parseTicketFromText(message, branchCode);
+  // STEP 3: Rule-based fallback
+  // If Groq failed, check if this looks like a ticket request
+  const roomMatch = message.match(/(?:ห้อง|room)\s*(\d+)/i);
+  const hasProblem = /(?:เสีย|พัง|ไม่ทำงาน|ไม่ติด|ไม่เย็น|รั่ว|ดับ|แก้|ซ่อม|แจ้ง)/i.test(message);
+  const hasHelp = /(?:ถาม|อะไร|ไง|หรา|ครับ|คะ|ค่ะ)/i.test(message);
+
+  if (roomMatch || hasProblem) {
+    return parseTicketFromText(message, branchCode);
+  }
+
+  // General chat / question — friendly fallback
+  return {
+    action: 'general_chat',
+    message: `ขออภัยครับ ระบบ AI กำลังพักผ่อน 🦞\n\nแต่ผมช่วยเรื่องงานซ่อมได้นะครับ:\n🔧 ถามวิธีแก้ — เช่น "แอร์ไม่เย็น ทำไง"\n📝 แจ้งซ่อม — เช่น "ห้อง 301 แอร์ไม่เย็น"\n\nหรือลองถามใหม่ดูครับ!`,
+  };
 }
 
 export async function classifyRequestAI(text: string): Promise<AIClassificationResult> {
