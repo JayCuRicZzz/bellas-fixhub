@@ -36,11 +36,14 @@ export async function GET(req: NextRequest) {
       params.push(...userBranches);
     }
 
-    // Personal scope: non-admin, non-supervisor users only see their own tickets
+    // Department-based scope: non-supervisor users see ALL tickets in their department
     const supervisorRoles = ['admin', 'gm', 'sup', 'supit'];
     if (!supervisorRoles.includes(user.role)) {
-      query += ' AND t.reporter_id = ?';
-      params.push(userId);
+      const userDept = user.department;
+      if (userDept === 'MAINT' || userDept === 'IT') {
+        query += ' AND t.reporter_department = ?';
+        params.push(userDept);
+      }
     }
 
     // Handle multi-status filter (comma-separated)
