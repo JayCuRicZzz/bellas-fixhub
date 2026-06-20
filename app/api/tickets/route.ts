@@ -39,7 +39,14 @@ export async function GET(req: NextRequest) {
     // Department-based scope: non-supervisor users see ALL tickets in their department
     const supervisorRoles = ['admin', 'gm', 'sup', 'supit'];
     if (!supervisorRoles.includes(user.role)) {
-      const userDept = user.department;
+      // Map role/department to ticket department filter
+      const deptByRole: Record<string, string> = {
+        'tech': 'MAINT',
+        'it': 'IT',
+        'front': 'MAINT',
+        'house': 'MAINT',
+      };
+      const userDept = user.department || deptByRole[user.role] || '';
       if (userDept === 'MAINT' || userDept === 'IT') {
         query += ' AND t.reporter_department = ?';
         params.push(userDept);
