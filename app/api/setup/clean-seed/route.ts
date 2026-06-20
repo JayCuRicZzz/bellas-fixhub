@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       // MAINT ticket
       const maintNum = await getNextTicketNumber('MAINT', branch);
       const [maintResult]: any = await pool.query(
-        `INSERT INTO tickets (ticket_number, branch_code, department, category_id, status, location_detail, description, reported_by, created_at, updated_at)
+        `INSERT INTO tickets (ticket_number, branch_code, reporter_department, category_id, status, location_detail, description, reporter_id, created_at, updated_at)
          VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, NOW(), NOW())`,
         [
           maintNum,
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       // IT ticket
       const itNum = await getNextTicketNumber('IT', branch);
       const [itResult]: any = await pool.query(
-        `INSERT INTO tickets (ticket_number, branch_code, department, category_id, status, location_detail, description, reported_by, created_at, updated_at)
+        `INSERT INTO tickets (ticket_number, branch_code, reporter_department, category_id, status, location_detail, description, reporter_id, created_at, updated_at)
          VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, NOW(), NOW())`,
         [
           itNum,
