@@ -164,34 +164,34 @@ export default function AdminPMPage() {
       </div>
 
       {msg && (
-        <div className={`mb-4 p-3 rounded-lg ${msg.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+        <div className={`mb-4 p-3 rounded-lg ${msg.startsWith('✅') ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
           {msg}
         </div>
       )}
 
       {/* Add Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-6 mb-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-navy-800 rounded-xl shadow p-6 mb-6 space-y-4">
           <h2 className="text-lg font-semibold">เพิ่มแผน PM ใหม่</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">สาขา</label>
-              <select value={branch} onChange={e => setBranch(e.target.value)} className="w-full border rounded-lg px-3 py-2">
+              <label className="block text-sm font-medium mb-1 text-gray-300">สาขา</label>
+              <select value={branch} onChange={e => setBranch(e.target.value)} className="w-full border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-gray-200">
                 {BRANCHES.map(b => (
                   <option key={b.branch_code} value={b.branch_code}>{b.branch_name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">ฝ่าย</label>
-              <select value={dept} onChange={e => setDept(e.target.value)} className="w-full border rounded-lg px-3 py-2">
+              <label className="block text-sm font-medium mb-1 text-gray-300">ฝ่าย</label>
+              <select value={dept} onChange={e => setDept(e.target.value)} className="w-full border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-gray-200">
                 <option value="MAINT">ช่าง Maintenance</option>
                 <option value="IT">ไอที</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">หมวดหมู่</label>
-              <select value={catId} onChange={e => setCatId(Number(e.target.value))} className="w-full border rounded-lg px-3 py-2">
+              <label className="block text-sm font-medium mb-1 text-gray-300">หมวดหมู่</label>
+              <select value={catId} onChange={e => setCatId(Number(e.target.value))} className="w-full border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-gray-200">
                 {categories.map(c => (
                   <option key={c.category_id} value={c.category_id}>
                     {c.main_th} - {c.sub_th} ({c.dept_type})
@@ -200,28 +200,28 @@ export default function AdminPMPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">ชื่องาน</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">ชื่องาน</label>
               <input
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-gray-200"
                 placeholder="เช่น ล้างแอร์"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">ทำทุก</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">ทำทุก</label>
               <div className="flex gap-2">
                 <input
                   type="number"
                   min={1}
                   value={freqVal}
                   onChange={e => setFreqVal(Number(e.target.value))}
-                  className="w-20 border rounded-lg px-3 py-2"
+                  className="w-20 border border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-white"
                   required
                 />
-                <select value={freqUnit} onChange={e => setFreqUnit(e.target.value)} className="border rounded-lg px-3 py-2">
+                <select value={freqUnit} onChange={e => setFreqUnit(e.target.value)} className="border border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-white">
                   <option value="day">วัน</option>
                   <option value="week">สัปดาห์</option>
                   <option value="month">เดือน</option>
@@ -230,12 +230,12 @@ export default function AdminPMPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">รายละเอียด</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">รายละเอียด</label>
               <input
                 type="text"
                 value={desc}
                 onChange={e => setDesc(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-gray-200"
                 placeholder="รายละเอียดเพิ่มเติม"
               />
             </div>
@@ -251,7 +251,7 @@ export default function AdminPMPage() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+              className="px-4 py-2 bg-navy-600 text-gray-200 rounded-lg hover:bg-navy-500"
             >
               ยกเลิก
             </button>
@@ -261,14 +261,14 @@ export default function AdminPMPage() {
 
       {/* PM List */}
       {pmList.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-300">
           <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
           <p>ยังไม่มีแผน PM — กด "เพิ่มแผน PM" เพื่อเริ่ม</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="bg-navy-800 rounded-xl shadow overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-navy-700">
               <tr>
                 <th className="text-left p-3">ชื่องาน</th>
                 <th className="text-left p-3">สาขา</th>
@@ -281,7 +281,7 @@ export default function AdminPMPage() {
             </thead>
             <tbody>
               {pmList.map((pm) => (
-                <tr key={pm.id} className="border-t hover:bg-gray-50">
+                <tr key={pm.id} className="border-t hover:bg-navy-700">
                   <td className="p-3 font-medium">{pm.title}</td>
                   <td className="p-3">{pm.branch_code}</td>
                   <td className="p-3">
@@ -296,7 +296,7 @@ export default function AdminPMPage() {
                     </span>
                   </td>
                   <td className="p-3">{fmtDate(pm.next_run)}</td>
-                  <td className="p-3 text-gray-500">{pm.last_run ? fmtDate(pm.last_run) : '-'}</td>
+                  <td className="p-3 text-gray-300">{pm.last_run ? fmtDate(pm.last_run) : '-'}</td>
                   <td className="p-3">
                     <button
                       onClick={() => handleDelete(pm.id)}

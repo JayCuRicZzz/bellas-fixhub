@@ -69,7 +69,7 @@ export default function PMPage() {
       <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
         <Calendar className="w-6 h-6" /> ตาราง PM
       </h1>
-      <p className="text-gray-500 mb-6">งานบำรุงรักษาตามรอบ — ระบบออกใบงานอัตโนมัติเมื่อถึงกำหนด</p>
+      <p className="text-gray-300 mb-6">งานบำรุงรักษาตามรอบ — ระบบออกใบงานอัตโนมัติเมื่อถึงกำหนด</p>
 
       {/* Filter */}
       <div className="flex gap-2 mb-6">
@@ -78,7 +78,7 @@ export default function PMPage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium ${
-              filter === f ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              filter === f ? 'bg-blue-600 text-white' : 'bg-navy-700 text-gray-200 hover:bg-gray-200'
             }`}
           >
             {f === 'all' ? 'ทั้งหมด' : f === 'MAINT' ? '🔧 ช่าง' : '💻 ไอที'}
@@ -87,7 +87,7 @@ export default function PMPage() {
       </div>
 
       {Object.keys(grouped).length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-300">
           <Wrench className="w-12 h-12 mx-auto mb-4 text-gray-300" />
           <p>ไม่มีแผน PM</p>
         </div>
@@ -98,7 +98,7 @@ export default function PMPage() {
               <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
                 {month}
-                <span className="text-sm text-gray-400 font-normal">({items.length} รายการ)</span>
+                <span className="text-sm text-gray-500 font-normal">({items.length} รายการ)</span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {items.map(pm => {
@@ -107,27 +107,27 @@ export default function PMPage() {
                   return (
                     <div
                       key={pm.id}
-                      className={`bg-white rounded-xl shadow p-4 border-l-4 ${
+                      className={`bg-navy-800 rounded-xl shadow p-4 border-l-4 ${
                         isOverdue ? 'border-red-500' : pm.dept_type === 'IT' ? 'border-blue-400' : 'border-amber-400'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="font-semibold">{pm.title}</h3>
-                          <p className="text-sm text-gray-500">{pm.branch_code} — {pm.category_name}</p>
+                          <p className="text-sm text-gray-300">{pm.branch_code} — {pm.category_name}</p>
                         </div>
                         {isOverdue && (
-                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">เลยกำหนด</span>
+                          <span className="text-xs bg-red-900/40 text-red-300 px-2 py-0.5 rounded-full">เลยกำหนด</span>
                         )}
                       </div>
-                      <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
+                      <div className="mt-3 flex items-center gap-4 text-sm text-gray-300">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" /> {freqLabel(pm.frequency_value, pm.frequency_unit)}
                         </span>
                         <span>📅 ครั้งต่อไป: {nextDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       </div>
                       {pm.last_run && (
-                        <p className="text-xs text-gray-400 mt-2">
+                        <p className="text-xs text-gray-500 mt-2">
                           ครั้งล่าสุด: {new Date(pm.last_run).toLocaleDateString('th-TH')}
                         </p>
                       )}
