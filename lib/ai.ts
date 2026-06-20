@@ -234,18 +234,48 @@ function generateReportSummary(data: ReportData): string {
 }
 
 async function callAIAPI(messages: any[]): Promise<string|null> {
-  const apiUrl = process.env.AI_API_URL;
-  const apiKey = process.env.AI_API_KEY;
-  const model = process.env.AI_MODEL || 'gpt-3.5-turbo';
-  if (!apiUrl || !apiKey) return null;
-  try {
-    const res = await fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${apiKey}`},body:JSON.stringify({model,messages,max_tokens:1000,temperature:0.7})});
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch { return null; }
-}
+  var provider = process.env.AI_PROVIDER || 'openai';
+  var apiKey = process.env.AI_API_KEY;
+  var model = process.env.AI_MODEL || 'gemini-2.0-flash';
+  if (!apiKey) return null;
 
+  try {
+    if (provider === 'gemini') {
+      var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey;
+      var systemMsg = messages.find(function(m) { return m.role === 'system'; });
+      var contents = messages
+        .filter(function(m) { return m.role !== 'system'; })
+        .map(function(m) {
+          return {
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }],
+          };
+        });
+      var body: any = { contents: contents, generationConfig: { maxOutputTokens: 1000, temperature: 0.7 } };
+      if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg.content }] };
+
+      var gRes = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!gRes.ok) { console.error('[Gemini] Status:', gRes.status); return null; }
+      var gData = await gRes.json();
+      return gData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    }
+
+    var oaiUrl = process.env.AI_API_URL;
+    if (!oaiUrl) return null;
+    var res = await fetch(oaiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
+      body: JSON.stringify({ model: model, messages: messages, max_tokens: 1000, temperature: 0.7 })
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch(e) { return null; }
+}
 export async function chatWithAI(
   message: string,
   branchCode: string,
