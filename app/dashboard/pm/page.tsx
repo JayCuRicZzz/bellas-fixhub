@@ -32,9 +32,16 @@ export default function PMPage() {
   async function loadPM() {
     try {
       const res = await fetch('/api/pm', { headers: { Authorization: `Bearer ${token}` } });
-      setPmList(await res.json());
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        setPmList(data);
+      } else {
+        setPmList([]);
+        console.error('PM load error:', data);
+      }
     } catch (e) {
       console.error(e);
+      setPmList([]);
     }
     setLoading(false);
   }

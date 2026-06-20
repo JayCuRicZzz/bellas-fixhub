@@ -58,11 +58,13 @@ export default function AdminPMPage() {
         fetch('/api/pm', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/categories'),
       ]);
-      setPmList(await pmRes.json());
+      const pmData = await pmRes.json();
+      setPmList(pmRes.ok && Array.isArray(pmData) ? pmData : []);
       const cats = await catRes.json();
       setCategories(Array.isArray(cats) ? cats : []);
     } catch (e) {
       console.error(e);
+      setPmList([]);
     }
     setLoading(false);
   }

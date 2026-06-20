@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processDuePmTickets } from '../../../../lib/pm';
 
+export const dynamic = 'force-dynamic';
+
 // Called by Netlify scheduled function every hour
 export async function GET(req: NextRequest) {
   try {
