@@ -11,6 +11,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Bellas FixHub — ระบบแจ้งซ่อมบำรุง',
   description: 'ระบบแจ้งซ่อมบำรุงโรงแรมอัจฉริยะ พร้อม AI และรองรับ 2 ภาษา',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/logo.jpg',
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -28,8 +33,8 @@ export default function RootLayout({
     <html lang="th">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/icon-192.png" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="icon" href="/logo.jpg" />
+        <link rel="apple-touch-icon" href="/logo.jpg" />
       </head>
       <body className="min-h-screen antialiased" suppressHydrationWarning>
         {children}
