@@ -46,7 +46,7 @@ export default function PMPage() {
     setLoading(false);
   }
 
-  const filtered = pmList.filter(p => filter === 'all' || p.dept_type === filter);
+  const filtered = pmList.filter(p => filter === 'all' || p.dept_type === filter || p.department === filter);
 
   // Group by month
   const grouped: Record<string, PmItem[]> = {};
