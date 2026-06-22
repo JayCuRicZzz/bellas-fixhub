@@ -50,8 +50,8 @@ export async function GET(req: NextRequest) {
       };
       const userDept = user.department || deptByRole[user.role] || '';
       if (userDept === 'MAINT' || userDept === 'IT') {
-        query += ' AND t.reporter_department = ?';
-        params.push(userDept);
+        query += ' AND (t.reporter_id = ? OR t.reporter_department = ?)';
+        params.push(userId, userDept);
       }
     }
 
