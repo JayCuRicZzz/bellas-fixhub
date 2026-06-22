@@ -45,7 +45,18 @@ export default function TicketDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<string>('');
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const repairFileRef = useRef<HTMLInputElement>(null);
+
+  // Check if ticket was flagged as unsatisfactory
+  const isFlagged = !!(ticket?.pending_reason && ticket.pending_reason.includes('ไม่เรียบร้อย'));
+
+  const fetchActivityLogs = async () => {
+    try {
+      const res = await fetch(`/api/tickets/log/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setActivityLogs(await res.json());
+    } catch {}
+  };
 
   useEffect(() => {
     fetchTicket();
@@ -62,6 +73,7 @@ export default function TicketDetailPage() {
         setTicket(data);
         setKpiRating(data.kpi_rating || 0);
         setDifficulty(data.difficulty || '');
+        fetchActivityLogs();
       } else {
         setError(data.error || 'ไม่พบข้อมูล');
       }
@@ -211,7 +223,10 @@ export default function TicketDetailPage() {
     }
   };
 
-  const canRate = ['sup', 'supit', 'admin', 'gm'].includes(user?.role || '');
+  const canRate = ticket?.status === 'APPROVED' && (
+    user?.id === ticket?.reporter_id ||
+    ['sup', 'supit', 'admin', 'gm'].includes(user?.role || '')
+  );
   const canPrint = !!ticket;
 
   if (loading) {
@@ -758,11 +773,63 @@ export default function TicketDetailPage() {
         </div>
       )}
 
+      {/* Red Flag — งานไม่เรียบร้อย */}
+      {isFlagged && (
+        <div className="card border-2 border-red-500 bg-red-500/10 animate-pulse no-print">
+          <h3 className="text-lg font-bold text-red-400 flex items-center gap-2">
+            🚩 งานไม่เรียบร้อย — ต้องดำเนินการใหม่
+          </h3>
+          {ticket?.pending_reason && <p className="text-red-300 text-sm mt-1">{ticket.pending_reason}</p>}
+        </div>
+      )}
+
+      {/* Activity Log */}
+      {activityLogs.length > 0 && (
+        <div className="card no-print">
+          <h3 className="text-lg font-semibold text-white mb-3">📋 บันทึกการดำเนินการ</h3>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {activityLogs.map((log: any, i: number) => (
+              <div key={i} className="flex items-start gap-3 text-sm py-1.5 border-b border-navy-700/50 last:border-0">
+                <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                  log.action === 'APPROVED' ? 'bg-emerald-500' :
+                  log.action === 'RATED' ? 'bg-gold-500' :
+                  log.action === 'RESOLVED' ? 'bg-green-500' :
+                  log.action === 'ACCEPTED' ? 'bg-blue-500' :
+                  log.action === 'START' ? 'bg-purple-500' :
+                  log.action === 'FLAGGED' ? 'bg-red-500' :
+                  log.action === 'REJECTED' ? 'bg-orange-500' :
+                  log.action === 'CANCELLED' ? 'bg-gray-500' :
+                  'bg-navy-500'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-white font-medium">{log.actionByName}</span>
+                  <span className="text-gray-400 ml-1">
+                    {log.action === 'ACCEPTED' ? 'รับงาน' :
+                     log.action === 'START' ? 'เริ่มดำเนินการ' :
+                     log.action === 'RESOLVED' ? 'ซ่อมเสร็จ' :
+                     log.action === 'APPROVED' ? 'อนุมัติ' :
+                     log.action === 'REJECTED' ? 'ตีกลับ' :
+                     log.action === 'FLAGGED' ? 'แจ้งงานไม่เรียบร้อย' :
+                     log.action === 'RATED' ? 'ให้คะแนน' :
+                     log.action === 'CANCELLED' ? 'ยกเลิก' :
+                     log.action}
+                  </span>
+                  {log.reason && <p className="text-yellow-400/80 text-xs mt-0.5">⚠️ {log.reason}</p>}
+                </div>
+                <span className="text-xs text-gray-500 flex-shrink-0">
+                  {new Date(log.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="card no-print">
         <h3 className="text-lg font-semibold text-white mb-3">ดำเนินการ</h3>
         <div className="flex flex-wrap gap-2">
-          {ticket.status === 'PENDING' && ['tech', 'it', 'sup', 'supit', 'admin', 'gm'].includes(user?.role || '') && (
+          {ticket.status === 'PENDING' && ['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '') && (
             <button
               onClick={() => handleStatusUpdate('ACCEPTED')}
               disabled={actionLoading === 'ACCEPTED'}

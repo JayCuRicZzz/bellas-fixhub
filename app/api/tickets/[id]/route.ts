@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '../../../../lib/db';
 import { getUserFromRequest } from '../../../../lib/auth';
 
+async function logActivity(pool: any, ticketId: string, action: string, oldStatus: string, newStatus: string, userId: number, userName: string, reason?: string) {
+  try {
+    await pool.query(
+      `INSERT INTO ticket_activity_log (ticket_id, action, old_status, new_status, action_by, action_by_name, reason) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [ticketId, action, oldStatus, newStatus, userId, userName, reason || null]
+    );
+  } catch (e: any) {
+    console.error('[Activity Log] Failed:', e.message);
+  }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -92,6 +103,10 @@ export async function PUT(
     let slaInfo: any = null;
 
     if (status === 'ACCEPTED') {
+      // GM cannot accept work
+      if (user.role === 'gm') {
+        return NextResponse.json({ error: 'GM ไม่สามารถรับงานได้' }, { status: 403 });
+      }
       // Calculate SLA deadline based on priority and sla_config
       const priority = currentTicket.priority || 'medium';
       const slaDeadline = await getSlaDeadline(priority);
@@ -103,6 +118,7 @@ export async function PUT(
          WHERE ticket_id = ?`,
         [userId, userId, slaDeadline, ticketId]
       );
+      await logActivity(pool, ticketId, 'ACCEPTED', currentTicket.status, 'IN_PROGRESS', userId, user.full_name || user.username);
 
       slaInfo = {
         accepted_by: userId,
@@ -117,6 +133,7 @@ export async function PUT(
          WHERE ticket_id = ?`,
         [status, userId, userId, ticketId]
       );
+      await logActivity(pool, ticketId, 'START', currentTicket.status, 'IN_PROGRESS', userId, user.full_name || user.username);
 
     } else if (status === 'RESOLVED') {
       // Calculate sla_minutes before update (NOW() changes)
@@ -136,6 +153,7 @@ export async function PUT(
          WHERE ticket_id = ?`,
         [status, pending_reason || null, userId, slaMinutes, ticketId]
       );
+      await logActivity(pool, ticketId, 'RESOLVED', currentTicket.status, 'RESOLVED', userId, user.full_name || user.username);
 
       slaInfo = {
         resolved_by: userId,
@@ -153,6 +171,7 @@ export async function PUT(
          WHERE ticket_id = ?`,
         [status, userId, ticketId]
       );
+      await logActivity(pool, ticketId, 'APPROVED', currentTicket.status, 'APPROVED', userId, user.full_name || user.username);
 
       slaInfo = {
         approved_by: userId,
@@ -166,6 +185,7 @@ export async function PUT(
          WHERE ticket_id = ?`,
         [pending_reason || 'หัวหน้าปฏิเสธงาน กรุณาดำเนินการใหม่', ticketId]
       );
+      await logActivity(pool, ticketId, 'REJECTED', currentTicket.status, 'PENDING', userId, user.full_name || user.username, pending_reason || 'หัวหน้าตีกลับ');
 
       slaInfo = { rejected_by: userId, reason: pending_reason };
     } else if (status === 'FLAGGED') {
@@ -175,6 +195,7 @@ export async function PUT(
          WHERE ticket_id = ?`,
         [pending_reason || 'ผู้แจ้งแจ้งว่างานยังไม่เรียบร้อย', ticketId]
       );
+      await logActivity(pool, ticketId, 'FLAGGED', currentTicket.status, 'PENDING', userId, user.full_name || user.username, pending_reason || 'งานไม่เรียบร้อย (ธงแดง)');
 
       slaInfo = { flagged_by: userId, reason: pending_reason };
 
@@ -183,6 +204,7 @@ export async function PUT(
         'UPDATE tickets SET status = ? WHERE ticket_id = ?',
         [status, ticketId]
       );
+      await logActivity(pool, ticketId, 'CANCELLED', currentTicket.status, 'CANCELLED', userId, user.full_name || user.username);
     } else {
       // Difficulty update (supervisor only)
       const supervisorRoles = ['sup', 'supit', 'admin', 'gm'];
@@ -192,15 +214,17 @@ export async function PUT(
           [difficulty, ticketId]
         );
       }
-      // KPI rating — only the reporter can rate
+      // KPI rating — reporter or supervisor can rate
       if (kpi_rating !== undefined && !status) {
-        if (currentTicket.reporter_id !== userId && !supervisorRoles.includes(user.role)) {
-          return NextResponse.json({ error: 'เฉพาะผู้แจ้งเท่านั้นที่ให้คะแนนได้' }, { status: 403 });
+        const canRateKpi = currentTicket.reporter_id === userId || ['sup','supit','admin','gm'].includes(user.role);
+        if (!canRateKpi) {
+          return NextResponse.json({ error: 'เฉพาะผู้แจ้งหรือหัวหน้าเท่านั้นที่ให้คะแนนได้' }, { status: 403 });
         }
         await pool.query(
           'UPDATE tickets SET kpi_rating = ? WHERE ticket_id = ?',
           [kpi_rating, ticketId]
         );
+        await logActivity(pool, ticketId, 'RATED', currentTicket.status, currentTicket.status, userId, user.full_name || user.username, `ให้คะแนน ${kpi_rating} ดาว`);
       } else if (!difficulty && status) {
         await pool.query(
           'UPDATE tickets SET status = ? WHERE ticket_id = ?',

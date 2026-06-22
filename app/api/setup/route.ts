@@ -21,6 +21,22 @@ export async function POST(req: NextRequest) {
       )
     `);
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_activity_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_id INT NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        old_status VARCHAR(30),
+        new_status VARCHAR(30),
+        action_by INT,
+        action_by_name VARCHAR(100),
+        reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_log_ticket (ticket_id),
+        INDEX idx_log_created (created_at)
+      )
+    `).catch(e => console.log('[Setup] Activity log:', e.message));
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS pm_schedules (
         id INT AUTO_INCREMENT PRIMARY KEY,
         branch_code VARCHAR(10) NOT NULL,
