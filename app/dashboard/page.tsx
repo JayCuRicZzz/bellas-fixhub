@@ -49,7 +49,7 @@ export default function DashboardPage() {
   const fetchStats = useCallback(async () => {
     try {
       // All-time stats
-      const resAll = await fetch('/api/reports/daily?period=month', {
+      const resAll = await fetch('/api/reports/daily?period=all', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const all = await resAll.json();

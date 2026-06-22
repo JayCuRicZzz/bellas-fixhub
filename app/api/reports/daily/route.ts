@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
       const period = searchParams.get('period') || 'today';
       if (period === 'week') dateCondition = 'DATE(t.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
       else if (period === 'month') dateCondition = 'DATE(t.created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+      else if (period === 'all') dateCondition = '1=1';
       else dateCondition = 'DATE(t.created_at) = CURDATE()';
     }
 
