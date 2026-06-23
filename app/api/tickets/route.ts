@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
     // Send LINE notification — route to correct group by work type
     const { sendLineMessage } = await import('../../../lib/line');
     const lineResult = await sendLineMessage(
-      `📢 มีงานแจ้งซ่อมใหม่!\n🔢 ${ticketNumber}\n🏨 ${branch_code}\n📍 ${location_detail}\n📝 ${description}`,
+      `📢 มีงานแจ้งซ่อมใหม่!\n🔢 ${ticketNumber}\n🏨 ${branch_code}\n📍 ${location_detail}\n📝 ${descriptionThai}`,
       deptType
     );
     console.log('[Tickets] LINE result:', JSON.stringify({deptType, result: lineResult}));
