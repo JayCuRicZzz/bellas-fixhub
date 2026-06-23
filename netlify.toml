@@ -8,12 +8,15 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Scheduled Function — Daily LINE Summary at 22:00 Bangkok time (15:00 UTC)
+# Scheduled Functions
 [functions]
   directory = "netlify/functions"
 
 [functions."daily-summary"]
   schedule = "0 15 * * *"
+
+[functions."pm-check"]
+  schedule = "0 * * * *"
 
 [[redirects]]
   from = "/api/*"
