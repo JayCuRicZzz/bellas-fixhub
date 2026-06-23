@@ -18,6 +18,7 @@ import {
   Globe,
   Shield,
   ClipboardList,
+  Wind,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -43,6 +44,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // PM link for all users
   navItems.push({ href: '/dashboard/pm', label: '📅 ตาราง PM', icon: ClipboardList });
+
+  // Aircon report link for all users
+  navItems.push({ href: '/dashboard/reports/aircon', label: '🧊 เติมน้ำยาแอร์', icon: Wind });
 
   // Add admin links for admin only (not GM)
   if (user?.role === 'admin') {
