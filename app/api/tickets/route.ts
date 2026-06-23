@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '../../../lib/db';
 import { getUserFromRequest, getUserBranches } from '../../../lib/auth';
+import { translateToThai } from '../../../lib/translate';
+import { sendLineMessage } from '../../../lib/line';
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -166,10 +168,12 @@ export async function POST(req: NextRequest) {
     const slaMinutes = slaRows[0]?.sla_minutes || 240;
     const slaDeadline = new Date(now.getTime() + slaMinutes * 60 * 1000);
 
+    const descriptionThai = await translateToThai(description);
+
     const [result]: any = await pool.query(
       `INSERT INTO tickets (ticket_number, branch_code, category_id, reporter_id, reporter_department, location_detail, description, priority, difficulty, status, sla_deadline)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)`,
-      [ticketNumber, branch_code, category_id, reporterId, reporter_department || null, location_detail, description, priority || 'medium', difficultyVal, slaDeadline]
+      [ticketNumber, branch_code, category_id, reporterId, reporter_department || null, location_detail, descriptionThai, priority || 'medium', difficultyVal, slaDeadline]
     );
 
     const ticketId = result.insertId;
@@ -192,7 +196,68 @@ export async function POST(req: NextRequest) {
     );
     console.log('[Tickets] LINE result:', JSON.stringify({deptType, result: lineResult}));
 
-    return NextResponse.json({ success: true, ticket_number: ticketNumber, ticket_id: ticketId });
+    // --- Duplicate & Aircon Refill Detection ---
+    const alerts: string[] = [];
+
+    // (A) Aircon refrigerant refill alert (14 days)
+    // Detect if this ticket is about aircon refill
+    const isAircon = descriptionThai.includes('น้ำยาแอร์') || descriptionThai.includes('เติมน้ำยา') ||
+                     descriptionThai.includes('แอร์ไม่เย็น') || descriptionThai.includes('น้ำยา');
+    const isAirconCategory = category_id >= 1 && category_id <= 3; // HVAC categories
+    if (isAircon || isAirconCategory) {
+      const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const [refillDupes]: any = await pool.query(
+        `SELECT t.ticket_number, t.location_detail, t.created_at
+         FROM tickets t
+         JOIN categories c ON t.category_id = c.category_id
+         WHERE t.branch_code = ?
+           AND t.location_detail = ?
+           AND t.ticket_id != ?
+           AND t.created_at >= ?
+           AND (c.category_id BETWEEN 1 AND 3
+                OR t.description LIKE '%น้ำยาแอร์%'
+                OR t.description LIKE '%เติมน้ำยา%')
+         ORDER BY t.created_at DESC`,
+        [branch_code, location_detail, ticketId, fourteenDaysAgo]
+      );
+      if (refillDupes.length > 0) {
+        const lastRefill = refillDupes[0];
+        const daysAgo = Math.round((now.getTime() - new Date(lastRefill.created_at).getTime()) / (24 * 60 * 60 * 1000));
+        alerts.push(`⚠️ น้ำยาแอร์ซ้ำ: ห้อง ${location_detail} เคยเติมน้ำยาแอร์เมื่อ ${daysAgo} วันที่แล้ว (${lastRefill.ticket_number}) — ภายใน 14 วัน อาจมีแอร์รั่ว!`);
+      }
+    }
+
+    // (B) Same issue within 1 day
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const [sameIssueDupes]: any = await pool.query(
+      `SELECT t.ticket_number, t.description, t.created_at
+       FROM tickets t
+       WHERE t.branch_code = ?
+         AND t.location_detail = ?
+         AND t.category_id = ?
+         AND t.ticket_id != ?
+         AND t.created_at >= ?
+       ORDER BY t.created_at DESC`,
+      [branch_code, location_detail, category_id, ticketId, oneDayAgo]
+    );
+    if (sameIssueDupes.length > 0) {
+      const lastIssue = sameIssueDupes[0];
+      const hoursAgo = Math.round((now.getTime() - new Date(lastIssue.created_at).getTime()) / (60 * 60 * 1000));
+      alerts.push(`🔄 งานซ้ำ: ห้อง ${location_detail} แจ้งปัญหาเดียวกันเมื่อ ${hoursAgo} ชม.ที่แล้ว (${lastIssue.ticket_number})`);
+    }
+
+    // Send alerts
+    if (alerts.length > 0) {
+      const alertMsg = `🚨 แจ้งเตือนอัตโนมัติ
+📋 ${ticketNumber} (${branch_code})
+📍 ${location_detail}
+
+${alerts.join('\n')}`;
+      const { sendLineMessage: sendAlert } = await import('../../../lib/line');
+      sendAlert(alertMsg, deptType).catch(() => {});
+    }
+
+    return NextResponse.json({ success: true, ticket_number: ticketNumber, ticket_id: ticketId, alerts: alerts.length > 0 ? alerts : undefined });
   } catch (err: any) {
     console.error('[Tickets] Create error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
