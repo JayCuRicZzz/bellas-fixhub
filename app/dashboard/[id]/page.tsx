@@ -81,19 +81,25 @@ export default function TicketDetailPage() {
       const res = await fetch(`/api/tickets/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        credentials: 'include',
         body: JSON.stringify({ status: 'PAUSED', paused_reason: reason, paused_expected_end: pauseEndDate }),
       });
       const data = await res.json();
       if (res.ok) {
         setShowPause(false);
+        setPauseCustomReason('');
+        setPauseReason('อะไหล่ไม่มี/รอสั่งซื้อ');
         fetchTicket();
       } else {
-        setError(data.error || 'พักงานไม่สำเร็จ');
-        setTimeout(() => setError(''), 3000);
+        const errMsg = data.error || 'พักงานไม่สำเร็จ';
+        console.error('[Pause] API Error:', res.status, errMsg);
+        setError(errMsg);
+        setTimeout(() => setError(''), 5000);
       }
-    } catch {
-      setError('เกิดข้อผิดพลาด');
-      setTimeout(() => setError(''), 3000);
+    } catch (err: any) {
+      console.error('[Pause] Network Error:', err.message);
+      setError('เกิดข้อผิดพลาด: ' + (err.message || 'โปรดลองใหม่'));
+      setTimeout(() => setError(''), 5000);
     } finally {
       setActionLoading(null);
     }
