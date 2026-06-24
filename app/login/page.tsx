@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { I18nProvider, useI18n } from '../../lib/i18n/i18n';
+import { I18nProvider, useI18n, LANGUAGES } from '../../lib/i18n/i18n';
 import { AuthProvider, useAuth } from '../../components/authprovider';
 import { Eye, EyeOff } from 'lucide-react';
 
 function LoginContent() {
-  const { t, lang, toggleLang } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const { login } = useAuth();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -54,12 +54,18 @@ function LoginContent() {
 
       <div style={{ width: '100%', maxWidth: '420px', position: 'relative', zIndex: 1 }} suppressHydrationWarning>
         <div style={{ textAlign: 'right', marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-          <button onClick={() => lang !== 'th' && toggleLang()}
-            style={{ width: '44px', height: '44px', borderRadius: '50%', background: lang==='th' ? 'rgba(212,168,37,0.25)' : 'rgba(255,255,255,0.06)', border: lang==='th' ? '2px solid rgba(212,168,37,0.5)' : '1px solid rgba(255,255,255,0.12)', color: lang==='th' ? '#d4a825' : '#8da4d2', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', letterSpacing: '0.5px' }}
-            title="ภาษาไทย">TH</button>
-          <button onClick={() => lang !== 'en' && toggleLang()}
-            style={{ width: '44px', height: '44px', borderRadius: '50%', background: lang==='en' ? 'rgba(212,168,37,0.25)' : 'rgba(255,255,255,0.06)', border: lang==='en' ? '2px solid rgba(212,168,37,0.5)' : '1px solid rgba(255,255,255,0.12)', color: lang==='en' ? '#d4a825' : '#8da4d2', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', letterSpacing: '0.5px' }}
-            title="English">EN</button>
+          {LANGUAGES.map(l => (
+            <button key={l.code} onClick={() => setLang(l.code)}
+              style={{ width: '44px', height: '44px', borderRadius: '50%',
+                background: lang===l.code ? 'rgba(212,168,37,0.25)' : 'rgba(255,255,255,0.06)',
+                border: lang===l.code ? '2px solid rgba(212,168,37,0.5)' : '1px solid rgba(255,255,255,0.12)',
+                color: lang===l.code ? '#d4a825' : '#8da4d2', fontSize: '0.7rem', fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s', letterSpacing: '0.5px' }}
+              title={l.label}>
+              {l.code.toUpperCase()}
+            </button>
+          ))}
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
