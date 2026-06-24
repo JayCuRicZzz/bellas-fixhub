@@ -55,6 +55,7 @@ export default function TicketDetailPage() {
   const [showPause, setShowPause] = useState(false);
   const [pauseReason, setPauseReason] = useState('อะไหล่ไม่มี/รอสั่งซื้อ');
   const [pauseEndDate, setPauseEndDate] = useState('');
+  const [pauseCustomReason, setPauseCustomReason] = useState('');
   const PAUSE_REASONS = [
     { value: 'อะไหล่ไม่มี/รอสั่งซื้อ', label: '🔧 อะไหล่ไม่มี / รอสั่งซื้อ' },
     { value: 'รอผู้เชี่ยวชาญ', label: '👨‍🔧 รอผู้เชี่ยวชาญมาดำเนินการ' },
@@ -64,8 +65,14 @@ export default function TicketDetailPage() {
   ];
 
   const handlePause = async () => {
-    if (!pauseReason || !pauseEndDate) {
-      setError('กรุณาระบุเหตุผลและวันที่คาดว่าจะเสร็จ');
+    const reason = pauseReason === 'อื่นๆ' ? (pauseCustomReason || 'อื่นๆ') : pauseReason;
+    if (!pauseEndDate) {
+      setError('กรุณาระบุวันที่คาดว่าจะเสร็จ');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    if (pauseReason === 'อื่นๆ' && !pauseCustomReason) {
+      setError('กรุณาระบุเหตุผลเพิ่มเติม');
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -74,7 +81,7 @@ export default function TicketDetailPage() {
       const res = await fetch(`/api/tickets/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: 'PAUSED', paused_reason: pauseReason, paused_expected_end: pauseEndDate }),
+        body: JSON.stringify({ status: 'PAUSED', paused_reason: reason, paused_expected_end: pauseEndDate }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -1049,6 +1056,19 @@ export default function TicketDetailPage() {
                 </label>
               ))}
             </div>
+
+            {pauseReason === 'อื่นๆ' && (
+              <div className="mb-4">
+                <label className="block text-sm text-gray-300 mb-2">ระบุเหตุผลเพิ่มเติม</label>
+                <input
+                  type="text"
+                  value={pauseCustomReason}
+                  onChange={(e) => setPauseCustomReason(e.target.value)}
+                  placeholder="ระบุเหตุผลที่พักงาน..."
+                  className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
+            )}
 
             <label className="block text-sm text-gray-300 mb-2">วันที่คาดว่าจะเสร็จ/ดำเนินการต่อ</label>
             <input
