@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from './authprovider';
-import { useI18n } from '../lib/i18n/i18n';
+import { useI18n, LANGUAGES } from '../lib/i18n/i18n';
 import { DEPARTMENTS, getDepartmentByCode } from '../types';
 import Logo from './logo';
 import {
@@ -29,7 +30,22 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { t, lang, toggleLang } = useI18n();
+  const { t, lang, setLang } = useI18n();
+
+  // Language dropdown state
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!langOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [langOpen]);
 
   // Get user's department info
   const userDept = user?.department ? getDepartmentByCode(user.department) : null;
@@ -134,14 +150,34 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Bottom */}
         <div className="px-3 py-4 border-t border-navy-700/50 space-y-3">
-          {/* Language Toggle */}
-          <button
-            onClick={toggleLang}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700/50 w-full transition-all duration-200 group"
-          >
-            <Globe className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            🌐 {lang === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นไทย'}
-          </button>
+          {/* Language Switcher */}
+          <div ref={langRef} className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setLangOpen(!langOpen); }}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700/50 w-full transition-all duration-200 group"
+            >
+              <Globe className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              {LANGUAGES.find(l => l.code === lang)?.flag} {LANGUAGES.find(l => l.code === lang)?.label}
+            </button>
+            {langOpen && (
+              <div className="absolute bottom-full left-0 mb-1 w-48 bg-navy-800 border border-navy-600 rounded-xl shadow-2xl overflow-hidden z-50">
+                {LANGUAGES.map(l => (
+                  <button
+                    key={l.code}
+                    onClick={() => { setLang(l.code); setLangOpen(false); }}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm w-full text-left transition-colors ${
+                      l.code === lang
+                        ? 'bg-gold-500/10 text-gold-400 font-medium'
+                        : 'text-gray-300 hover:bg-navy-700/50 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-base">{l.flag}</span>
+                    <span>{l.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Logout */}
           <button

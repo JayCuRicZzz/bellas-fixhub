@@ -36,6 +36,11 @@ export async function POST(req: NextRequest) {
       )
     `).catch(e => console.log('[Setup] Activity log:', e.message));
 
+    // Migration: add PAUSED columns to tickets
+    await pool.query(`ALTER TABLE tickets ADD COLUMN paused_reason VARCHAR(255) NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE tickets ADD COLUMN paused_at DATETIME NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE tickets ADD COLUMN paused_expected_end DATETIME NULL`).catch(() => {});
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pm_schedules (
         id INT AUTO_INCREMENT PRIMARY KEY,

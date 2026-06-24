@@ -85,7 +85,7 @@ export async function PUT(
 
   try {
     const body = await req.json();
-    const { status, pending_reason, kpi_rating, difficulty } = body;
+    const { status, pending_reason, kpi_rating, difficulty, paused_reason, paused_expected_end } = body;
     const ticketId = params.id;
     const userId = user.user_id || user.id;
 
@@ -205,6 +205,35 @@ export async function PUT(
         [status, ticketId]
       );
       await logActivity(pool, ticketId, 'CANCELLED', currentTicket.status, 'CANCELLED', userId, user.full_name || user.username);
+
+    } else if (status === 'PAUSED') {
+      // Technician pauses work — requires reason + expected end date
+      if (!paused_reason) {
+        return NextResponse.json({ error: 'กรุณาระบุเหตุผลที่พักงาน' }, { status: 400 });
+      }
+      if (!paused_expected_end) {
+        return NextResponse.json({ error: 'กรุณาระบุวันที่คาดว่าจะเสร็จ' }, { status: 400 });
+      }
+      await pool.query(
+        `UPDATE tickets SET status = 'PAUSED', paused_reason = ?, paused_at = NOW(), paused_expected_end = ?
+         WHERE ticket_id = ?`,
+        [paused_reason, paused_expected_end, ticketId]
+      );
+      await logActivity(pool, ticketId, 'PAUSED', currentTicket.status, 'PAUSED', userId, user.full_name || user.username, paused_reason);
+
+      slaInfo = { paused_by: userId, reason: paused_reason, expected_end: paused_expected_end };
+
+    } else if (status === 'IN_PROGRESS' && currentTicket.status === 'PAUSED') {
+      // Resume from paused → back to IN_PROGRESS
+      await pool.query(
+        `UPDATE tickets SET status = 'IN_PROGRESS', paused_reason = NULL, paused_expected_end = NULL
+         WHERE ticket_id = ?`,
+        [ticketId]
+      );
+      await logActivity(pool, ticketId, 'RESUME', 'PAUSED', 'IN_PROGRESS', userId, user.full_name || user.username);
+
+      slaInfo = { resumed_by: userId };
+
     } else {
       // Difficulty update (supervisor only)
       const supervisorRoles = ['sup', 'supit', 'admin', 'gm'];

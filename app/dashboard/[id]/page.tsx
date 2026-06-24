@@ -51,6 +51,70 @@ export default function TicketDetailPage() {
   // Check if ticket was flagged as unsatisfactory
   const isFlagged = !!(ticket?.pending_reason && ticket.pending_reason.includes('ไม่เรียบร้อย'));
 
+  // Pause work modal
+  const [showPause, setShowPause] = useState(false);
+  const [pauseReason, setPauseReason] = useState('อะไหล่ไม่มี/รอสั่งซื้อ');
+  const [pauseEndDate, setPauseEndDate] = useState('');
+  const PAUSE_REASONS = [
+    { value: 'อะไหล่ไม่มี/รอสั่งซื้อ', label: '🔧 อะไหล่ไม่มี / รอสั่งซื้อ' },
+    { value: 'รอผู้เชี่ยวชาญ', label: '👨‍🔧 รอผู้เชี่ยวชาญมาดำเนินการ' },
+    { value: 'ส่งช่างนอก', label: '🏗️ ส่งงานให้ช่างข้างนอกทำ' },
+    { value: 'สภาพอากาศ', label: '🌧️ สภาพอากาศไม่เอื้ออำนวย' },
+    { value: 'อื่นๆ', label: '📝 อื่นๆ' },
+  ];
+
+  const handlePause = async () => {
+    if (!pauseReason || !pauseEndDate) {
+      setError('กรุณาระบุเหตุผลและวันที่คาดว่าจะเสร็จ');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    setActionLoading('PAUSED');
+    try {
+      const res = await fetch(`/api/tickets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'PAUSED', paused_reason: pauseReason, paused_expected_end: pauseEndDate }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowPause(false);
+        fetchTicket();
+      } else {
+        setError(data.error || 'พักงานไม่สำเร็จ');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch {
+      setError('เกิดข้อผิดพลาด');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResume = async () => {
+    setActionLoading('RESUME');
+    try {
+      const res = await fetch(`/api/tickets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'IN_PROGRESS' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchTicket();
+      } else {
+        setError(data.error || 'ดำเนินการต่อไม่สำเร็จ');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch {
+      setError('เกิดข้อผิดพลาด');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const fetchActivityLogs = async () => {
     try {
       const res = await fetch(`/api/tickets/log/${id}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -783,6 +847,24 @@ export default function TicketDetailPage() {
         </div>
       )}
 
+      {/* PAUSED Banner */}
+      {ticket?.status === 'PAUSED' && (
+        <div className="card border-2 border-orange-500 bg-orange-500/10 no-print">
+          <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2">
+            ⏸️ งานถูกพัก
+          </h3>
+          {ticket.paused_reason && (
+            <p className="text-orange-300 text-sm mt-1">เหตุผล: {ticket.paused_reason}</p>
+          )}
+          {ticket.paused_at && (
+            <p className="text-gray-400 text-xs mt-1">พักเมื่อ: {new Date(ticket.paused_at).toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' })}</p>
+          )}
+          {ticket.paused_expected_end && (
+            <p className="text-gray-400 text-xs">คาดว่าจะเสร็จ: {new Date(ticket.paused_expected_end).toLocaleDateString('th-TH', { dateStyle: 'long' })}</p>
+          )}
+        </div>
+      )}
+
       {/* Activity Log */}
       {activityLogs.length > 0 && (
         <div className="card no-print">
@@ -798,6 +880,8 @@ export default function TicketDetailPage() {
                   log.action === 'START' ? 'bg-purple-500' :
                   log.action === 'FLAGGED' ? 'bg-red-500' :
                   log.action === 'REJECTED' ? 'bg-orange-500' :
+                  log.action === 'PAUSED' ? 'bg-orange-500' :
+                  log.action === 'RESUME' ? 'bg-blue-500' :
                   log.action === 'CANCELLED' ? 'bg-gray-500' :
                   'bg-navy-500'
                 }`} />
@@ -810,6 +894,8 @@ export default function TicketDetailPage() {
                      log.action === 'APPROVED' ? 'อนุมัติ' :
                      log.action === 'REJECTED' ? 'ตีกลับ' :
                      log.action === 'FLAGGED' ? 'แจ้งงานไม่เรียบร้อย' :
+                     log.action === 'PAUSED' ? 'พักงาน' :
+                     log.action === 'RESUME' ? 'ดำเนินการต่อ' :
                      log.action === 'RATED' ? 'ให้คะแนน' :
                      log.action === 'CANCELLED' ? 'ยกเลิก' :
                      log.action}
@@ -848,6 +934,33 @@ export default function TicketDetailPage() {
             >
               {actionLoading === 'IN_PROGRESS' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               เริ่มดำเนินการ
+            </button>
+          )}
+          {/* PAUSE — technician pauses work */}
+          {(ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS') &&
+           ['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '') && (
+            <button
+              onClick={() => {
+                const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+                setPauseEndDate(tomorrow.toISOString().split('T')[0]);
+                setShowPause(true);
+              }}
+              disabled={actionLoading === 'PAUSED'}
+              className="btn-primary text-sm flex items-center gap-2 bg-orange-600 hover:bg-orange-700"
+            >
+              ⏸️ พักงาน
+            </button>
+          )}
+          {/* RESUME — continue paused work */}
+          {ticket.status === 'PAUSED' &&
+           ['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '') && (
+            <button
+              onClick={handleResume}
+              disabled={actionLoading === 'RESUME'}
+              className="btn-primary text-sm flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            >
+              {actionLoading === 'RESUME' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              ▶️ ดำเนินการต่อ
             </button>
           )}
           {(ticket.status === 'PENDING' || ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS') &&
@@ -908,6 +1021,62 @@ export default function TicketDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Pause Work Modal */}
+      {showPause && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-1">⏸️ พักงาน</h3>
+            <p className="text-gray-400 text-sm mb-4">ระบุเหตุผลและวันที่คาดว่าจะดำเนินการต่อ</p>
+            
+            <label className="block text-sm text-gray-300 mb-2">เหตุผลที่พักงาน</label>
+            <div className="space-y-2 mb-4">
+              {PAUSE_REASONS.map(r => (
+                <label key={r.value} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  pauseReason === r.value
+                    ? 'border-gold-500 bg-gold-500/10 text-gold-400'
+                    : 'border-navy-600 bg-navy-700/50 text-gray-300 hover:border-gray-500'
+                }`}>
+                  <input
+                    type="radio"
+                    name="pauseReason"
+                    value={r.value}
+                    checked={pauseReason === r.value}
+                    onChange={(e) => setPauseReason(e.target.value)}
+                    className="accent-gold-500 w-4 h-4"
+                  />
+                  <span className="text-sm">{r.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <label className="block text-sm text-gray-300 mb-2">วันที่คาดว่าจะเสร็จ/ดำเนินการต่อ</label>
+            <input
+              type="date"
+              value={pauseEndDate}
+              onChange={(e) => setPauseEndDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-white focus:border-gold-500 focus:outline-none mb-5"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={handlePause}
+                disabled={actionLoading === 'PAUSED' || !pauseEndDate}
+                className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg font-semibold text-sm"
+              >
+                {actionLoading === 'PAUSED' ? 'กำลังบันทึก...' : 'ยืนยันพักงาน'}
+              </button>
+              <button
+                onClick={() => setShowPause(false)}
+                className="flex-1 py-2.5 bg-navy-700 hover:bg-navy-600 text-gray-300 rounded-lg text-sm"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

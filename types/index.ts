@@ -27,11 +27,14 @@ export interface Ticket {
   reporter_id: number;
   location_detail: string;
   description: string;
-  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'RESOLVED' | 'APPROVED' | 'CANCELLED';
+  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'PAUSED' | 'RESOLVED' | 'APPROVED' | 'REJECTED' | 'FLAGGED' | 'CANCELLED';
   priority: 'non_urgent' | 'low' | 'medium' | 'high' | 'urgent';
   difficulty?: 'easy' | 'medium' | 'hard' | 'very_hard';
   technician_id: number | null;
   pending_reason: string | null;
+  paused_reason?: string | null;
+  paused_at?: string | null;
+  paused_expected_end?: string | null;
   kpi_rating: number | null;
   image_url: string | null;
   images?: string[];
@@ -137,8 +140,11 @@ export const STATUS_LABELS: Record<string, string> = {
   PENDING: 'รอดำเนินการ',
   ACCEPTED: 'รับงานแล้ว',
   IN_PROGRESS: 'กำลังดำเนินการ',
+  PAUSED: 'พักงาน',
   RESOLVED: 'ดำเนินการเสร็จ',
   APPROVED: 'อนุมัติแล้ว',
+  REJECTED: 'ถูกตีกลับ',
+  FLAGGED: 'งานไม่เรียบร้อย 🚩',
   CANCELLED: 'ยกเลิก',
 };
 
@@ -146,9 +152,12 @@ export const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   ACCEPTED: 'bg-blue-100 text-blue-800 border-blue-300',
   IN_PROGRESS: 'bg-purple-100 text-purple-800 border-purple-300',
+  PAUSED: 'bg-orange-100 text-orange-800 border-orange-400',
   RESOLVED: 'bg-green-100 text-green-800 border-green-300',
   APPROVED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-  CANCELLED: 'bg-red-100 text-red-800 border-red-300',
+  REJECTED: 'bg-red-100 text-red-800 border-red-300',
+  FLAGGED: 'bg-red-200 text-red-900 border-red-400',
+  CANCELLED: 'bg-gray-200 text-gray-700 border-gray-400',
 };
 
 export const PRIORITY_LABELS: Record<string, string> = {
