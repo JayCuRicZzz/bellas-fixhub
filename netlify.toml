@@ -8,10 +8,7 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Scheduled Functions
-[functions]
-  directory = "netlify/functions"
-
+# Scheduled Functions (default directory = netlify/functions, no explicit dir to avoid plugin conflict)
 [functions."daily-summary"]
   schedule = "0 15 * * *"
 
