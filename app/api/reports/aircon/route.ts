@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '../../../../lib/db';
 import { getUserFromRequest, getUserBranches } from '../../../../lib/auth';
 
-// GET: Aircon refill report — tracks repeated refrigerant refills within 14 days
+// GET: Aircon report — all aircon tickets + refrigerant refill alerts
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     const daysAgo = parseInt(period);
 
-    // Find tickets related to aircon refill
+    // Find ALL aircon-related tickets (cat 1-3 OR description has 'แอร์')
     let query = `
       SELECT t.ticket_id, t.ticket_number, t.branch_code, t.location_detail, 
              t.description, t.created_at, t.status,
@@ -26,9 +26,8 @@ export async function GET(req: NextRequest) {
       JOIN categories c ON t.category_id = c.category_id
       WHERE t.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
         AND (c.category_id BETWEEN 1 AND 3
-             OR t.description LIKE '%น้ำยาแอร์%'
-             OR t.description LIKE '%เติมน้ำยา%'
-             OR t.description LIKE '%แอร์ไม่เย็น%')
+             OR t.description LIKE '%แอร์%'
+             OR t.description LIKE '%aircon%')
     `;
     const params: any[] = [daysAgo];
 
@@ -53,24 +52,28 @@ export async function GET(req: NextRequest) {
       byRoom[key].push(row);
     }
 
-    // Find rooms with refills within 14 days
+    // Find rooms with refrigerant refills within 14 days (only actual refrigerant tickets)
     const refillAlerts: any[] = [];
     for (const [key, tickets] of Object.entries(byRoom)) {
-      if (tickets.length >= 2) {
-        for (let i = 1; i < tickets.length; i++) {
+      // Filter to only refrigerant-related tickets
+      const refillTickets = tickets.filter((t: any) =>
+        t.description.includes('น้ำยา') || t.description.includes('เติมน้ำยา')
+      );
+      if (refillTickets.length >= 2) {
+        for (let i = 1; i < refillTickets.length; i++) {
           const daysBetween = Math.round(
-            (new Date(tickets[i - 1].created_at).getTime() - new Date(tickets[i].created_at).getTime()) / (24 * 60 * 60 * 1000)
+            (new Date(refillTickets[i - 1].created_at).getTime() - new Date(refillTickets[i].created_at).getTime()) / (24 * 60 * 60 * 1000)
           );
           if (daysBetween <= 14) {
             refillAlerts.push({
               room: key,
-              refill1: tickets[i].ticket_number,
-              refill2: tickets[i - 1].ticket_number,
+              refill1: refillTickets[i].ticket_number,
+              refill2: refillTickets[i - 1].ticket_number,
               days_between: daysBetween,
-              date1: tickets[i].created_at,
-              date2: tickets[i - 1].created_at,
+              date1: refillTickets[i].created_at,
+              date2: refillTickets[i - 1].created_at,
             });
-            break; // Only flag once per room
+            break;
           }
         }
       }

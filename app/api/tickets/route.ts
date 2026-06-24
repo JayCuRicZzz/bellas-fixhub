@@ -199,24 +199,18 @@ export async function POST(req: NextRequest) {
     // --- Duplicate & Aircon Refill Detection ---
     const alerts: string[] = [];
 
-    // (A) Aircon refrigerant refill alert (14 days)
-    // Detect if this ticket is about aircon refill
-    const isAircon = descriptionThai.includes('น้ำยาแอร์') || descriptionThai.includes('เติมน้ำยา') ||
-                     descriptionThai.includes('แอร์ไม่เย็น') || descriptionThai.includes('น้ำยา');
-    const isAirconCategory = category_id >= 1 && category_id <= 3; // HVAC categories
-    if (isAircon || isAirconCategory) {
+    // (A) Aircon refrigerant refill alert (14 days) — ONLY if this ticket is actually about refrigerant
+    const isRefrigerantTicket = descriptionThai.includes('น้ำยา') || descriptionThai.includes('เติมน้ำยา');
+    if (isRefrigerantTicket) {
       const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
       const [refillDupes]: any = await pool.query(
         `SELECT t.ticket_number, t.location_detail, t.created_at
          FROM tickets t
-         JOIN categories c ON t.category_id = c.category_id
          WHERE t.branch_code = ?
            AND t.location_detail = ?
            AND t.ticket_id != ?
            AND t.created_at >= ?
-           AND (c.category_id BETWEEN 1 AND 3
-                OR t.description LIKE '%น้ำยาแอร์%'
-                OR t.description LIKE '%เติมน้ำยา%')
+           AND (t.description LIKE '%น้ำยา%' OR t.description LIKE '%เติมน้ำยา%')
          ORDER BY t.created_at DESC`,
         [branch_code, location_detail, ticketId, fourteenDaysAgo]
       );
