@@ -28,9 +28,12 @@ export default function ReportsPage() {
   const [workTypeFilter, setWorkTypeFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [techData, setTechData] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
+    fetchTechPerformance();
   }, [period, startDate, endDate, deptFilter, workTypeFilter]);
 
   const fetchData = async () => {
@@ -55,6 +58,27 @@ export default function ReportsPage() {
       console.error('Failed to fetch reports:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTechPerformance = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (period === 'custom' && startDate && endDate) {
+        params.set('start_date', startDate);
+        params.set('end_date', endDate);
+      } else {
+        params.set('period', period);
+      }
+      if (deptFilter) params.set('department', deptFilter);
+      if (workTypeFilter) params.set('work_type', workTypeFilter);
+
+      const res = await fetch(`/api/reports/tech-performance?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setTechData(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch tech performance:', err);
     }
   };
 
@@ -239,6 +263,24 @@ export default function ReportsPage() {
         </div>
       )}
 
+      {/* Search input */}
+      <div className="card flex items-center gap-3 no-print">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={lang === 'th' ? 'ค้นหาด้วยเบอร์ห้อง / สถานที่ / ตำแหน่ง...' : 'Search by room / location / position...'}
+          className="input-field py-2 text-sm flex-1"
+        />
+        <button
+          onClick={() => window.print()}
+          className="btn-primary text-sm flex items-center gap-2"
+        >
+          <Printer className="w-4 h-4" />
+          {lang === 'th' ? 'พิมพ์ / PDF' : 'Print / PDF'}
+        </button>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
         {[
@@ -421,6 +463,49 @@ export default function ReportsPage() {
                 <span className="text-sm font-bold text-white">{slaTotal}</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Technician Performance */}
+      {techData.length > 0 && (
+        <div className="card">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-gold-500" />
+            {lang === 'th' ? 'ผลงานช่างรายบุคคล' : 'Technician Performance'}
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-navy-700">
+                  <th className="text-left py-2 text-gray-500 font-medium">{lang === 'th' ? 'ชื่อช่าง' : 'Technician'}</th>
+                  <th className="text-center py-2 text-gray-500 font-medium">{lang === 'th' ? 'รับงาน' : 'Accepted'}</th>
+                  <th className="text-center py-2 text-gray-500 font-medium">{lang === 'th' ? 'ปิดงาน' : 'Closed'}</th>
+                  <th className="text-center py-2 text-gray-500 font-medium">SLA</th>
+                  <th className="text-center py-2 text-gray-500 font-medium">{lang === 'th' ? 'ค้าง' : 'Backlog'}</th>
+                  <th className="text-center py-2 text-gray-500 font-medium">⭐</th>
+                </tr>
+              </thead>
+              <tbody>
+                {techData.map((tech: any) => (
+                  <tr key={tech.user_id} className="border-b border-navy-700/50 hover:bg-navy-800/30 transition-colors">
+                    <td className="py-2.5 text-white font-medium">
+                      <span className="mr-2">👤</span>{tech.full_name}
+                      <span className="text-xs text-gray-500 ml-2">({lang === 'th' ? (tech.department === 'IT' ? 'ไอที' : 'ช่าง') : tech.department})</span>
+                    </td>
+                    <td className="py-2.5 text-center text-blue-400 font-medium">{tech.accepted || 0}</td>
+                    <td className="py-2.5 text-center text-green-400 font-medium">{tech.completed || 0}</td>
+                    <td className={`py-2.5 text-center font-medium ${tech.sla_percent >= 80 ? 'text-green-400' : tech.sla_percent >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {tech.sla_percent != null ? `${tech.sla_percent}%` : '-'}
+                    </td>
+                    <td className="py-2.5 text-center text-orange-400 font-medium">{tech.backlog || 0}</td>
+                    <td className="py-2.5 text-center text-gold-400 font-medium">
+                      {tech.avg_rating ? `${tech.avg_rating}/5` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
