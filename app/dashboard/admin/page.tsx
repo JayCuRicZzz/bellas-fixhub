@@ -262,7 +262,7 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t.admin.username} *</label>
                 <input
@@ -272,6 +272,8 @@ export default function AdminPage() {
                   className="input-field"
                   required
                   placeholder="username"
+                  autoComplete="off"
+                  name="fixhub-new-username"
                 />
               </div>
               <div>
@@ -284,6 +286,8 @@ export default function AdminPage() {
                   onChange={e => setFormPassword(e.target.value)}
                   className="input-field"
                   minLength={6}
+                  autoComplete="new-password"
+                  name="fixhub-new-password"
                   placeholder={editingUser ? t.admin.leaveEmpty : 'อย่างน้อย 6 ตัวอักษร'}
                 />
               </div>

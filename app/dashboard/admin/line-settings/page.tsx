@@ -22,6 +22,26 @@ export default function LineSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [testing, setTesting] = useState<'' | 'MAINT' | 'IT'>('');
+  const [testMsg, setTestMsg] = useState('');
+
+  const handleTest = async (group: 'MAINT' | 'IT') => {
+    setTesting(group); setTestMsg(''); setError('');
+    try {
+      const res = await fetch('/api/admin/line-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'test', group }),
+      });
+      const d = await res.json();
+      if (res.ok && d.success) setTestMsg(lang === 'th' ? `ส่งข้อความทดสอบไปกลุ่ม${group === 'IT' ? 'ไอที' : 'ช่าง'}แล้ว ✅` : `Test message sent to ${group} group ✅`);
+      else setError(d.error || (d.result && JSON.stringify(d.result)) || 'ส่งไม่สำเร็จ');
+    } catch {
+      setError(lang === 'th' ? 'เกิดข้อผิดพลาด' : 'Connection error');
+    } finally {
+      setTesting('');
+    }
+  };
 
   // Only admin/GM can access
   useEffect(() => {
@@ -118,10 +138,25 @@ export default function LineSettingsPage() {
           </div>
         )}
 
-        <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {lang === 'th' ? 'บันทึก' : 'Save Settings'}
-        </button>
+        {testMsg && (
+          <div className="bg-green-900/30 border border-green-700 text-green-300 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />{testMsg}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {lang === 'th' ? 'บันทึก' : 'Save Settings'}
+          </button>
+          <button type="button" disabled={!!testing} onClick={() => handleTest('MAINT')} className="btn-secondary flex items-center gap-2">
+            {testing === 'MAINT' ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔧'} {lang === 'th' ? 'ทดสอบส่งกลุ่มช่าง' : 'Test Maintenance group'}
+          </button>
+          <button type="button" disabled={!!testing} onClick={() => handleTest('IT')} className="btn-secondary flex items-center gap-2">
+            {testing === 'IT' ? <Loader2 className="w-4 h-4 animate-spin" /> : '💻'} {lang === 'th' ? 'ทดสอบส่งกลุ่มไอที' : 'Test IT group'}
+          </button>
+        </div>
+        <p className="text-xs text-gray-500">{lang === 'th' ? 'กด "บันทึก" ก่อนทดสอบ หากเพิ่งเปลี่ยนค่า' : 'Save first if you just changed values.'}</p>
       </form>
     </div>
   );
