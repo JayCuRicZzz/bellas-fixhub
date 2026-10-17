@@ -1,5 +1,4 @@
 'use client';
-// NETLIFY-MARKER-v4
 
 import { useAuth } from '../../components/authprovider';
 import Navbar from '../../components/navbar';

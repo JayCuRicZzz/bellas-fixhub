@@ -1,17 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import pool from '../../../lib/db';
+import { NextResponse } from 'next/server';
+import sql from '../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const [rows]: any = await pool.query('SELECT priority, sla_minutes FROM sla_config');
+    const rows = await sql`select priority, sla_minutes from fixhub.sla_config`;
     const slaMap: Record<string, { sla_hours: number; sla_minutes: number }> = {};
     for (const row of rows) {
-      slaMap[row.priority] = {
-        sla_hours: Math.floor(row.sla_minutes / 60),
-        sla_minutes: row.sla_minutes,
-      };
+      slaMap[row.priority] = { sla_hours: Math.floor(row.sla_minutes / 60), sla_minutes: row.sla_minutes };
     }
     return NextResponse.json(slaMap);
   } catch (err: any) {

@@ -1,55 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '../../../../lib/db';
-import { getUserFromRequest, getUserBranches } from '../../../../lib/auth';
+import sql from '../../../../lib/db';
+import { getUserFromRequest } from '../../../../lib/auth';
+import { buildReportScope } from '../../../../lib/report-filters';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
-  if (!user || !['admin', 'gm'].includes(user.role)) {
+  const user = await getUserFromRequest(req);
+  if (!user || !['admin', 'gm', 'sup', 'supit'].includes(user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const userId = user.user_id as number;
-    const userBranches = await getUserBranches(userId, user.role);
     const { searchParams } = new URL(req.url);
-    const workType = searchParams.get('work_type') || '';
+    if (!searchParams.get('period') && !searchParams.get('start_date')) searchParams.set('period', 'all');
+    const scope = await buildReportScope(user, searchParams);
 
-    let branchClause = '', workJoin = '', workClause = '';
-    const params: any[] = [];
-    if (userBranches.length > 0) {
-      branchClause = `AND t.branch_code IN (${userBranches.map(() => '?').join(',')})`;
-      params.push(...userBranches);
-    }
-    if (workType) {
-      workJoin = 'JOIN categories c ON t.category_id = c.category_id';
-      workClause = 'AND c.dept_type = ?';
-      params.push(workType);
-    }
+    const rows = await sql`
+      select coalesce(p.full_name, p.username, 'Unknown') as technician_name,
+             p.user_id as technician_id,
+             p.department,
+             count(*)::int as total_work,
+             count(*) filter (where t.status = 'APPROVED')::int as approved_count,
+             round(avg(t.kpi_rating)::numeric, 2) as avg_kpi,
+             count(*) filter (where t.difficulty = 'easy')::int as easy_count,
+             count(*) filter (where t.difficulty = 'medium')::int as medium_count,
+             count(*) filter (where t.difficulty = 'hard')::int as hard_count,
+             count(*) filter (where t.difficulty = 'very_hard')::int as very_hard_count,
+             round(avg(t.sla_minutes)::numeric, 0) as avg_sla_minutes,
+             count(*) filter (where t.sla_minutes is not null and t.resolved_at <= t.sla_deadline)::int as on_time_count,
+             count(*) filter (where t.sla_minutes is not null and t.resolved_at >  t.sla_deadline)::int as overdue_count
+      from fixhub.tickets_full t
+      left join fixhub.profiles p on p.user_id = t.resolved_by
+      where t.resolved_by is not null and ${scope.whereFrag}
+      group by p.user_id, p.full_name, p.username, p.department
+      order by total_work desc`;
 
-    // Per-technician stats
-    const [rows]: any = await pool.query(
-      `SELECT 
-         COALESCE(tu.full_name, tu.username, 'Unknown') as technician_name,
-         tu.user_id as technician_id,
-         COUNT(*) as total_work,
-         SUM(CASE WHEN t.status = 'APPROVED' THEN 1 ELSE 0 END) as approved_count,
-         AVG(t.kpi_rating) as avg_kpi,
-         SUM(CASE WHEN t.difficulty = 'easy' THEN 1 ELSE 0 END) as easy_count,
-         SUM(CASE WHEN t.difficulty = 'medium' THEN 1 ELSE 0 END) as medium_count,
-         SUM(CASE WHEN t.difficulty = 'hard' THEN 1 ELSE 0 END) as hard_count,
-         SUM(CASE WHEN t.difficulty = 'very_hard' THEN 1 ELSE 0 END) as very_hard_count,
-         AVG(t.sla_minutes) as avg_sla_minutes,
-         SUM(CASE WHEN t.sla_minutes IS NOT NULL AND t.resolved_at <= t.sla_deadline THEN 1 ELSE 0 END) as on_time_count,
-         SUM(CASE WHEN t.sla_minutes IS NOT NULL AND t.resolved_at > t.sla_deadline THEN 1 ELSE 0 END) as overdue_count
-       FROM tickets t ${workJoin}
-       LEFT JOIN users tu ON t.resolved_by = tu.user_id
-       WHERE t.resolved_by IS NOT NULL ${branchClause} ${workClause}
-       GROUP BY tu.user_id, tu.full_name, tu.username
-       ORDER BY total_work DESC`,
-      params
-    );
-
-    return NextResponse.json(rows);
+    return NextResponse.json(rows.map((r: any) => ({
+      ...r,
+      avg_kpi: r.avg_kpi === null ? null : Number(r.avg_kpi),
+      avg_sla_minutes: r.avg_sla_minutes === null ? null : Number(r.avg_sla_minutes),
+    })));
   } catch (err: any) {
     console.error('[Perf Report] Error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });

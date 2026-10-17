@@ -1,289 +1,202 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '../../../../lib/db';
-import { getUserFromRequest } from '../../../../lib/auth';
+import sql from '../../../../lib/db';
+import { getUserFromRequest, getUserBranches, canApproveTicket, canManageTicket, isReporterRole } from '../../../../lib/auth';
+import { sendLineMessage } from '../../../../lib/line';
+import { User } from '../../../../types';
 
-async function logActivity(pool: any, ticketId: string, action: string, oldStatus: string, newStatus: string, userId: number, userName: string, reason?: string) {
+export const dynamic = 'force-dynamic';
+
+const VALID_DIFFICULTY = ['easy', 'medium', 'hard', 'very_hard'];
+
+async function logActivity(ticketId: number, action: string, oldStatus: string | null, newStatus: string | null, user: User, reason?: string | null) {
   try {
-    await pool.query(
-      `INSERT INTO ticket_activity_log (ticket_id, action, old_status, new_status, action_by, action_by_name, reason) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [ticketId, action, oldStatus, newStatus, userId, userName, reason || null]
-    );
+    await sql`
+      insert into fixhub.ticket_activity_log (ticket_id, action, old_status, new_status, action_by, action_by_name, reason)
+      values (${ticketId}, ${action}, ${oldStatus}, ${newStatus}, ${user.id}, ${user.full_name || user.username}, ${reason || null})`;
   } catch (e: any) {
     console.error('[Activity Log] Failed:', e.message);
   }
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const user = getUserFromRequest(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+async function loadTicket(ticketId: number) {
+  const rows = await sql`select * from fixhub.tickets_full where ticket_id = ${ticketId}`;
+  return rows[0] || null;
+}
+
+async function canSeeTicket(user: User, ticket: any): Promise<boolean> {
+  const branches = await getUserBranches(user.id, user.role);
+  return branches.includes(ticket.branch_code);
+}
+
+function parseId(id: string): number | null {
+  const n = parseInt(id, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const ticketId = parseId(params.id);
+  if (!ticketId) return NextResponse.json({ error: 'ไม่พบใบงาน' }, { status: 404 });
 
   try {
-    const [rows]: any = await pool.query(
-      `SELECT t.*, c.main_th, c.sub_th, c.dept_type,
-              u.full_name as reporter_name,
-              tu.full_name as technician_name,
-              au.full_name as accepted_by_name,
-              ru.full_name as resolved_by_name,
-              apu.full_name as approved_by_name
-       FROM tickets t
-       JOIN categories c ON t.category_id = c.category_id
-       LEFT JOIN users u ON t.reporter_id = u.user_id
-       LEFT JOIN users tu ON t.technician_id = tu.user_id
-       LEFT JOIN users au ON t.accepted_by = au.user_id
-       LEFT JOIN users ru ON t.resolved_by = ru.user_id
-       LEFT JOIN users apu ON t.approved_by = apu.user_id
-       WHERE t.ticket_id = ?`,
-      [params.id]
-    );
+    const ticket = await loadTicket(ticketId);
+    if (!ticket) return NextResponse.json({ error: 'ไม่พบใบงาน' }, { status: 404 });
+    if (!(await canSeeTicket(user, ticket))) return NextResponse.json({ error: 'ไม่มีสิทธิ์ดูใบงานนี้' }, { status: 403 });
 
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'ไม่พบใบงาน' }, { status: 404 });
-    }
-
-    // Calculate SLA status
-    const ticket = rows[0];
-    if (ticket.sla_deadline) {
-      const now = new Date();
-      const deadline = new Date(ticket.sla_deadline);
-      ticket.sla_overdue = ticket.status !== 'APPROVED' && ticket.status !== 'CANCELLED' && now > deadline;
-    }
-
+    const images = await sql`select image_url, image_type from fixhub.ticket_images where ticket_id = ${ticketId} order by uploaded_at`;
+    ticket.images = images.map((i: any) => i.image_url);
+    ticket.image_url = ticket.images[0] || null;
     return NextResponse.json(ticket);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-async function getSlaDeadline(priority: string): Promise<Date | null> {
-  try {
-    const [rows]: any = await pool.query(
-      'SELECT sla_minutes FROM sla_config WHERE priority = ? LIMIT 1',
-      [priority]
-    );
-    if (rows.length > 0 && rows[0].sla_minutes) {
-      const d = new Date();
-      d.setMinutes(d.getMinutes() + rows[0].sla_minutes);
-      return d;
-    }
-  } catch (e) { /* ignore */ }
-  return null;
-}
-
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const user = getUserFromRequest(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const ticketId = parseId(params.id);
+  if (!ticketId) return NextResponse.json({ error: 'ไม่พบใบงาน' }, { status: 404 });
 
   try {
     const body = await req.json();
     const { status, pending_reason, kpi_rating, difficulty, paused_reason, paused_expected_end } = body;
-    const ticketId = params.id;
-    const userId = user.user_id || user.id;
+    const userId = user.id;
 
-    // Get current ticket for SLA calculations
-    const [currentRows]: any = await pool.query(
-      'SELECT * FROM tickets WHERE ticket_id = ?',
-      [ticketId]
-    );
+    const current = await loadTicket(ticketId);
+    if (!current) return NextResponse.json({ error: 'ไม่พบใบงาน' }, { status: 404 });
+    if (!(await canSeeTicket(user, current))) return NextResponse.json({ error: 'ไม่มีสิทธิ์แก้ไขใบงานนี้' }, { status: 403 });
 
-    if (currentRows.length === 0) {
-      return NextResponse.json({ error: 'ไม่พบใบงาน' }, { status: 404 });
-    }
-
-    const currentTicket = currentRows[0];
+    const isSupervisor = canApproveTicket(user.role);           // sup, supit, admin, gm
+    const isWorker = canManageTicket(user.role);                // tech, it, sup, supit, admin, gm
+    const isReporter = current.reporter_id === userId || isReporterRole(user.role);
     let slaInfo: any = null;
+    const actor = user.full_name || user.username;
 
     if (status === 'ACCEPTED') {
-      // GM cannot accept work
-      if (user.role === 'gm') {
-        return NextResponse.json({ error: 'GM ไม่สามารถรับงานได้' }, { status: 403 });
+      if (user.role === 'gm') return NextResponse.json({ error: 'GM ไม่สามารถรับงานได้' }, { status: 403 });
+      if (!isWorker) return NextResponse.json({ error: 'เฉพาะช่าง/ไอทีเท่านั้นที่รับงานได้' }, { status: 403 });
+      if (!['PENDING', 'ACCEPTED'].includes(current.status)) {
+        return NextResponse.json({ error: 'ใบงานนี้ถูกรับไปแล้ว' }, { status: 409 });
       }
-      // Calculate SLA deadline based on priority and sla_config
-      const priority = currentTicket.priority || 'medium';
-      const slaDeadline = await getSlaDeadline(priority);
+      const sla = await sql`select sla_minutes from fixhub.sla_config where priority = ${current.priority || 'medium'}`;
+      const slaMinutes: number = sla[0]?.sla_minutes || 480;
+      await sql`
+        update fixhub.tickets set status = 'IN_PROGRESS', technician_id = ${userId},
+          accepted_at = now(), accepted_by = ${userId},
+          sla_deadline = now() + make_interval(mins => ${slaMinutes}),
+          pending_reason = null
+        where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'ACCEPTED', current.status, 'IN_PROGRESS', user);
+      slaInfo = { accepted_by: userId, sla_minutes_target: slaMinutes };
 
-      await pool.query(
-        `UPDATE tickets SET status = 'IN_PROGRESS', technician_id = ?,
-         accepted_at = NOW(), accepted_by = ?,
-         sla_deadline = ?
-         WHERE ticket_id = ?`,
-        [userId, userId, slaDeadline, ticketId]
-      );
-      await logActivity(pool, ticketId, 'ACCEPTED', currentTicket.status, 'IN_PROGRESS', userId, user.full_name || user.username);
-
-      slaInfo = {
-        accepted_by: userId,
-        sla_deadline: slaDeadline,
-      };
-
-    } else if (status === 'IN_PROGRESS') {
-      await pool.query(
-        `UPDATE tickets SET status = ?, technician_id = COALESCE(technician_id, ?),
-         accepted_at = COALESCE(accepted_at, NOW()),
-         accepted_by = COALESCE(accepted_by, ?)
-         WHERE ticket_id = ?`,
-        [status, userId, userId, ticketId]
-      );
-      await logActivity(pool, ticketId, 'START', currentTicket.status, 'IN_PROGRESS', userId, user.full_name || user.username);
-
-    } else if (status === 'RESOLVED') {
-      // Calculate sla_minutes before update (NOW() changes)
-      let slaMinutes = null;
-      if (currentTicket.accepted_at) {
-        const [result]: any = await pool.query(
-          'SELECT TIMESTAMPDIFF(MINUTE, ?, NOW()) as minutes',
-          [currentTicket.accepted_at]
-        );
-        slaMinutes = result[0]?.minutes ?? null;
-      }
-
-      await pool.query(
-        `UPDATE tickets SET status = ?, pending_reason = ?,
-         resolved_at = NOW(), resolved_by = ?,
-         sla_minutes = ?
-         WHERE ticket_id = ?`,
-        [status, pending_reason || null, userId, slaMinutes, ticketId]
-      );
-      await logActivity(pool, ticketId, 'RESOLVED', currentTicket.status, 'RESOLVED', userId, user.full_name || user.username);
-
-      slaInfo = {
-        resolved_by: userId,
-        sla_minutes: slaMinutes,
-      };
-
-    } else if (status === 'APPROVED') {
-      // Save difficulty if provided (supervisor sets during approval)
-      if (difficulty && ['sup','supit','admin','gm'].includes(user.role)) {
-        await pool.query('UPDATE tickets SET difficulty = ? WHERE ticket_id = ?', [difficulty, ticketId]);
-      }
-
-      await pool.query(
-        `UPDATE tickets SET status = ?, approved_at = NOW(), approved_by = ?
-         WHERE ticket_id = ?`,
-        [status, userId, ticketId]
-      );
-      await logActivity(pool, ticketId, 'APPROVED', currentTicket.status, 'APPROVED', userId, user.full_name || user.username);
-
-      slaInfo = {
-        approved_by: userId,
-        difficulty: difficulty || null,
-      };
-
-    } else if (status === 'REJECTED') {
-      // Supervisor rejects → send back to technician
-      await pool.query(
-        `UPDATE tickets SET status = 'PENDING', pending_reason = ?, technician_id = NULL
-         WHERE ticket_id = ?`,
-        [pending_reason || 'หัวหน้าปฏิเสธงาน กรุณาดำเนินการใหม่', ticketId]
-      );
-      await logActivity(pool, ticketId, 'REJECTED', currentTicket.status, 'PENDING', userId, user.full_name || user.username, pending_reason || 'หัวหน้าตีกลับ');
-
-      slaInfo = { rejected_by: userId, reason: pending_reason };
-    } else if (status === 'FLAGGED') {
-      // Reporter flags unsatisfactory work → notify supervisor
-      await pool.query(
-        `UPDATE tickets SET status = 'PENDING', pending_reason = ?
-         WHERE ticket_id = ?`,
-        [pending_reason || 'ผู้แจ้งแจ้งว่างานยังไม่เรียบร้อย', ticketId]
-      );
-      await logActivity(pool, ticketId, 'FLAGGED', currentTicket.status, 'PENDING', userId, user.full_name || user.username, pending_reason || 'งานไม่เรียบร้อย (ธงแดง)');
-
-      slaInfo = { flagged_by: userId, reason: pending_reason };
-
-    } else if (status === 'CANCELLED') {
-      await pool.query(
-        'UPDATE tickets SET status = ? WHERE ticket_id = ?',
-        [status, ticketId]
-      );
-      await logActivity(pool, ticketId, 'CANCELLED', currentTicket.status, 'CANCELLED', userId, user.full_name || user.username);
-
-    } else if (status === 'PAUSED') {
-      // Technician pauses work — requires reason + expected end date
-      if (!paused_reason) {
-        return NextResponse.json({ error: 'กรุณาระบุเหตุผลที่พักงาน' }, { status: 400 });
-      }
-      if (!paused_expected_end) {
-        return NextResponse.json({ error: 'กรุณาระบุวันที่คาดว่าจะเสร็จ' }, { status: 400 });
-      }
-      await pool.query(
-        `UPDATE tickets SET status = 'PAUSED', paused_reason = ?, paused_at = NOW(), paused_expected_end = ?
-         WHERE ticket_id = ?`,
-        [paused_reason, paused_expected_end, ticketId]
-      );
-      await logActivity(pool, ticketId, 'PAUSED', currentTicket.status, 'PAUSED', userId, user.full_name || user.username, paused_reason);
-
-      slaInfo = { paused_by: userId, reason: paused_reason, expected_end: paused_expected_end };
-
-    } else if (status === 'IN_PROGRESS' && currentTicket.status === 'PAUSED') {
-      // Resume from paused → back to IN_PROGRESS
-      await pool.query(
-        `UPDATE tickets SET status = 'IN_PROGRESS', paused_reason = NULL, paused_expected_end = NULL
-         WHERE ticket_id = ?`,
-        [ticketId]
-      );
-      await logActivity(pool, ticketId, 'RESUME', 'PAUSED', 'IN_PROGRESS', userId, user.full_name || user.username);
-
+    } else if (status === 'IN_PROGRESS' && current.status === 'PAUSED') {
+      if (!isWorker) return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });
+      await sql`
+        update fixhub.tickets set status = 'IN_PROGRESS', paused_reason = null, paused_expected_end = null
+        where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'RESUME', 'PAUSED', 'IN_PROGRESS', user);
       slaInfo = { resumed_by: userId };
 
+    } else if (status === 'IN_PROGRESS') {
+      if (!isWorker) return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });
+      await sql`
+        update fixhub.tickets set status = 'IN_PROGRESS',
+          technician_id = coalesce(technician_id, ${userId}),
+          accepted_at = coalesce(accepted_at, now()),
+          accepted_by = coalesce(accepted_by, ${userId})
+        where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'START', current.status, 'IN_PROGRESS', user);
+
+    } else if (status === 'RESOLVED') {
+      if (!isWorker) return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });
+      const [row] = await sql`
+        update fixhub.tickets set status = 'RESOLVED', pending_reason = ${pending_reason || null},
+          resolved_at = now(), resolved_by = ${userId},
+          technician_id = coalesce(technician_id, ${userId}),
+          sla_minutes = case when accepted_at is not null
+                             then greatest(0, floor(extract(epoch from (now() - accepted_at)) / 60))::int
+                             else null end
+        where ticket_id = ${ticketId}
+        returning sla_minutes`;
+      await logActivity(ticketId, 'RESOLVED', current.status, 'RESOLVED', user, pending_reason);
+      slaInfo = { resolved_by: userId, sla_minutes: row?.sla_minutes ?? null };
+      sendLineMessage(`✅ งานเสร็จแล้ว รอหัวหน้าตรวจ\n🔢 ${current.ticket_number}\n🏨 ${current.branch_code} 📍 ${current.location_detail}\n👷 ${actor}`, current.dept_type).catch(() => {});
+
+    } else if (status === 'APPROVED') {
+      if (!isSupervisor) return NextResponse.json({ error: 'เฉพาะหัวหน้าเท่านั้นที่อนุมัติได้' }, { status: 403 });
+      const diff = VALID_DIFFICULTY.includes(difficulty) ? difficulty : null;
+      await sql`
+        update fixhub.tickets set status = 'APPROVED', approved_at = now(), approved_by = ${userId},
+          difficulty = coalesce(${diff}, difficulty)
+        where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'APPROVED', current.status, 'APPROVED', user);
+      slaInfo = { approved_by: userId, difficulty: diff };
+
+    } else if (status === 'REJECTED') {
+      if (!isSupervisor) return NextResponse.json({ error: 'เฉพาะหัวหน้าเท่านั้นที่ตีกลับได้' }, { status: 403 });
+      const reason = pending_reason || 'หัวหน้าปฏิเสธงาน กรุณาดำเนินการใหม่';
+      await sql`
+        update fixhub.tickets set status = 'PENDING', pending_reason = ${reason}, technician_id = null,
+          resolved_at = null, resolved_by = null
+        where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'REJECTED', current.status, 'PENDING', user, reason);
+      slaInfo = { rejected_by: userId, reason };
+      sendLineMessage(`↩️ งานถูกตีกลับ\n🔢 ${current.ticket_number}\n📍 ${current.location_detail}\n📝 ${reason}\n👔 ${actor}`, current.dept_type).catch(() => {});
+
+    } else if (status === 'FLAGGED') {
+      if (!(isReporter || isSupervisor)) return NextResponse.json({ error: 'เฉพาะผู้แจ้งหรือหัวหน้าเท่านั้น' }, { status: 403 });
+      const reason = pending_reason || 'ผู้แจ้งแจ้งว่างานยังไม่เรียบร้อย';
+      await sql`
+        update fixhub.tickets set status = 'PENDING', pending_reason = ${reason}
+        where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'FLAGGED', current.status, 'PENDING', user, reason);
+      slaInfo = { flagged_by: userId, reason };
+      sendLineMessage(`🚩 งานไม่เรียบร้อย — แจ้งโดยผู้แจ้ง\n🔢 ${current.ticket_number}\n📍 ${current.location_detail}\n📝 ${reason}`, current.dept_type).catch(() => {});
+
+    } else if (status === 'CANCELLED') {
+      if (!(isReporter || isWorker)) return NextResponse.json({ error: 'ไม่มีสิทธิ์ยกเลิกใบงานนี้' }, { status: 403 });
+      await sql`update fixhub.tickets set status = 'CANCELLED', pending_reason = ${pending_reason || null} where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'CANCELLED', current.status, 'CANCELLED', user, pending_reason);
+
+    } else if (status === 'PAUSED') {
+      if (!isWorker) return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });
+      if (!paused_reason) return NextResponse.json({ error: 'กรุณาระบุเหตุผลที่พักงาน' }, { status: 400 });
+      if (!paused_expected_end) return NextResponse.json({ error: 'กรุณาระบุวันที่คาดว่าจะเสร็จ' }, { status: 400 });
+      await sql`
+        update fixhub.tickets set status = 'PAUSED', paused_reason = ${paused_reason}, paused_at = now(),
+          paused_expected_end = ${new Date(paused_expected_end)}
+        where ticket_id = ${ticketId}`;
+      await logActivity(ticketId, 'PAUSED', current.status, 'PAUSED', user, paused_reason);
+      slaInfo = { paused_by: userId, reason: paused_reason, expected_end: paused_expected_end };
+
+    } else if (status) {
+      return NextResponse.json({ error: `สถานะไม่ถูกต้อง: ${status}` }, { status: 400 });
+
     } else {
-      // Difficulty update (supervisor only)
-      const supervisorRoles = ['sup', 'supit', 'admin', 'gm'];
-      if (difficulty !== undefined && supervisorRoles.includes(user.role)) {
-        await pool.query(
-          'UPDATE tickets SET difficulty = ? WHERE ticket_id = ?',
-          [difficulty, ticketId]
-        );
+      // no status change: difficulty (supervisor) and/or KPI rating (reporter or supervisor)
+      let touched = false;
+      if (difficulty !== undefined) {
+        if (!isSupervisor) return NextResponse.json({ error: 'เฉพาะหัวหน้าเท่านั้นที่กำหนดระดับความยากได้' }, { status: 403 });
+        if (!VALID_DIFFICULTY.includes(difficulty)) return NextResponse.json({ error: 'ระดับความยากไม่ถูกต้อง' }, { status: 400 });
+        await sql`update fixhub.tickets set difficulty = ${difficulty} where ticket_id = ${ticketId}`;
+        await logActivity(ticketId, 'DIFFICULTY', current.status, current.status, user, `ระดับความยาก: ${difficulty}`);
+        touched = true;
       }
-      // KPI rating — reporter or supervisor can rate
-      if (kpi_rating !== undefined && !status) {
-        const canRateKpi = currentTicket.reporter_id === userId || ['sup','supit','admin','gm'].includes(user.role);
-        if (!canRateKpi) {
-          return NextResponse.json({ error: 'เฉพาะผู้แจ้งหรือหัวหน้าเท่านั้นที่ให้คะแนนได้' }, { status: 403 });
-        }
-        await pool.query(
-          'UPDATE tickets SET kpi_rating = ? WHERE ticket_id = ?',
-          [kpi_rating, ticketId]
-        );
-        await logActivity(pool, ticketId, 'RATED', currentTicket.status, currentTicket.status, userId, user.full_name || user.username, `ให้คะแนน ${kpi_rating} ดาว`);
-      } else if (!difficulty && status) {
-        await pool.query(
-          'UPDATE tickets SET status = ? WHERE ticket_id = ?',
-          [status, ticketId]
-        );
+      if (kpi_rating !== undefined) {
+        if (!(isReporter || isSupervisor)) return NextResponse.json({ error: 'เฉพาะผู้แจ้งหรือหัวหน้าเท่านั้นที่ให้คะแนนได้' }, { status: 403 });
+        const rating = parseInt(kpi_rating, 10);
+        if (!(rating >= 1 && rating <= 5)) return NextResponse.json({ error: 'คะแนนต้องอยู่ระหว่าง 1-5' }, { status: 400 });
+        await sql`update fixhub.tickets set kpi_rating = ${rating} where ticket_id = ${ticketId}`;
+        await logActivity(ticketId, 'RATED', current.status, current.status, user, `ให้คะแนน ${rating} ดาว`);
+        touched = true;
       }
+      if (!touched) return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องอัปเดต' }, { status: 400 });
     }
 
-    // Fetch updated ticket with SLA info
-    const [updatedRows]: any = await pool.query(
-      `SELECT t.*, c.main_th, c.sub_th, c.dept_type
-       FROM tickets t
-       JOIN categories c ON t.category_id = c.category_id
-       WHERE t.ticket_id = ?`,
-      [ticketId]
-    );
-
-    const ticket = updatedRows[0];
-    if (ticket && ticket.sla_deadline) {
-      const now = new Date();
-      const deadline = new Date(ticket.sla_deadline);
-      ticket.sla_overdue = ticket.status !== 'APPROVED' && ticket.status !== 'CANCELLED' && now > deadline;
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'อัปเดตสถานะสำเร็จ',
-      ticket,
-      sla: slaInfo,
-    });
+    const ticket = await loadTicket(ticketId);
+    return NextResponse.json({ success: true, message: 'อัปเดตสถานะสำเร็จ', ticket, sla: slaInfo });
   } catch (err: any) {
     console.error('[Tickets] Update error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });

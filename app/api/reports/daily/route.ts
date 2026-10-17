@@ -1,108 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '../../../../lib/db';
-import { getUserFromRequest, getUserBranches } from '../../../../lib/auth';
+import sql from '../../../../lib/db';
+import { getUserFromRequest } from '../../../../lib/auth';
+import { buildReportScope } from '../../../../lib/report-filters';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const userId = user.user_id || user.id;
-    const userBranches = await getUserBranches(userId, user.role);
     const { searchParams } = new URL(req.url);
-    const startDate = searchParams.get('start_date');
-    const endDate = searchParams.get('end_date');
-    const department = searchParams.get('department') || '';
-    const workType = searchParams.get('work_type') || '';
+    const scope = await buildReportScope(user, searchParams);
 
-    let dateCondition: string;
-    if (startDate && endDate) {
-      dateCondition = `DATE(t.created_at) BETWEEN ? AND ?`;
-    } else {
-      const period = searchParams.get('period') || 'today';
-      if (period === 'week') dateCondition = 'DATE(t.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
-      else if (period === 'month') dateCondition = 'DATE(t.created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
-      else if (period === 'all') dateCondition = '1=1';
-      else dateCondition = 'DATE(t.created_at) = CURDATE()';
-    }
+    const [summary] = await sql`
+      select count(*)::int as total,
+             count(*) filter (where t.status = 'PENDING')::int as pending,
+             count(*) filter (where t.status in ('ACCEPTED','IN_PROGRESS','PAUSED'))::int as in_progress,
+             count(*) filter (where t.status = 'RESOLVED')::int as resolved,
+             count(*) filter (where t.status = 'APPROVED')::int as completed,
+             count(*) filter (where t.status = 'CANCELLED')::int as cancelled,
+             count(*) filter (where t.sla_deadline is not null)::int as sla_total,
+             count(*) filter (where t.status = 'APPROVED' and t.resolved_at <= t.sla_deadline)::int as sla_on_time,
+             count(*) filter (where t.status = 'APPROVED' and t.resolved_at >  t.sla_deadline)::int as sla_overdue,
+             count(*) filter (where t.status not in ('APPROVED','CANCELLED') and t.sla_deadline < now())::int as overdue_open
+      from fixhub.tickets_full t
+      where ${scope.whereFrag}`;
 
-    // Auto-filter by department for non-supervisor users
-    let autoDept = department;
-    const supervisorRoles = ['admin', 'gm'];
-    if (!supervisorRoles.includes(user.role)) {
-      const deptByRole: Record<string, string> = {
-        'tech': 'MAINT',
-        'sup': 'MAINT',
-        'it': 'IT',
-        'supit': 'IT',
-        'front': 'MAINT',
-        'house': 'MAINT',
-      };
-      autoDept = department || user.department || deptByRole[user.role] || '';
-    }
+    const byDept = await sql`
+      select case coalesce(t.reporter_department,'MAINT') when 'MAINT' then 'MAINTENANCE' else t.reporter_department end as name,
+             count(*)::int as count
+      from fixhub.tickets_full t where ${scope.whereFrag}
+      group by 1 order by count desc`;
 
-    // Build WHERE clauses
-    let branchClause = '', deptClause = '', workJoin = '', workClause = '';
-    const params: any[] = [];
+    const byBranch = await sql`
+      select t.branch_code as name, count(*)::int as count
+      from fixhub.tickets_full t where ${scope.whereFrag}
+      group by 1 order by count desc`;
 
-    if (startDate && endDate) { params.push(startDate); params.push(endDate); }
+    const byStatus = await sql`
+      select t.status as name, count(*)::int as count
+      from fixhub.tickets_full t where ${scope.whereFrag}
+      group by 1 order by count desc`;
 
-    if (userBranches.length > 0) {
-      branchClause = `AND t.branch_code IN (${userBranches.map(() => '?').join(',')})`;
-      params.push(...userBranches);
-    }
-    if (autoDept && (autoDept === 'MAINT' || autoDept === 'IT')) {
-      deptClause = 'AND t.reporter_department = ?';
-      params.push(autoDept);
-    }
-    if (workType) {
-      workJoin = 'JOIN categories c ON t.category_id = c.category_id';
-      workClause = 'AND c.dept_type = ?';
-      params.push(workType);
-    }
+    const byCategory = await sql`
+      select t.main_th as name, t.dept_type, count(*)::int as count
+      from fixhub.tickets_full t where ${scope.whereFrag}
+      group by 1, 2 order by count desc limit 10`;
 
-    const baseWhere = `${dateCondition} ${branchClause} ${deptClause} ${workClause}`;
-
-    // Total
-    const [totalResult]: any = await pool.query(
-      `SELECT COUNT(*) as cnt FROM tickets t ${workJoin} WHERE ${baseWhere}`, params
-    );
-    const [completedResult]: any = await pool.query(
-      `SELECT COUNT(*) as cnt FROM tickets t ${workJoin} WHERE ${dateCondition} AND t.status='APPROVED' ${branchClause} ${deptClause} ${workClause}`, params
-    );
-    const [pendingResult]: any = await pool.query(
-      `SELECT COUNT(*) as cnt FROM tickets t ${workJoin} WHERE ${dateCondition} AND t.status='PENDING' ${branchClause} ${deptClause} ${workClause}`, params
-    );
-    const [inProgressResult]: any = await pool.query(
-      `SELECT COUNT(*) as cnt FROM tickets t ${workJoin} WHERE ${dateCondition} AND t.status IN ('ACCEPTED','IN_PROGRESS') ${branchClause} ${deptClause} ${workClause}`, params
-    );
-    const [resolvedResult]: any = await pool.query(
-      `SELECT COUNT(*) as cnt FROM tickets t ${workJoin} WHERE ${dateCondition} AND t.status='RESOLVED' ${branchClause} ${deptClause} ${workClause}`, params
-    );
-    const [byDept]: any = await pool.query(
-      `SELECT COALESCE(t.reporter_department,'MAINT') as name, COUNT(*) as count FROM tickets t ${workJoin} WHERE ${baseWhere} GROUP BY t.reporter_department ORDER BY count DESC`, params
-    );
-    // Normalize dept names: MAINT→MAINTENANCE to match frontend DEPARTMENTS
-    const normalizedByDept = byDept.map((d: any) => ({
-      ...d,
-      name: d.name === 'MAINT' ? 'MAINTENANCE' : d.name,
-    }));
-    const [byBranch]: any = await pool.query(
-      `SELECT t.branch_code as name, COUNT(*) as count FROM tickets t ${workJoin} WHERE ${baseWhere} GROUP BY t.branch_code ORDER BY count DESC`, params
-    );
-    const [byStatus]: any = await pool.query(
-      `SELECT t.status as name, COUNT(*) as count FROM tickets t ${workJoin} WHERE ${baseWhere} GROUP BY t.status`, params
-    );
-    const [slaCompliance]: any = await pool.query(
-      `SELECT COUNT(*) as total, SUM(CASE WHEN t.status='APPROVED' AND t.resolved_at<=t.sla_deadline THEN 1 ELSE 0 END) as on_time, SUM(CASE WHEN t.status='APPROVED' AND t.resolved_at>t.sla_deadline THEN 1 ELSE 0 END) as overdue FROM tickets t ${workJoin} WHERE ${dateCondition} AND t.sla_deadline IS NOT NULL ${branchClause} ${deptClause} ${workClause}`, params
-    );
+    const pendingDetails = await sql`
+      select t.ticket_id, t.ticket_number, t.branch_code, t.location_detail, t.description, t.priority,
+             t.status, t.created_at, t.sla_deadline, t.sla_overdue, t.technician_name, t.main_th
+      from fixhub.tickets_full t
+      where ${scope.whereFrag} and t.status in ('PENDING','ACCEPTED','IN_PROGRESS','PAUSED')
+      order by t.sla_deadline asc nulls last limit 50`;
 
     return NextResponse.json({
-      total: totalResult[0].cnt, pending: pendingResult[0].cnt,
-      inProgress: inProgressResult[0].cnt, completed: completedResult[0].cnt,
-      resolved: resolvedResult[0].cnt,
-      byDepartment: normalizedByDept, byBranch, byStatus,
-      slaCompliance: slaCompliance[0] || { total: 0, on_time: 0, overdue: 0 },
+      total: summary.total,
+      pending: summary.pending,
+      inProgress: summary.in_progress,
+      resolved: summary.resolved,
+      completed: summary.completed,
+      cancelled: summary.cancelled,
+      success: summary.completed,
+      overdueOpen: summary.overdue_open,
+      byDepartment: byDept,
+      byBranch,
+      byStatus,
+      byCategory,
+      slaCompliance: { total: summary.sla_total, on_time: summary.sla_on_time, overdue: summary.sla_overdue },
+      pending_details: pendingDetails,
     });
   } catch (err: any) {
     console.error('[Reports] Error:', err.message);

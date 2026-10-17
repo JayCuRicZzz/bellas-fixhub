@@ -1,13 +1,13 @@
 export interface User {
-  id: number;
-  user_id?: number;
+  id: string;          // Supabase Auth user id (uuid)
+  user_id?: string;
   username: string;
-  password?: string;
   full_name: string;
   role: string;
   branch_code: string;
   department?: string;
   branches?: string[];
+  password_reset_required?: boolean;
 }
 
 export interface Category {
@@ -24,13 +24,14 @@ export interface Ticket {
   ticket_number: string;
   branch_code: string;
   category_id: number;
-  reporter_id: number;
+  reporter_id: string | null;
+  reporter_department?: string | null;
   location_detail: string;
   description: string;
   status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'PAUSED' | 'RESOLVED' | 'APPROVED' | 'REJECTED' | 'FLAGGED' | 'CANCELLED';
   priority: 'non_urgent' | 'low' | 'medium' | 'high' | 'urgent';
   difficulty?: 'easy' | 'medium' | 'hard' | 'very_hard';
-  technician_id: number | null;
+  technician_id: string | null;
   pending_reason: string | null;
   paused_reason?: string | null;
   paused_at?: string | null;
@@ -44,16 +45,15 @@ export interface Ticket {
   sla_deadline: string | null;
   sla_minutes: number | null;
   sla_overdue?: boolean;
-  accepted_by: number | null;
-  resolved_by: number | null;
-  approved_by: number | null;
+  accepted_by: string | null;
+  resolved_by: string | null;
+  approved_by: string | null;
   created_at: string;
   updated_at: string;
   // Joined fields
   main_th?: string;
   sub_th?: string;
   dept_type?: string;
-  reporter_department?: string;
   reporter_name?: string;
   technician_name?: string;
   accepted_by_name?: string;
@@ -103,12 +103,12 @@ export interface ChatMessage {
 }
 
 export const BRANCHES: Branch[] = [
-  { branch_code: 'BV', branch_name: 'BellaVilla', branch_name_en: 'BellaVilla' },
-  { branch_code: 'BP', branch_name: 'BellaVilla Prima', branch_name_en: 'BellaVilla Prima' },
-  { branch_code: 'BC', branch_name: 'BellaVilla Cabana', branch_name_en: 'BellaVilla Cabana' },
-  { branch_code: 'BM', branch_name: 'BellaVilla Metro', branch_name_en: 'BellaVilla Metro' },
+  { branch_code: 'BV', branch_name: 'Bella Villa Pattaya 3rd Road', branch_name_en: 'Bella Villa Pattaya 3rd Road' },
+  { branch_code: 'BP', branch_name: 'Bella Villa Prima', branch_name_en: 'Bella Villa Prima' },
+  { branch_code: 'BC', branch_name: 'Bella Villa Cabana', branch_name_en: 'Bella Villa Cabana' },
+  { branch_code: 'BM', branch_name: 'Bella Villa Metro', branch_name_en: 'Bella Villa Metro' },
   { branch_code: 'BB', branch_name: 'Best Bella Pattaya', branch_name_en: 'Best Bella Pattaya' },
-  { branch_code: 'BE', branch_name: 'BellaVilla Express', branch_name_en: 'BellaVilla Express' },
+  { branch_code: 'BE', branch_name: 'Bella Express', branch_name_en: 'Bella Express' },
   { branch_code: 'GB', branch_name: 'Grand Bella Pattaya', branch_name_en: 'Grand Bella Pattaya' },
 ];
 

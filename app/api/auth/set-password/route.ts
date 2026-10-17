@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '../../../../lib/db';
-import { getUserFromRequest } from '../../../../lib/auth';
-import bcrypt from 'bcryptjs';
+import sql from '../../../../lib/db';
+import { getUserFromRequest, invalidateUserCache } from '../../../../lib/auth';
+import { supabaseAdmin } from '../../../../lib/supabase';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -12,21 +14,21 @@ export async function POST(req: NextRequest) {
   try {
     const { password, confirmPassword } = await req.json();
 
-    if (!password || password.length < 4) {
-      return NextResponse.json({ error: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' }, { status: 400 });
+    if (!password || String(password).length < 6) {
+      return NextResponse.json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }, { status: 400 });
     }
-
     if (password !== confirmPassword) {
       return NextResponse.json({ error: 'รหัสผ่านไม่ตรงกัน กรุณาลองใหม่' }, { status: 400 });
     }
 
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const userId = user.user_id || user.id;
+    const admin = supabaseAdmin();
+    const { error } = await admin.auth.admin.updateUserById(user.id, { password });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
 
-    await pool.query(
-      'UPDATE users SET password = ?, password_reset_required = 0 WHERE user_id = ?',
-      [hashedPassword, userId]
-    );
+    await sql`update fixhub.profiles set password_reset_required = false where user_id = ${user.id}`;
+    invalidateUserCache(user.id);
 
     return NextResponse.json({ success: true, message: 'ตั้งรหัสผ่านสำเร็จ' });
   } catch (err: any) {

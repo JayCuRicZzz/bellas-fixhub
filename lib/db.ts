@@ -1,18 +1,30 @@
-import mysql from 'mysql2/promise';
+// Postgres connection (Supabase) via postgres.js
+// Uses the Supabase connection pooler (Supavisor, transaction mode) — safe for serverless.
+// All tables live in schema `fixhub` and are referenced fully-qualified: fixhub.tickets etc.
+import postgres from 'postgres';
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
-  database: process.env.DB_NAME || 'hotel_fix',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  // Railway / cloud MySQL requires SSL
-  ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost'
-    ? { rejectUnauthorized: false }
-    : undefined,
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var __fixhubSql: ReturnType<typeof postgres> | undefined;
+}
 
-export default pool;
+function createSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error('DATABASE_URL is not set (Supabase → Project Settings → Database → Connection string, Transaction pooler, port 6543)');
+  }
+  return postgres(url, {
+    prepare: false,          // required for Supavisor transaction mode
+    max: 3,                  // small pool per serverless instance
+    idle_timeout: 20,
+    connect_timeout: 10,
+    ssl: 'require',
+    transform: { undefined: null },
+  });
+}
+
+const sql = global.__fixhubSql ?? createSql();
+if (process.env.NODE_ENV !== 'production') global.__fixhubSql = sql;
+
+export default sql;
+export { sql };

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 interface AdminUser {
-  id: number;
+  id: string;
   username: string;
   full_name: string;
   role: string;
@@ -136,8 +136,8 @@ export default function AdminPage() {
         department: formDepartment || null,
         branch_codes: formBranches,
       };
-      if (formPassword || !editingUser) {
-        body.password = formPassword;
+      if (formPassword) {
+        body.password = formPassword;  // blank on create = server generates a temp password
       }
 
       const res = await fetch(url, {
@@ -151,8 +151,9 @@ export default function AdminPage() {
 
       const data = await res.json();
       if (res.ok) {
-        setSuccessMsg(editingUser ? t.admin.userUpdated : t.admin.userCreated);
-        setTimeout(() => setSuccessMsg(''), 3000);
+        const msg = editingUser ? t.admin.userUpdated : t.admin.userCreated;
+        setSuccessMsg(data.temp_password ? `${msg} — รหัสผ่านชั่วคราว: ${data.temp_password} (ผู้ใช้ต้องตั้งรหัสใหม่เมื่อเข้าสู่ระบบครั้งแรก)` : msg);
+        setTimeout(() => setSuccessMsg(''), data.temp_password ? 30000 : 3000);
         resetForm();
         fetchUsers();
       } else {
@@ -197,7 +198,7 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccessMsg(`รีเซ็ตรหัสผ่าน ${u.username} สำเร็จ! รหัสชั่วคราว: ${data.temp_password}`);
+        setSuccessMsg(`รีเซ็ตรหัสผ่าน ${u.username} สำเร็จ! รหัสชั่วคราว: ${data.temp_password} (จดไว้ — แสดงครั้งเดียว)`);
         setTimeout(() => setSuccessMsg(''), 5000);
       } else {
         setError(data.error || 'เกิดข้อผิดพลาด');
@@ -273,15 +274,15 @@ export default function AdminPage() {
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">
-                  {t.admin.password} {editingUser ? '(เว้นว่างเพื่อไม่เปลี่ยน)' : '*'}
+                  {t.admin.password} {editingUser ? '(เว้นว่างเพื่อไม่เปลี่ยน)' : '(เว้นว่าง = ระบบสร้างรหัสชั่วคราวให้)'}
                 </label>
                 <input
                   type="password"
                   value={formPassword}
                   onChange={e => setFormPassword(e.target.value)}
                   className="input-field"
-                  required={!editingUser}
-                  placeholder={editingUser ? t.admin.leaveEmpty : '********'}
+                  minLength={6}
+                  placeholder={editingUser ? t.admin.leaveEmpty : 'อย่างน้อย 6 ตัวอักษร'}
                 />
               </div>
               <div>

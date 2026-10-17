@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '../../../../../lib/db';
+import sql from '../../../../../lib/db';
 import { getUserFromRequest } from '../../../../../lib/auth';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const user = getUserFromRequest(req);
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const ticketId = parseInt(params.id, 10);
+  if (!ticketId) return NextResponse.json([]);
 
   try {
-    const [rows]: any = await pool.query(
-      `SELECT al.*, u.full_name as action_by_name_display
-       FROM ticket_activity_log al
-       LEFT JOIN users u ON al.action_by = u.user_id
-       WHERE al.ticket_id = ?
-       ORDER BY al.created_at DESC`,
-      [params.id]
-    );
-
-    const logs = rows.map((r: any) => ({
+    const rows = await sql`
+      select al.*, p.full_name as action_by_name_display
+      from fixhub.ticket_activity_log al
+      left join fixhub.profiles p on p.user_id = al.action_by
+      where al.ticket_id = ${ticketId}
+      order by al.created_at desc, al.id desc`;
+    return NextResponse.json(rows.map((r: any) => ({
       ...r,
       actionByName: r.action_by_name_display || r.action_by_name || 'ระบบ',
-    }));
-
-    return NextResponse.json(logs);
+    })));
   } catch (err: any) {
     console.error('[ActivityLog] Error:', err.message);
-    // Table might not exist yet
     return NextResponse.json([]);
   }
 }
