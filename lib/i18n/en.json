@@ -8,7 +8,7 @@
     "login": "Sign In",
     "loggingIn": "Signing in...",
     "username": "Username",
-    "usernamePlaceholder": "Enter username",
+    "usernamePlaceholder": "Employee code (HR) or username",
     "password": "Password",
     "passwordPlaceholder": "Enter password",
     "logout": "Logout",

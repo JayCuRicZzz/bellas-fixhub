@@ -8,6 +8,8 @@ export interface User {
   department?: string;
   branches?: string[];
   password_reset_required?: boolean;
+  employee_code?: string;     // linked Bella HR employee code
+  managed_by_hr?: boolean;    // role/branch auto-synced from HR
 }
 
 export interface Category {

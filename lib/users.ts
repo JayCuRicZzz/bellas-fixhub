@@ -104,7 +104,8 @@ export async function updateUser(userId: string, input: Partial<NewUserInput>) {
       role = coalesce(${input.role ?? null}, role),
       department = ${input.department ?? null},
       branch_code = ${primaryBranch},
-      password_reset_required = case when ${!!input.password} then false else password_reset_required end
+      password_reset_required = case when ${!!input.password} then false else password_reset_required end,
+      managed_by_hr = false
     where user_id = ${userId}`;
   if (input.branch_codes) await syncBranches(userId, input.branch_codes);
   invalidateUserCache(userId);
@@ -134,7 +135,7 @@ export async function deleteUser(userId: string) {
 export async function listUsers() {
   const rows = await sql`
     select p.user_id as id, p.username, p.full_name, p.role, p.department, p.branch_code,
-           p.password_reset_required, p.active, p.created_at,
+           p.password_reset_required, p.active, p.created_at, p.employee_code, p.managed_by_hr, p.last_login_at,
            coalesce(array_agg(ub.branch_code order by ub.branch_code) filter (where ub.branch_code is not null), '{}') as branches
     from fixhub.profiles p
     left join fixhub.user_branches ub on ub.user_id = p.user_id

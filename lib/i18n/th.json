@@ -8,7 +8,7 @@
     "login": "เข้าสู่ระบบ",
     "loggingIn": "กำลังเข้าสู่ระบบ...",
     "username": "ชื่อผู้ใช้",
-    "usernamePlaceholder": "กรอกชื่อผู้ใช้",
+    "usernamePlaceholder": "รหัสพนักงาน (HR) หรือชื่อผู้ใช้",
     "password": "รหัสผ่าน",
     "passwordPlaceholder": "กรอกรหัสผ่าน",
     "logout": "ออกจากระบบ",

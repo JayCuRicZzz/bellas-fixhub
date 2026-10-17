@@ -11,6 +11,8 @@ import {
 
 interface AdminUser {
   id: string;
+  employee_code?: string | null;
+  managed_by_hr?: boolean;
   username: string;
   full_name: string;
   role: string;
@@ -417,7 +419,10 @@ export default function AdminPage() {
               {users.map((u, idx) => (
                 <tr key={u.id} className="border-b border-navy-700/50 hover:bg-navy-700/30">
                   <td className="py-2.5 px-3 text-gray-500">{idx + 1}</td>
-                  <td className="py-2.5 px-3 text-white font-medium">{u.username}</td>
+                  <td className="py-2.5 px-3 text-white font-medium">
+                    {u.username}
+                    {u.employee_code && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" title="บัญชีเชื่อมกับ Bella HR">HR {u.employee_code}</span>}
+                  </td>
                   <td className="py-2.5 px-3 text-gray-300">{u.full_name}</td>
                   <td className="py-2.5 px-3">
                     <span className="px-2 py-0.5 rounded text-xs font-medium bg-navy-600 text-gray-300">

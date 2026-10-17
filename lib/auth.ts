@@ -60,7 +60,7 @@ async function verifyToken(token: string): Promise<string | null> {
 export async function loadProfile(userId: string): Promise<User | null> {
   const rows = await sql`
     select p.user_id, p.username, p.full_name, p.role, p.branch_code, p.department,
-           p.password_reset_required, p.active,
+           p.password_reset_required, p.active, p.employee_code, p.managed_by_hr,
            coalesce(array_agg(ub.branch_code order by ub.branch_code) filter (where ub.branch_code is not null), '{}') as branches
     from fixhub.profiles p
     left join fixhub.user_branches ub on ub.user_id = p.user_id
@@ -80,6 +80,8 @@ export async function loadProfile(userId: string): Promise<User | null> {
     department: p.department || undefined,
     branches,
     password_reset_required: !!p.password_reset_required,
+    employee_code: p.employee_code || undefined,
+    managed_by_hr: !!p.managed_by_hr,
   };
 }
 

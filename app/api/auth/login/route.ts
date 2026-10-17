@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAnon, usernameToEmail } from '../../../../lib/supabase';
-import { loadProfile, setAuthCookies } from '../../../../lib/auth';
+import { loadProfile, setAuthCookies, invalidateUserCache } from '../../../../lib/auth';
+import { employeeCodeToHrEmail, isHrEmail, looksLikeEmployeeCode, provisionFromHr } from '../../../../lib/hr-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,12 +25,22 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = supabaseAnon();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: username.includes('@') ? username.trim().toLowerCase() : usernameToEmail(username),
-      password,
-    });
+    const uname = username.trim().toLowerCase();
+    // Candidate accounts: explicit email → as-is; employee code → HR account first, then FixHub; otherwise FixHub then HR
+    const candidates = uname.includes('@')
+      ? [uname]
+      : looksLikeEmployeeCode(uname)
+        ? [employeeCodeToHrEmail(uname), usernameToEmail(uname)]
+        : [usernameToEmail(uname), employeeCodeToHrEmail(uname)];
 
-    if (error || !data.session || !data.user) {
+    let data: any = null, error: any = null;
+    for (const email of candidates) {
+      const res = await supabase.auth.signInWithPassword({ email, password });
+      if (!res.error && res.data.session && res.data.user) { data = res.data; error = null; break; }
+      error = res.error;
+    }
+
+    if (error || !data?.session || !data?.user) {
       console.log(`[LOGIN] Failed for "${username}": ${error?.message || 'no session'}`);
       if (isJson) {
         return NextResponse.json({ success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
@@ -37,7 +48,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=invalid', req.url), 302);
     }
 
-    const profile = await loadProfile(data.user.id);
+    let profile = await loadProfile(data.user.id);
+    if (!profile && isHrEmail(data.user.email)) {
+      // HR staff logging in for the first time → create FixHub profile from HR record
+      const prov = await provisionFromHr(data.user.id);
+      if (!prov.ok) {
+        const msg = prov.reason === 'inactive' ? 'บัญชีพนักงานนี้ไม่ได้อยู่ในสถานะทำงาน'
+          : prov.reason === 'no_branch' ? 'ไม่พบสาขาของพนักงานในระบบ HR กรุณาติดต่อผู้ดูแลระบบ'
+          : 'ไม่พบข้อมูลพนักงานในระบบ HR';
+        if (isJson) return NextResponse.json({ success: false, message: msg }, { status: 403 });
+        return NextResponse.redirect(new URL('/login?error=noaccess', req.url), 302);
+      }
+      invalidateUserCache(data.user.id);
+      profile = await loadProfile(data.user.id);
+    } else if (profile && isHrEmail(data.user.email)) {
+      // keep name/branch in sync with HR on every login (non-blocking on failure)
+      try { await provisionFromHr(data.user.id); invalidateUserCache(data.user.id); profile = (await loadProfile(data.user.id)) || profile; } catch (e: any) { console.error('[LOGIN] HR sync failed:', e.message); }
+    }
     if (!profile) {
       // Auth account exists (e.g. HR staff) but has no FixHub profile / is deactivated
       if (isJson) {

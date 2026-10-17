@@ -28,7 +28,8 @@
 | `branches` | 7 สาขา (seed แล้ว) |
 | `categories` | 24 หมวดงาน (14 ช่าง + 10 ไอที) |
 | `sla_config` | SLA ตาม priority (urgent 2 ชม. … non_urgent 72 ชม.) |
-| `profiles` | ผู้ใช้ (FK → `auth.users`) role / department / branch_code / password_reset_required |
+| `profiles` | ผู้ใช้ (FK → `auth.users`) role / department / branch_code / employee_code (HR) / managed_by_hr |
+| `hr_role_map` | แผนก HR → role FixHub (แก้ได้) |
 | `user_branches` | สาขาที่ผู้ใช้เข้าถึงได้ (หลายสาขา) |
 | `tickets` | ใบงาน · เลขที่ `BV-EN-2026-10-00001` (ออกเลขแบบ atomic ด้วย `next_ticket_number()`) |
 | `ticket_images` | รูปแนบ (URL จาก Storage) |
@@ -38,6 +39,17 @@
 | view `tickets_full` | ใบงาน + ชื่อหมวด/ผู้แจ้ง/ช่าง + `sla_overdue` |
 
 RLS เปิดทุกตาราง (deny-by-default) — ทุกการเข้าถึงผ่าน server เท่านั้น
+
+## บัญชีผู้ใช้ — 2 แบบ
+
+| แบบ | login ด้วย | ใครใช้ |
+|---|---|---|
+| **บัญชี Bella HR** (แนะนำ) | **รหัสพนักงาน 5 หลัก + รหัสผ่าน HR เดิม** (เช่น `00197`) | พนักงานทุกคน — ระบบสร้างโปรไฟล์ FixHub ให้อัตโนมัติครั้งแรกที่ login: ชื่อ/สาขาจาก HR, สิทธิ์ตามแผนก (`fixhub.hr_role_map`: EN→ช่าง, IT→ไอที, หัวหน้าแผนก→หัวหน้า, FO/HK/อื่น ๆ→ผู้แจ้ง, EXEC→gm) · ชื่อผู้แจ้งในใบงาน = ชื่อจริงจาก HR |
+| บัญชี FixHub | username + รหัสที่ admin ตั้ง | admin ส่วนกลาง / คนที่ไม่มีบัญชี HR |
+
+- admin แก้ role/สาขาของบัญชี HR ได้ที่ `/dashboard/admin` — เมื่อแก้แล้วระบบจะไม่ sync role จาก HR ทับอีก (sync เฉพาะชื่อ)
+- พนักงานสถานะไม่ใช่ `active` ใน HR จะ login FixHub ไม่ได้
+- ลบบัญชี HR จากหน้า admin FixHub = ลบเฉพาะสิทธิ์ FixHub (บัญชี HR ไม่ถูกลบ)
 
 ## ขั้นตอนติดตั้งใช้งานจริง (ทำครั้งเดียว)
 
