@@ -1,72 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '../../../lib/db';
-import { getUserFromRequest } from '../../../lib/auth';
-import { calcNextRun, processDuePmTickets } from '../../../lib/pm';
+import sql from '../../../lib/db';
+import { getUserFromRequest, getUserBranches } from '../../../lib/auth';
+import { calcNextRun, processDuePmTickets, FREQ_UNITS } from '../../../lib/pm';
 
-// GET: list all PM schedules
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const { searchParams } = new URL(req.url);
-    const branch = searchParams.get('branch');
-    const check = searchParams.get('check'); // trigger due check
+    const branch = searchParams.get('branch') || '';
+    const includeInactive = searchParams.get('all') === '1' && user.role === 'admin';
 
-    // Trigger auto-check for due PMs
-    if (check === '1') {
+    if (searchParams.get('check') === '1') {
+      if (!['admin', 'gm', 'sup', 'supit'].includes(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       const created = await processDuePmTickets();
-      if (created > 0) {
-        console.log(`[PM] Auto-check created ${created} tickets`);
-      }
       return NextResponse.json({ checked: true, tickets_created: created });
     }
 
-    let query = `SELECT ps.*, c.main_th as category_name, c.sub_th as category_sub, c.dept_type,
-                        u.full_name as created_by_name
-                 FROM pm_schedules ps
-                 JOIN categories c ON ps.category_id = c.category_id
-                 LEFT JOIN users u ON ps.created_by = u.user_id
-                 WHERE ps.active = 1`;
-    const params: any[] = [];
-
-    if (branch) {
-      query += ' AND ps.branch_code = ?';
-      params.push(branch);
-    }
-
-    query += ' ORDER BY ps.next_run ASC';
-
-    const [rows]: any = await pool.query(query, params);
+    const branches = await getUserBranches(user.id, user.role);
+    const rows = await sql`
+      select ps.*, c.main_th as category_name, c.sub_th as category_sub, c.dept_type,
+             p.full_name as created_by_name
+      from fixhub.pm_schedules ps
+      join fixhub.categories c on c.category_id = ps.category_id
+      left join fixhub.profiles p on p.user_id = ps.created_by
+      where ${includeInactive ? sql`true` : sql`ps.active`}
+        ${branches.length ? sql`and ps.branch_code = any(${branches})` : sql`and false`}
+        ${branch ? sql`and ps.branch_code = ${branch}` : sql``}
+      order by ps.next_run asc`;
     return NextResponse.json(rows);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// POST: create PM schedule (admin only)
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
-  if (!user || user.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
-  }
+  const user = await getUserFromRequest(req);
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Admin only' }, { status: 403 });
 
   try {
-    const { branch_code, title, description, department, category_id, frequency_value, frequency_unit } = await req.json();
-
-    if (!branch_code || !title || !category_id || !frequency_value || !frequency_unit) {
+    const { branch_code, title, description, category_id, frequency_value, frequency_unit, first_run } = await req.json();
+    const freqVal = parseInt(frequency_value, 10);
+    if (!branch_code || !title || !category_id || !freqVal || !FREQ_UNITS.includes(frequency_unit)) {
       return NextResponse.json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });
     }
+    const cat = await sql`select dept_type from fixhub.categories where category_id = ${Number(category_id)}`;
+    if (cat.length === 0) return NextResponse.json({ error: 'หมวดงานไม่ถูกต้อง' }, { status: 400 });
+    const department = cat[0].dept_type === 'IT' ? 'IT' : 'MAINT';
+    const nextRun = first_run ? new Date(first_run) : calcNextRun(freqVal, frequency_unit);
 
-    const nextRun = calcNextRun(frequency_value, frequency_unit);
-
-    const [result]: any = await pool.query(
-      `INSERT INTO pm_schedules (branch_code, title, description, department, category_id, frequency_value, frequency_unit, next_run, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [branch_code, title, description || '', department || 'MAINT', category_id, frequency_value, frequency_unit, nextRun, user.user_id || user.id]
-    );
-
-    return NextResponse.json({ success: true, id: result.insertId, next_run: nextRun });
+    const [row] = await sql`
+      insert into fixhub.pm_schedules (branch_code, title, description, department, category_id, frequency_value, frequency_unit, next_run, created_by)
+      values (${branch_code}, ${title}, ${description || ''}, ${department}, ${Number(category_id)}, ${freqVal}, ${frequency_unit}, ${nextRun}, ${user.id})
+      returning id`;
+    return NextResponse.json({ success: true, id: row.id, next_run: nextRun });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

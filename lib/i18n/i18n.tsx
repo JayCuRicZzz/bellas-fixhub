@@ -78,13 +78,13 @@ export function tStatus(status: string, lang: Lang): string {
 
 export function tBranch(code: string, lang: Lang): string {
   const branchMap: Record<string, Record<Lang, string>> = {
-    BV: { th: 'บูทีค วิคตอรี่', en: 'Boutique Victory', km: 'Boutique Victory', my: 'Boutique Victory' },
-    BP: { th: 'บูทีค พัทยา', en: 'Boutique Pattaya', km: 'Boutique Pattaya', my: 'Boutique Pattaya' },
-    BC: { th: 'บูทีค เชียงใหม่', en: 'Boutique Chiang Mai', km: 'Boutique Chiang Mai', my: 'Boutique Chiang Mai' },
-    BE: { th: 'บูทีค เอเชียทีค', en: 'Boutique Asiatique', km: 'Boutique Asiatique', my: 'Boutique Asiatique' },
-    BM: { th: 'บูทีค ภูเก็ต', en: 'Boutique Phuket', km: 'Boutique Phuket', my: 'Boutique Phuket' },
-    BB: { th: 'บูทีค บางนา', en: 'Boutique Bangna', km: 'Boutique Bangna', my: 'Boutique Bangna' },
-    GB: { th: 'แกรนด์ บูทีค', en: 'Grand Boutique', km: 'Grand Boutique', my: 'Grand Boutique' },
+    BV: { th: 'เบลล่า วิลล่า พัทยา (สาย 3)', en: 'Bella Villa Pattaya 3rd Road', km: 'Bella Villa Pattaya 3rd Road', my: 'Bella Villa Pattaya 3rd Road' },
+    BP: { th: 'เบลล่า วิลล่า พรีมา', en: 'Bella Villa Prima', km: 'Bella Villa Prima', my: 'Bella Villa Prima' },
+    BC: { th: 'เบลล่า วิลล่า คาบาน่า', en: 'Bella Villa Cabana', km: 'Bella Villa Cabana', my: 'Bella Villa Cabana' },
+    BM: { th: 'เบลล่า วิลล่า เมโทร', en: 'Bella Villa Metro', km: 'Bella Villa Metro', my: 'Bella Villa Metro' },
+    BB: { th: 'เบสท์ เบลล่า พัทยา', en: 'Best Bella Pattaya', km: 'Best Bella Pattaya', my: 'Best Bella Pattaya' },
+    BE: { th: 'เบลล่า เอ็กซ์เพรส', en: 'Bella Express', km: 'Bella Express', my: 'Bella Express' },
+    GB: { th: 'แกรนด์ เบลล่า พัทยา', en: 'Grand Bella Pattaya', km: 'Grand Bella Pattaya', my: 'Grand Bella Pattaya' },
   };
   return branchMap[code]?.[lang] || code;
 }

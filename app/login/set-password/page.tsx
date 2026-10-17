@@ -26,8 +26,8 @@ export default function SetPasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 4) {
-      setError(lang === 'th' ? 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' : 'Password must be at least 4 characters');
+    if (password.length < 6) {
+      setError(lang === 'th' ? 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' : 'Password must be at least 6 characters');
       return;
     }
     if (password !== confirmPassword) {
@@ -117,7 +117,7 @@ export default function SetPasswordPage() {
                   {lang === 'th' ? 'รหัสผ่านใหม่' : 'New Password'}
                 </label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder={lang === 'th' ? 'อย่างน้อย 4 ตัวอักษร' : 'At least 4 characters'}
+                  placeholder={lang === 'th' ? 'อย่างน้อย 6 ตัวอักษร' : 'At least 6 characters'}
                   autoFocus required
                   style={{
                     width: '100%', padding: '12px 16px', background: 'rgba(13,20,35,0.8)',

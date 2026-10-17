@@ -8,21 +8,9 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Scheduled Functions (default directory = netlify/functions, no explicit dir to avoid plugin conflict)
+# Scheduled Functions (netlify/functions/*.mjs) — times are UTC
 [functions."daily-summary"]
-  schedule = "0 15 * * *"
+  schedule = "0 15 * * *"      # 22:00 Asia/Bangkok
 
 [functions."pm-check"]
-  schedule = "0 * * * *"
-
-[[redirects]]
-  from = "/api/*"
-  to = "/api/:splat"
-  status = 200
-
-[[headers]]
-  for = "/api/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
+  schedule = "0 * * * *"       # hourly

@@ -1,40 +1,38 @@
 import { getLineConfig } from './line-config';
 
-export async function sendLineMessage(messageText: string, department?: string) {
-  const { accessToken, targetIdMaint, targetIdIT } = getLineConfig();
+export type LineDept = 'IT' | 'MAINT' | 'MAINTENANCE' | 'ไอที' | 'ช่าง' | string | undefined;
 
-  // Choose target group based on department
-  const targetId = (department === 'IT' || department === 'ไอที') ? targetIdIT : targetIdMaint;
+function isIT(department?: string) {
+  return department === 'IT' || department === 'ไอที';
+}
+
+export async function pushLineText(to: string, text: string, accessToken: string) {
+  const response = await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
+  });
+  const result = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, result };
+}
+
+/** Send a text message to the Maintenance or IT LINE group. Never throws. */
+export async function sendLineMessage(messageText: string, department?: LineDept) {
+  const { accessToken, targetIdMaint, targetIdIT } = await getLineConfig();
+  const it = isIT(department);
+  const targetId = it ? targetIdIT : targetIdMaint;
+  const groupLabel = it ? 'ไอที' : 'ช่าง';
 
   if (!accessToken || !targetId) {
-    const group = department === 'IT' ? 'IT' : 'Maintenance';
-    console.log(`[LINE] ${group} group not configured (missing token or target ID)`);
-    return { success: false, message: `LINE ${group} group not configured` };
+    console.log(`[LINE] ${groupLabel} group not configured (missing token or target ID)`);
+    return { success: false, message: `LINE ${groupLabel} group not configured` };
   }
 
-  const groupLabel = department === 'IT' || department === 'ไอที' ? 'ไอที' : 'ช่าง';
-
   try {
-    const response = await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        to: targetId,
-        messages: [{ type: 'text', text: `[${groupLabel}] ${messageText}` }],
-      }),
-    });
-
-    const result = await response.json();
-    if (response.ok) {
-      console.log(`[LINE] Message sent to ${groupLabel} group successfully`);
-      return { success: true, group: groupLabel };
-    } else {
-      console.error(`[LINE] Failed to send to ${groupLabel}:`, result);
-      return { success: false, error: result };
-    }
+    const r = await pushLineText(targetId, `[${groupLabel}] ${messageText}`, accessToken);
+    if (r.ok) return { success: true, group: groupLabel };
+    console.error(`[LINE] Failed to send to ${groupLabel}:`, r.result);
+    return { success: false, error: r.result };
   } catch (err: any) {
     console.error('[LINE] Error:', err.message);
     return { success: false, error: err.message };
