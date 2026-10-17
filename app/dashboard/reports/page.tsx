@@ -104,6 +104,9 @@ export default function ReportsPage() {
     RESOLVED: lang === 'th' ? 'เสร็จสิ้น' : 'Resolved',
     APPROVED: lang === 'th' ? 'อนุมัติแล้ว' : 'Approved',
     CANCELLED: lang === 'th' ? 'ยกเลิก' : 'Cancelled',
+    PAUSED: lang === 'th' ? 'พักงาน' : 'Paused',
+    REJECTED: lang === 'th' ? 'ถูกตีกลับ' : 'Rejected',
+    FLAGGED: lang === 'th' ? 'งานไม่เรียบร้อย' : 'Flagged',
   };
 
   const statusIcons: Record<string, React.ReactNode> = {

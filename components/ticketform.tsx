@@ -14,7 +14,7 @@ interface SlaConfig {
 export default function TicketForm() {
   const { user, token } = useAuth();
   const { t, lang } = useI18n();
-  const [branchCode, setBranchCode] = useState(user?.branch_code || '');
+  const [branchCode, setBranchCode] = useState(user?.branches?.length === 1 ? user.branches[0] : (user?.branch_code || ''));
   const [department, setDepartment] = useState('MAINTENANCE');
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState('');
@@ -30,6 +30,11 @@ export default function TicketForm() {
   const [createdTicket, setCreatedTicket] = useState<{ticket_number:string; branch_code:string; location_detail:string; description:string; priority:string; department:string} | null>(null);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!branchCode && user?.branches?.length === 1) setBranchCode(user.branches[0]);
+    else if (!branchCode && user?.branch_code && user.branches?.includes(user.branch_code)) setBranchCode(user.branch_code);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetch('/api/sla')

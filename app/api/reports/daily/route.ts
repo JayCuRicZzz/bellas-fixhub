@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
              count(*) filter (where t.status = 'RESOLVED')::int as resolved,
              count(*) filter (where t.status = 'APPROVED')::int as completed,
              count(*) filter (where t.status = 'CANCELLED')::int as cancelled,
-             count(*) filter (where t.sla_deadline is not null)::int as sla_total,
+             count(*) filter (where t.status = 'APPROVED' and t.sla_deadline is not null)::int as sla_total,
              count(*) filter (where t.status = 'APPROVED' and t.resolved_at <= t.sla_deadline)::int as sla_on_time,
              count(*) filter (where t.status = 'APPROVED' and t.resolved_at >  t.sla_deadline)::int as sla_overdue,
              count(*) filter (where t.status not in ('APPROVED','CANCELLED') and t.sla_deadline < now())::int as overdue_open

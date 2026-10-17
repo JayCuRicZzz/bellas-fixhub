@@ -58,7 +58,10 @@ export async function buildReportScope(user: User, params: URLSearchParams): Pro
 
   const dateFrag = dateFragment(params);
   const branchFrag = effectiveBranches.length > 0 ? sql`and t.branch_code = any(${effectiveBranches})` : sql`and false`;
-  const deptFrag = dept ? sql`and t.reporter_department = ${dept}` : sql``;
+  // same visibility rule as the ticket list: own department's work, plus anything the user reported themselves
+  const deptFrag = dept
+    ? (userScope ? sql`and (t.reporter_department = ${dept} or t.reporter_id = ${user.id})` : sql`and t.reporter_department = ${dept}`)
+    : sql``;
   const workFrag = workType ? sql`and t.dept_type = ${workType}` : sql``;
   const whereFrag = sql`${dateFrag} ${branchFrag} ${deptFrag} ${workFrag}`;
 

@@ -401,13 +401,13 @@ export default function TicketDetailPage() {
       )}
 
       {/* SLA Info */}
-      {(ticket.sla_deadline || ticket.sla_minutes) && (
+      {(ticket.sla_deadline || (ticket.sla_minutes != null && ticket.sla_minutes > 0)) && (
         <div className="border-t pt-3">
           <p className="text-sm text-gray-500 mb-1">SLA:</p>
           {ticket.sla_deadline && (
             <p>⏰ กำหนดเสร็จ: {new Date(ticket.sla_deadline).toLocaleString('th-TH')}</p>
           )}
-          {ticket.sla_minutes && (
+          {ticket.sla_minutes != null && ticket.sla_minutes > 0 && (
             <p>⏱️ เวลาดำเนินการ: {ticket.sla_minutes} นาที</p>
           )}
           {ticket.sla_overdue && (
@@ -568,7 +568,7 @@ export default function TicketDetailPage() {
         </div>
 
         {/* SLA Info */}
-        {(ticket.sla_deadline || ticket.sla_minutes) && (
+        {(ticket.sla_deadline || (ticket.sla_minutes != null && ticket.sla_minutes > 0)) && (
           <div className="mt-3 pt-3 border-t border-navy-700 flex flex-wrap gap-3 text-xs">
             {ticket.sla_deadline && (
               <div className={`flex items-center gap-1.5 px-2 py-1 rounded ${ticket.sla_overdue ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
@@ -577,7 +577,7 @@ export default function TicketDetailPage() {
                 {ticket.sla_overdue ? ' ⚠️ เกินกำหนด' : ' ✅ ทันเวลา'}
               </div>
             )}
-            {ticket.sla_minutes && (
+            {ticket.sla_minutes != null && ticket.sla_minutes > 0 && (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-blue-500/10 text-blue-400">
                 <Clock className="w-3.5 h-3.5" />
                 ใช้เวลา: {ticket.sla_minutes} นาที
@@ -890,6 +890,7 @@ export default function TicketDetailPage() {
                   log.action === 'PAUSED' ? 'bg-orange-500' :
                   log.action === 'RESUME' ? 'bg-blue-500' :
                   log.action === 'CANCELLED' ? 'bg-gray-500' :
+                  log.action === 'CREATED' ? 'bg-yellow-500' :
                   'bg-navy-500'
                 }`} />
                 <div className="flex-1 min-w-0">
@@ -905,6 +906,9 @@ export default function TicketDetailPage() {
                      log.action === 'RESUME' ? 'ดำเนินการต่อ' :
                      log.action === 'RATED' ? 'ให้คะแนน' :
                      log.action === 'CANCELLED' ? 'ยกเลิก' :
+                     log.action === 'CREATED' ? 'แจ้งซ่อม' :
+                     log.action === 'IMAGE' ? 'แนบรูป' :
+                     log.action === 'DIFFICULTY' ? 'กำหนดระดับความยาก' :
                      log.action}
                   </span>
                   {log.reason && <p className="text-yellow-400/80 text-xs mt-0.5">⚠️ {log.reason}</p>}

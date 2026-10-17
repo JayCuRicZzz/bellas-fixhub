@@ -69,7 +69,11 @@ export async function loadProfile(userId: string): Promise<User | null> {
   if (rows.length === 0) return null;
   const p: any = rows[0];
   if (!p.active) return null;
-  const branches: string[] = p.branches?.length ? p.branches : (p.branch_code ? [p.branch_code] : []);
+  let branches: string[] = p.branches?.length ? p.branches : (p.branch_code ? [p.branch_code] : []);
+  if (isAdminOrGm(p.role)) {
+    const all = await sql`select branch_code from fixhub.branches where active order by sort_order`;
+    branches = all.map((r: any) => r.branch_code);
+  }
   return {
     id: p.user_id,
     user_id: p.user_id,
