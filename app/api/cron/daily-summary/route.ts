@@ -18,7 +18,7 @@ async function deptStats(dept: 'MAINT' | 'IT') {
   return r;
 }
 
-// Daily LINE summary (22:00 Bangkok) — called by Netlify scheduled function
+// Daily LINE summary (22:00 Bangkok) — called by Vercel Cron (Authorization: Bearer CRON_SECRET)
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const today = new Date().toLocaleDateString('th-TH', {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', timeZone: 'Asia/Bangkok',
     });
-    const BASE_URL = process.env.URL || process.env.NEXT_PUBLIC_APP_URL || 'https://bellas-fixhub.netlify.app';
+    const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.URL || 'https://bellafixhub.bellavillapattaya.com';
     const cfg = await getLineConfig();
     const results = { maintSent: false, itSent: false };
 

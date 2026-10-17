@@ -1,19 +1,20 @@
 # Bellas FixHub v2 🛠️ — ระบบแจ้งซ่อมช่าง + ไอที (Supabase)
 
 > BellaVilla Pattaya Group · 7 สาขา (BV, BP, BC, BM, BB, BE, GB)
-> Next.js 14 · Supabase (Postgres + Auth + Storage) · Netlify · LINE Messaging API · Groq AI
+> Next.js 14 · Supabase (Postgres + Auth + Storage) · Vercel · LINE Messaging API · Groq AI
+> URL: https://bellafixhub.bellavillapattaya.com
 
 ## สถาปัตยกรรม
 
 ```
-[ผู้ใช้/มือถือ] ──► Netlify (Next.js App Router)
+[ผู้ใช้/มือถือ] ──► Vercel (Next.js App Router, region sin1)
                       │  middleware: ตรวจ/ต่ออายุ session (Supabase JWT ใน HttpOnly cookie)
                       ├─ /api/*  ──► Supabase Postgres  (schema fixhub, ผ่าน pooler 6543 — postgres.js)
                       │          ──► Supabase Auth       (login / สร้างผู้ใช้ / รีเซ็ตรหัส)
                       │          ──► Supabase Storage    (bucket ticket-images — รูปแนบใบงาน)
                       │          ──► LINE Messaging API  (แจ้งเตือนกลุ่มช่าง / ไอที)
                       │          ──► Groq AI             (แปล EN→TH, AI chat, AI report)
-                      └─ Netlify Scheduled Functions ──► /api/cron/daily-summary (22:00) · /api/cron/pm-check (ทุกชั่วโมง)
+                      └─ Vercel Cron (vercel.json) ──► /api/cron/daily-summary (22:00) · /api/cron/pm-check (ทุกชั่วโมง)
 ```
 
 - **โปรเจกต์ Supabase:** `bella-hr` (`kiguywlubwxdhvpkexcl`, Singapore) — FixHub ใช้ **schema `fixhub`** แยกจากระบบ HR (`public`)
@@ -52,20 +53,27 @@ node -e "console.log('SETUP_KEY='+require('crypto').randomBytes(24).toString('he
 node -e "console.log('CRON_SECRET='+require('crypto').randomBytes(24).toString('hex'))"
 ```
 
-### 3. ตั้ง Environment Variables บน Netlify
-Site settings → Environment variables → ใส่ทุกตัวตาม `.env.example`
-(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `SETUP_KEY`, `CRON_SECRET`, `LINE_*`, `AI_*`)
-แล้ว **Trigger deploy**
+### 3. สร้างโปรเจกต์บน Vercel (บัญชีเดียวกับ hr.bellavillapattaya.com)
+1. Vercel → **Add New → Project** → Import `JayCuRicZzz/bellas-fixhub` → Framework: Next.js (auto) → ยังไม่ต้องกด Deploy
+2. **Environment Variables** ใส่ทุกตัวตาม `.env.example` (Production + Preview)
+   (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `SETUP_KEY`, `CRON_SECRET`, `NEXT_PUBLIC_APP_URL`, `LINE_*`, `AI_*`)
+   - `CRON_SECRET` สำคัญ: Vercel Cron จะส่ง `Authorization: Bearer <CRON_SECRET>` มาเรียก `/api/cron/*` ให้อัตโนมัติ
+3. **Deploy** → ได้ URL `*.vercel.app`
+4. **Settings → Domains → Add** `bellafixhub.bellavillapattaya.com`
+   - โดเมน `bellavillapattaya.com` ใช้กับ `hr.` บน Vercel อยู่แล้ว → ถ้า DNS อยู่ที่ผู้ให้บริการภายนอก เพิ่ม record
+     `CNAME  bellafixhub  →  cname.vercel-dns.com` (Vercel จะบอกค่าที่ถูกต้องในหน้า Domains) · SSL ออกให้อัตโนมัติ
+5. **Settings → Cron Jobs** ตรวจว่ามี 2 งาน (daily-summary 15:00 UTC = 22:00 ไทย, pm-check ทุกชั่วโมง)
+   > แพลน Hobby จำกัด cron วันละครั้ง — ถ้าไม่ได้ใช้ Pro ให้แก้ `vercel.json` pm-check เป็น `"0 0 * * *"` (07:00 ไทย)
 
 ### 4. ตรวจสุขภาพระบบ
 ```
-GET https://bellas-fixhub.netlify.app/api/health
+GET https://bellafixhub.bellavillapattaya.com/api/health
 ```
 ต้องได้ `"ok": true` และ `"db": "ok (7 branches)"`
 
 ### 5. สร้างบัญชี admin คนแรก (ครั้งเดียว)
 ```bash
-curl -X POST https://bellas-fixhub.netlify.app/api/setup \
+curl -X POST https://bellafixhub.bellavillapattaya.com/api/setup \
   -H "Content-Type: application/json" \
   -d '{"setup_key":"<SETUP_KEY>","username":"admin","password":"<รหัสผ่านอย่างน้อย 8 ตัว>","full_name":"ผู้ดูแลระบบ"}'
 ```
@@ -122,7 +130,7 @@ Workflow: `PENDING → (ACCEPTED) IN_PROGRESS ⇄ PAUSED → RESOLVED → APPROV
 | สร้างผู้ใช้ไม่ได้ / 500 | `SUPABASE_SERVICE_ROLE_KEY` ไม่ถูกต้อง |
 | รูปไม่ขึ้น | bucket `ticket-images` ต้องเป็น public (seed ตั้งไว้แล้ว) |
 | LINE ไม่ส่ง | ตรวจ token/Group ID ที่ `/dashboard/admin/line-settings` แล้วกดทดสอบ |
-| cron ไม่ทำงาน | Netlify env `CRON_SECRET` ต้องตรงกับที่ function ส่ง (ใช้ตัวเดียวกัน) |
+| cron ไม่ทำงาน | ตั้ง `CRON_SECRET` ใน Vercel env (Vercel ส่งเป็น Bearer ให้เอง) · ดู Vercel → Logs → Cron |
 
 ---
 🛠️ พัฒนาโดย นายเดชาธร เดชอนุรักษ์ · 👾 JayCuRicZzz · IT Manager · Group BellaVillaPattaya · 📞 094-492-6155

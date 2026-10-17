@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-/** Cron endpoints are protected by CRON_SECRET (query ?key= or header x-cron-key / Authorization: Bearer). */
+/** Cron endpoints are protected by CRON_SECRET. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`; ?key= / x-cron-key also accepted for manual runs. */
 export function isCronAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;

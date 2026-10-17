@@ -4,7 +4,7 @@ import { isCronAuthorized } from '../../../../lib/cron';
 
 export const dynamic = 'force-dynamic';
 
-// Hourly PM check — called by Netlify scheduled function
+// Hourly PM check — called by Vercel Cron (Authorization: Bearer CRON_SECRET)
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
