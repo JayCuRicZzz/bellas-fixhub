@@ -1,4 +1,5 @@
 'use client';
+import { shrinkImage } from '../lib/image-client';
 
 import { useRef, useState } from 'react';
 import { useAuth } from './authprovider';
@@ -27,7 +28,7 @@ export default function ImageUpload({ onUpload, currentImage }: ImageUploadProps
     // Upload
     setUploading(true);
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('image', await shrinkImage(file));
 
     try {
       const res = await fetch('/api/upload', {

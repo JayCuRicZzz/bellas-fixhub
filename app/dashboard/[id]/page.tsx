@@ -1,4 +1,5 @@
 'use client';
+import { shrinkImage } from '../../../lib/image-client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
@@ -245,7 +246,7 @@ export default function TicketDetailPage() {
     const newFiles: File[] = [];
     const newPreviews: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      if (files[i].type.startsWith('image/') && files[i].size <= 5 * 1024 * 1024) {
+      if (files[i].type.startsWith('image/') && files[i].size <= 10 * 1024 * 1024) {
         newFiles.push(files[i]);
         newPreviews.push(URL.createObjectURL(files[i]));
       }
@@ -267,7 +268,7 @@ export default function TicketDetailPage() {
     try {
       for (const file of repairImages) {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', await shrinkImage(file));
         formData.append('ticket_id', id as string);
         formData.append('image_type', 'repair');
         await fetch('/api/upload', {

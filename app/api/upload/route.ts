@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '../../../lib/auth';
-import { uploadImage, safeImageFilename, MAX_IMAGE_BYTES } from '../../../lib/upload';
+import { uploadImage, safeImageFilename, processImage, MAX_IMAGE_BYTES, MAX_IMAGES_PER_TICKET } from '../../../lib/upload';
 import sql from '../../../lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -20,12 +20,24 @@ export async function POST(req: NextRequest) {
 
     if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     if (!file.type.startsWith('image/')) return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
-    if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 });
+    if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'ไฟล์ใหญ่เกินไป (สูงสุด 10MB)' }, { status: 400 });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const filename = safeImageFilename(file.name);
+    if (ticketId) {
+      const [{ n }] = await sql`select count(*)::int as n from fixhub.ticket_images where ticket_id = ${ticketId}`;
+      if (n >= MAX_IMAGES_PER_TICKET) {
+        return NextResponse.json({ error: `แนบรูปได้สูงสุด ${MAX_IMAGES_PER_TICKET} รูปต่อใบงาน` }, { status: 400 });
+      }
+    }
+
+    let processed;
+    try {
+      processed = await processImage(Buffer.from(await file.arrayBuffer()));
+    } catch (e: any) {
+      return NextResponse.json({ error: 'ไม่สามารถอ่านไฟล์รูปได้' }, { status: 400 });
+    }
+    const filename = safeImageFilename(processed.ext);
     const folder = ticketId ? `tickets/${ticketId}` : 'tickets/new';
-    const { url, path } = await uploadImage(buffer, filename, file.type, folder);
+    const { url, path } = await uploadImage(processed.buffer, filename, processed.contentType, folder);
 
     if (ticketId) {
       await sql`
@@ -36,7 +48,7 @@ export async function POST(req: NextRequest) {
         values (${ticketId}, 'IMAGE', null, null, ${user.id}, ${user.full_name || user.username}, ${`แนบรูป (${imageType})`})`.catch(() => {});
     }
 
-    return NextResponse.json({ url, filename, path });
+    return NextResponse.json({ url, filename, path, width: processed.width, height: processed.height, bytes: processed.buffer.length, original_bytes: file.size });
   } catch (err: any) {
     console.error('[Upload] Error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });

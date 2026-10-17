@@ -1,4 +1,5 @@
 'use client';
+import { shrinkImage } from '../lib/image-client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './authprovider';
@@ -58,7 +59,7 @@ export default function TicketForm() {
     if (!files) return;
     const newImages: { file: File; preview: string }[] = [];
     for (let i = 0; i < files.length; i++) {
-      if (files[i].type.startsWith('image/') && files[i].size <= 5 * 1024 * 1024) {
+      if (files[i].type.startsWith('image/') && files[i].size <= 10 * 1024 * 1024) {
         newImages.push({ file: files[i], preview: URL.createObjectURL(files[i]) });
       }
     }
@@ -95,7 +96,7 @@ export default function TicketForm() {
       const uploadedUrls: string[] = [];
       for (const img of images) {
         const formData = new FormData();
-        formData.append('image', img.file);
+        formData.append('image', await shrinkImage(img.file));
         const uploadRes = await fetch('/api/upload', {
           headers: { Authorization: `Bearer ${token}` },
           method: 'POST',

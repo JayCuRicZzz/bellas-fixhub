@@ -50,14 +50,5 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  try {
-    const [b, c, a] = await Promise.all([
-      sql`select count(*)::int as n from fixhub.branches`,
-      sql`select count(*)::int as n from fixhub.categories`,
-      sql`select count(*)::int as n from fixhub.profiles where role = 'admin'`,
-    ]);
-    return NextResponse.json({ ok: true, branches: b[0].n, categories: c[0].n, admins: a[0].n });
-  } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
-  }
+  return NextResponse.json({ ok: true, message: 'POST with setup_key to bootstrap the first admin' });
 }
