@@ -1,5 +1,5 @@
 'use client';
-import { shrinkImage } from '../lib/image-client';
+import { uploadImageFile } from '../lib/image-client';
 
 import { useRef, useState } from 'react';
 import { useAuth } from './authprovider';
@@ -27,19 +27,10 @@ export default function ImageUpload({ onUpload, currentImage }: ImageUploadProps
 
     // Upload
     setUploading(true);
-    const formData = new FormData();
-    formData.append('image', await shrinkImage(file));
-
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.url) {
-        onUpload(data.url);
-      }
+      const up = await uploadImageFile(file, {}, token);
+      if (up.ok && up.url) onUpload(up.url);
+      else { alert(up.error); setPreview(null); }
     } catch (err) {
       console.error('Upload failed:', err);
     } finally {

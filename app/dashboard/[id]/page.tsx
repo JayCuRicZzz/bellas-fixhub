@@ -1,5 +1,5 @@
 'use client';
-import { shrinkImage } from '../../../lib/image-client';
+import { uploadImageFile } from '../../../lib/image-client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
@@ -267,15 +267,8 @@ export default function TicketDetailPage() {
     setUploading(true);
     try {
       for (const file of repairImages) {
-        const formData = new FormData();
-        formData.append('image', await shrinkImage(file));
-        formData.append('ticket_id', id as string);
-        formData.append('image_type', 'repair');
-        await fetch('/api/upload', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
+        const up = await uploadImageFile(file, { ticket_id: String(id), image_type: 'repair' }, token);
+        if (!up.ok) { alert(up.error); break; }
       }
       setRepairImages([]);
       setRepairPreviews([]);

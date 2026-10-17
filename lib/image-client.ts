@@ -22,3 +22,27 @@ export async function shrinkImage(file: File): Promise<File> {
     return file;
   }
 }
+
+/** Vercel serverless accepts request bodies up to 4.5 MB — refuse before sending. */
+export const UPLOAD_HARD_LIMIT = 4 * 1024 * 1024;
+
+export interface UploadResult { ok: boolean; url?: string; error?: string }
+
+/** Shrink then POST to /api/upload. Never throws. */
+export async function uploadImageFile(file: File, extra: Record<string, string> = {}, token?: string | null): Promise<UploadResult> {
+  try {
+    const small = await shrinkImage(file);
+    if (small.size > UPLOAD_HARD_LIMIT) {
+      return { ok: false, error: `รูป ${file.name} ใหญ่เกินไป (${(small.size / 1024 / 1024).toFixed(1)} MB) กรุณาถ่ายใหม่หรือเลือกรูปที่เล็กกว่า 4 MB` };
+    }
+    const fd = new FormData();
+    fd.append('image', small);
+    for (const [k, v] of Object.entries(extra)) fd.append(k, v);
+    const res = await fetch('/api/upload', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error || `อัปโหลดไม่สำเร็จ (${res.status})` };
+    return { ok: true, url: data.url };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'อัปโหลดไม่สำเร็จ' };
+  }
+}

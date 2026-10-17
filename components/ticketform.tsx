@@ -1,5 +1,5 @@
 'use client';
-import { shrinkImage } from '../lib/image-client';
+import { uploadImageFile } from '../lib/image-client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './authprovider';
@@ -95,17 +95,14 @@ export default function TicketForm() {
     try {
       const uploadedUrls: string[] = [];
       for (const img of images) {
-        const formData = new FormData();
-        formData.append('image', await shrinkImage(img.file));
-        const uploadRes = await fetch('/api/upload', {
-          headers: { Authorization: `Bearer ${token}` },
-          method: 'POST',
-          body: formData,
-        });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          uploadedUrls.push(uploadData.url);
+        const up = await uploadImageFile(img.file, {}, token);
+        if (!up.ok) {
+          setUploadingImages(false);
+          setLoading(false);
+          setError(up.error || 'อัปโหลดรูปไม่สำเร็จ');
+          return;
         }
+        uploadedUrls.push(up.url!);
       }
       setUploadingImages(false);
 

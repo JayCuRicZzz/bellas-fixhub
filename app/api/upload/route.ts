@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '../../../lib/auth';
+import { getUserFromRequest, getUserBranches } from '../../../lib/auth';
 import { uploadImage, safeImageFilename, processImage, MAX_IMAGE_BYTES, MAX_IMAGES_PER_TICKET } from '../../../lib/upload';
 import sql from '../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
 const IMAGE_TYPES = ['report', 'repair', 'other'];
+
+/** 404 if the ticket does not exist, 403 if it is outside the user's branches, otherwise null. */
+async function ticketAccessDenied(user: { id: string; role: string }, ticketId: number) {
+  const rows = await sql`select branch_code, status from fixhub.tickets where ticket_id = ${ticketId}`;
+  if (rows.length === 0) return NextResponse.json({ error: 'ไม่พบใบงาน' }, { status: 404 });
+  const branches = await getUserBranches(user.id, user.role);
+  if (!branches.includes(rows[0].branch_code)) return NextResponse.json({ error: 'ไม่มีสิทธิ์เข้าถึงใบงานนี้' }, { status: 403 });
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -23,6 +32,8 @@ export async function POST(req: NextRequest) {
     if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'ไฟล์ใหญ่เกินไป (สูงสุด 10MB)' }, { status: 400 });
 
     if (ticketId) {
+      const denied = await ticketAccessDenied(user, ticketId);
+      if (denied) return denied;
       const [{ n }] = await sql`select count(*)::int as n from fixhub.ticket_images where ticket_id = ${ticketId}`;
       if (n >= MAX_IMAGES_PER_TICKET) {
         return NextResponse.json({ error: `แนบรูปได้สูงสุด ${MAX_IMAGES_PER_TICKET} รูปต่อใบงาน` }, { status: 400 });
@@ -63,6 +74,8 @@ export async function GET(req: NextRequest) {
   if (!ticketId) return NextResponse.json({ error: 'ticket_id required' }, { status: 400 });
 
   try {
+    const denied = await ticketAccessDenied(user, ticketId);
+    if (denied) return denied;
     const rows = await sql`
       select ti.*, p.full_name as uploader_name
       from fixhub.ticket_images ti
