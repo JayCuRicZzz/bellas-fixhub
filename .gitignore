@@ -45,3 +45,4 @@ public/uploads/*
 
 # editor
 .vscode/settings.json
+tsconfig.tsbuildinfo
