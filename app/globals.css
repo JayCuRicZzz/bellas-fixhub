@@ -15,6 +15,7 @@
   --ink:255 255 255;
   --scroll-track:#0d1423; --scroll-thumb:#2a3a5c; --scroll-hover:#3a4d75;
   --sk-a:#1a2744; --sk-b:#243356; color-scheme:dark;
+  --warn-bg:#33240A; --warn-ink:#FFD79A;
   /* หน้า login (inline style) */
   --lg-bg:linear-gradient(135deg,#0a0f1a 0%,#111a2e 40%,#1a2744 100%); --lg-card:rgba(17,26,46,.9);
   --lg-card-line:rgba(255,255,255,.08); --lg-card-shadow:0 20px 60px rgba(0,0,0,.4);
@@ -27,6 +28,7 @@
   --ink:15 27 51;
   --scroll-track:#e6ebf3; --scroll-thumb:#b9c4d6; --scroll-hover:#94a3bd;
   --sk-a:#e3e8f0; --sk-b:#f1f4f9; color-scheme:light;
+  --warn-bg:#FFFBEB; --warn-ink:#92400E;
   --lg-bg:linear-gradient(135deg,#f4f7fb 0%,#e9eef6 45%,#dde5f1 100%); --lg-card:rgba(255,255,255,.92);
   --lg-card-line:rgba(15,27,51,.10); --lg-card-shadow:0 20px 50px -18px rgba(15,27,51,.25);
   --lg-input:#f5f7fb; --lg-input-line:rgba(15,27,51,.16); --lg-chip:rgba(15,27,51,.05);
@@ -260,6 +262,37 @@
 .tt-btn:hover .tt{ filter:brightness(1.07); }
 .tt-btn:active .tt{ transform:scale(.97); }
 @media (prefers-reduced-motion:reduce){ .tt-el,.tt-knob{ transition:none; } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   หน้า 404 / ระบบขัดข้อง (app/notfoundview.tsx · app/error.tsx · components/mascotom.tsx)
+   แบบเดียวกับระบบใบเสนอราคา — CSS อยู่ที่นี่ ไม่ใส่ <style> ในคอมโพเนนต์ (ทำ hydration พัง)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes bvgFadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+@keyframes bvgGlow   { 0%,100%{opacity:.35} 50%{opacity:.75} }
+@keyframes bvgFloat  { 0%,100%{transform:translateY(0) rotate(-1.6deg)} 50%{transform:translateY(-10px) rotate(-1.6deg)} }
+@keyframes bvgScan   { 0%{transform:translateY(-110%)} 100%{transform:translateY(520%)} }
+@keyframes bvgFlick  { 0%,92%,100%{opacity:1} 94%{opacity:.35} 96%{opacity:.9} }
+@keyframes bvgPulse  { 0%,100%{transform:scale(1);opacity:.9} 50%{transform:scale(1.05);opacity:1} }
+@keyframes bvgPetal  { to { transform: rotate(360deg) } }
+@keyframes bvgBreath { 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
+@keyframes bvgAura   { 0%{opacity:.26;transform:scale(1)} 100%{opacity:0;transform:scale(1.55)} }
+.nf-up,.er-up { animation: bvgFadeUp .5s ease-out both; }
+.nf-glow  { animation: bvgGlow 3.6s ease-in-out infinite; }
+.nf-float { animation: bvgFloat 6s ease-in-out infinite; }
+.nf-scan::after { content:""; position:absolute; left:0; right:0; height:26%;
+  background:linear-gradient(180deg,transparent,rgba(255,138,0,.20),transparent);
+  animation: bvgScan 4.5s linear infinite; pointer-events:none; }
+.nf-flick { animation: bvgFlick 5s steps(1,end) infinite; }
+.er-pulse { animation: bvgPulse 2.4s ease-in-out infinite; }
+.nf-om    { animation: bvgBreath 3.6s ease-in-out infinite; transform-origin: 50% 95%; }
+.nf-petal { animation: bvgPetal 22s linear infinite; transform-origin: 104px 100px; }
+.nf-aura  { animation: bvgAura 3.6s ease-out infinite; transform-origin: 104px 100px; }
+.nf-svg   { transform-box: view-box; }
+@media (prefers-reduced-motion: reduce) {
+  .nf-up,.er-up,.nf-glow,.nf-float,.nf-flick,.er-pulse,.nf-om,.nf-petal { animation:none !important; }
+  .nf-aura { animation:none !important; opacity:.18; }
+  .nf-scan::after { display:none; }
+}
 
 /* -----------------------------------------------
    PRINT STYLES
