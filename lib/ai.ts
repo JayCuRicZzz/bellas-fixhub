@@ -236,7 +236,7 @@ function generateReportSummary(data: ReportData): string {
 async function callAIAPI(messages: any[]): Promise<string|null> {
   var provider = process.env.AI_PROVIDER || 'openai';
   var apiKey = process.env.AI_API_KEY;
-  var model = process.env.AI_MODEL || 'gemini-2.0-flash';
+  var model = process.env.AI_MODEL || 'openai/gpt-oss-120b';
   if (!apiKey) return null;
 
   try {

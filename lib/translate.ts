@@ -14,7 +14,7 @@ export async function translateToThai(text: string): Promise<string> {
       const url = provider === 'groq'
         ? 'https://api.groq.com/openai/v1/chat/completions'
         : (process.env.AI_API_URL || 'https://api.openai.com/v1/chat/completions');
-      const model = process.env.AI_MODEL || 'llama-3.3-70b-versatile';
+      const model = process.env.AI_MODEL || 'openai/gpt-oss-120b';
       
       res = await fetch(url, {
         method: 'POST',
