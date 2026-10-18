@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAnon, usernameToEmail } from '../../../../lib/supabase';
+import { sql } from '../../../../lib/db';
 import { loadProfile, setAuthCookies, invalidateUserCache } from '../../../../lib/auth';
 import { employeeCodeToHrEmail, isHrEmail, looksLikeEmployeeCode, provisionFromHr } from '../../../../lib/hr-sync';
 
@@ -74,6 +75,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { access_token, refresh_token } = data.session;
+    // บันทึกเวลาเข้าใช้ล่าสุดทุกบัญชี (เดิมอัปเดตเฉพาะบัญชี HR)
+    try { await sql`update fixhub.profiles set last_login_at = now() where user_id = ${data.user.id}`; } catch { /* ไม่ให้ login ล้มเพราะเรื่องนี้ */ }
 
     if (isJson) {
       const response = NextResponse.json({
