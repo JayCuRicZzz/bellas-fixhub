@@ -50,7 +50,7 @@ export interface DailySummary {
 export async function buildSummary(dept: SummaryDept, now = new Date()): Promise<DailySummary> {
   const rows = await sql`
     select b.branch_code, b.branch_name_en as branch_name,
-      count(t.ticket_id) filter (where (t.created_at at time zone ${BKK})::date = fixhub.today_bkk())::int as new_today,
+      count(t.ticket_id) filter (where t.status <> 'CANCELLED' and (t.created_at at time zone ${BKK})::date = fixhub.today_bkk())::int as new_today,
       count(t.ticket_id) filter (where t.status in ('RESOLVED','APPROVED')
                                    and (t.resolved_at at time zone ${BKK})::date = fixhub.today_bkk())::int as done_today,
       count(t.ticket_id) filter (where t.status = 'PENDING')::int as not_accepted,
