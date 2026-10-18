@@ -5,6 +5,7 @@ import { useAuth } from '../../../../components/authprovider';
 import { useI18n } from '../../../../lib/i18n/i18n';
 import { Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import EscalationSettings from '../../../../components/escalationsettings';
 
 export default function LineSettingsPage() {
   const { user, token } = useAuth();
@@ -189,6 +190,7 @@ export default function LineSettingsPage() {
           </div>
         </div>
       </form>
+      <EscalationSettings token={token} />
     </div>
   );
 }

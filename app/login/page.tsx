@@ -7,6 +7,15 @@ import { AuthProvider, useAuth } from '../../components/authprovider';
 import { Eye, EyeOff } from 'lucide-react';
 import ThemeToggle from '../../components/themetoggle';
 
+/** ?redirect=/r/xxx (จากสแกน QR ก่อน login) → กลับไปหน้านั้น · รับเฉพาะ path ภายในระบบ */
+function safeRedirect(): string {
+  try {
+    const r = new URLSearchParams(window.location.search).get('redirect') || '';
+    if (r.startsWith('/') && !r.startsWith('//') && !r.startsWith('/login')) return r;
+  } catch { /* ignore */ }
+  return '/dashboard';
+}
+
 function LoginContent() {
   const { t, lang, setLang } = useI18n();
   const { login } = useAuth();
@@ -30,7 +39,7 @@ function LoginContent() {
         if (result.passwordResetRequired) {
           router.push('/login/set-password');
         } else {
-          router.push('/dashboard');
+          router.push(safeRedirect());
         }
       } else {
         setError(result.message || t.auth.invalidCredentials);
@@ -160,7 +169,7 @@ function AuthProviderWrapper() {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      router.push('/dashboard');
+      router.push(safeRedirect());
     }
   }, [loading, isAuthenticated, router]);
 

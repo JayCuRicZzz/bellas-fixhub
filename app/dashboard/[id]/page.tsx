@@ -28,6 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import TicketParts from '../../../components/ticketparts';
 
 export default function TicketDetailPage() {
   const { id } = useParams();
@@ -602,6 +603,12 @@ export default function TicketDetailPage() {
             <p className="text-xs text-gray-500 mb-1">ตำแหน่งที่พบปัญหา</p>
             <p className="text-ink">{ticket.location_detail}</p>
           </div>
+          {(ticket as any).asset_code && (
+            <div>
+              <p className="text-xs text-gray-500 mb-1">อุปกรณ์</p>
+              <p className="text-ink">🧰 {(ticket as any).asset_name} <span className="text-xs text-gray-500 font-mono">{(ticket as any).asset_code}</span></p>
+            </div>
+          )}
           <div>
             <p className="text-xs text-gray-500 mb-1">อาการเสีย</p>
             <p className="text-gray-300 whitespace-pre-wrap">{ticket.description}</p>
@@ -735,6 +742,9 @@ export default function TicketDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Parts used */}
+      <TicketParts ticketId={ticket.ticket_id} status={ticket.status} branch={ticket.branch_code} deptType={ticket.dept_type} user={user} token={token} />
 
       {/* Timeline / Status History */}
       <div className="card">

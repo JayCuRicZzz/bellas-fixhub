@@ -10,7 +10,7 @@ const REFRESH_WHEN_LEFT_SEC = 10 * 60; // refresh when < 10 minutes of JWT life 
 const publicPaths = [
   '/login', '/login/set-password',
   '/api/auth/login', '/api/auth/logout', '/api/auth/set-password',
-  '/api/setup', '/api/cron/pm-check', '/api/cron/daily-summary', '/api/health',
+  '/api/setup', '/api/cron/pm-check', '/api/cron/daily-summary', '/api/cron/escalate', '/api/health',
 ];
 const staticPrefixes = ['/_next', '/favicon.ico', '/uploads', '/manifest.json', '/icon-', '/logo.jpg', '/logo.png', '/it-indy-404.jpg'];
 

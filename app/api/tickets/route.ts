@@ -93,16 +93,28 @@ export async function POST(req: NextRequest) {
     const sla = await sql`select sla_minutes from fixhub.sla_config where priority = ${priority}`;
     const slaMinutes: number = sla[0]?.sla_minutes || 240;
 
+    // ห้อง/อุปกรณ์จาก QR หรือที่เลือกในฟอร์ม — ต้องอยู่สาขาเดียวกับใบงาน
+    let locationId: number | null = Number(body.location_id) || null;
+    let assetId: number | null = Number(body.asset_id) || null;
+    if (assetId) {
+      const a = await sql`select location_id from fixhub.assets where asset_id = ${assetId} and branch_code = ${branch_code} and active`;
+      if (!a.length) assetId = null; else if (!locationId) locationId = a[0].location_id;
+    }
+    if (locationId) {
+      const l = await sql`select 1 from fixhub.locations where location_id = ${locationId} and branch_code = ${branch_code}`;
+      if (!l.length) locationId = null;
+    }
+
     const descriptionThai = await translateToThai(String(description).trim());
 
     const [created] = await sql`
       insert into fixhub.tickets
         (ticket_number, branch_code, category_id, reporter_id, reporter_department, location_detail, description,
-         priority, difficulty, status, sla_deadline)
+         priority, difficulty, status, sla_deadline, location_id, asset_id)
       values
         (fixhub.next_ticket_number(${branch_code}, ${deptCode}), ${branch_code}, ${Number(category_id)}, ${user.id}, ${reporterDept},
          ${String(location_detail).trim()}, ${descriptionThai}, ${priority}, ${difficulty}, 'PENDING',
-         now() + make_interval(mins => ${slaMinutes}))
+         now() + make_interval(mins => ${slaMinutes}), ${locationId}, ${assetId})
       returning ticket_id, ticket_number, created_at`;
 
     const ticketId: number = created.ticket_id;
@@ -146,12 +158,26 @@ export async function POST(req: NextRequest) {
       const hoursAgo = Math.round((Date.now() - new Date(dupes[0].created_at).getTime()) / 3600000);
       alerts.push(`🔄 งานซ้ำ: ห้อง ${location_detail} แจ้งปัญหาเดียวกันเมื่อ ${hoursAgo} ชม.ที่แล้ว (${dupes[0].ticket_number})`);
     }
+    let assetLine: string | null = null;
+    if (assetId) {
+      const [a] = await sql`
+        select a.asset_code, a.name, a.warranty_until,
+               (select count(*)::int from fixhub.tickets t where t.asset_id = a.asset_id and t.ticket_id <> ${ticketId}
+                  and t.status <> 'CANCELLED' and t.created_at > now() - interval '90 days') as n90
+        from fixhub.assets a where a.asset_id = ${assetId}`;
+      if (a) {
+        const inWarranty = a.warranty_until && new Date(a.warranty_until) >= new Date();
+        assetLine = `🧰 ${a.asset_code} ${a.name}${inWarranty ? ' (ยังอยู่ในประกัน — แจ้งผู้ขายก่อนซ่อมเอง)' : ''}`;
+        if (a.n90 >= 2) alerts.push(`🔁 อุปกรณ์นี้ซ่อมไปแล้ว ${a.n90} ครั้งใน 90 วัน — ควรพิจารณาเปลี่ยนเครื่อง`);
+      }
+    }
     // LINE: ONE push per new ticket (duplicate / refrigerant alerts included in the same message)
     const PRI: Record<string, string> = { urgent: '🔴 ด่วนมาก', high: '🟠 สูง', medium: '🔵 ปานกลาง', low: '⚪ น้อย', non_urgent: '⚫ ไม่เร่งด่วน' };
     const lineText = [
       `📢 งานแจ้งซ่อมใหม่ ${PRI[priority] || ''}`,
       `🔢 ${ticketNumber}`,
       `🏨 ${branch_code} 📍 ${location_detail}`,
+      ...(assetLine ? [assetLine] : []),
       `📝 ${descriptionThai}`,
       `👤 ${user.full_name || user.username}`,
       ...(alerts.length ? ['', ...alerts] : []),

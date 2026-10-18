@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './authprovider';
 import { useI18n } from '../lib/i18n/i18n';
 import { BRANCHES, Category, DEPARTMENTS } from '../types';
+import { assetTypeOf } from '../lib/asset-types';
 import { AlertCircle, Send, Loader2, Camera, X, ImagePlus, Clock } from 'lucide-react';
 
 interface SlaConfig {
@@ -30,6 +31,36 @@ export default function TicketForm() {
   const [createdTicket, setCreatedTicket] = useState<{ticket_number:string; branch_code:string; location_detail:string; description:string; priority:string; department:string} | null>(null);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // ── สแกน QR ห้อง/อุปกรณ์ (/r/<token> → ?qr=<token>) ──
+  const [qr, setQr] = useState<any>(null);
+  const [qrError, setQrError] = useState('');
+  const [locationId, setLocationId] = useState<number | null>(null);
+  const [assetId, setAssetId] = useState<number | null>(null);
+
+  const applyAsset = (a: any) => {
+    setAssetId(a ? a.asset_id : null);
+    if (!a) return;
+    const t = assetTypeOf(a.asset_type);
+    const dept = (a.dept_type || t?.dept) === 'IT' ? 'IT' : 'MAINTENANCE';
+    setDepartment(dept);
+    setCategoryId(t?.cat ? String(t.cat) : '');
+  };
+
+  useEffect(() => {
+    const qrToken = new URLSearchParams(window.location.search).get('qr');
+    if (!qrToken) return;
+    fetch(`/api/qr/${encodeURIComponent(qrToken)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(async r => ({ ok: r.ok, d: await r.json() }))
+      .then(({ ok, d }) => {
+        if (!ok) { setQrError(d.error || 'QR ไม่ถูกต้อง'); return; }
+        setQr(d);
+        setBranchCode(d.branch_code);
+        if (d.location) { setLocationId(d.location.location_id); setLocationDetail(d.location.name); }
+        else if (d.asset) setLocationDetail(d.asset.name);
+        if (d.asset) applyAsset(d.asset);
+      })
+      .catch(() => setQrError('โหลดข้อมูล QR ไม่สำเร็จ'));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!branchCode && user?.branches?.length === 1) setBranchCode(user.branches[0]);
@@ -125,6 +156,8 @@ export default function TicketForm() {
           priority,
           reporter_department: department,
           images: uploadedUrls,
+          location_id: locationId,
+          asset_id: assetId,
         }),
       });
 
@@ -132,7 +165,8 @@ export default function TicketForm() {
       if (res.ok) {
         setSuccess(true);
         setCreatedTicket({ ticket_number: data.ticket_number, branch_code: branchCode, location_detail: locationDetail, description, priority, department });
-        setLocationDetail('');
+        setLocationDetail(qr?.location?.name || '');  // สแกน QR มา → แจ้งเรื่องอื่นของห้องเดิมต่อได้
+        if (!qr?.location) setLocationId(null);
         setDescription('');
         setImages([]);
       } else {
@@ -149,6 +183,33 @@ export default function TicketForm() {
   return (
     <>
     <form onSubmit={handleSubmit} className="space-y-5">
+      {qrError && <div className="px-4 py-3 rounded-lg bg-red-500/10 text-red-400 text-sm">⚠️ {qrError}</div>}
+      {qr && (
+        <div className="px-4 py-3 rounded-lg bg-gold-500/10 border border-gold-500/30 text-sm space-y-2">
+          <div className="text-ink font-medium">
+            📷 แจ้งซ่อมจาก QR: {qr.location?.name || ''}{qr.asset ? ` · ${assetTypeOf(qr.asset.asset_type)?.icon || '🧰'} ${qr.asset.name} (${qr.asset.asset_code})` : ''}
+          </div>
+          {qr.asset?.warranty_until && new Date(qr.asset.warranty_until) >= new Date() && (
+            <div className="text-amber-400 text-xs">🛡️ อุปกรณ์นี้ยังอยู่ในประกันถึง {new Date(qr.asset.warranty_until).toLocaleDateString('th-TH')} — ช่างควรติดต่อผู้ขายก่อนซ่อมเอง</div>
+          )}
+          {!qr.asset && qr.assets?.length > 0 && (
+            <label className="block text-xs text-gray-400">อุปกรณ์ที่เสีย (ถ้ารู้)
+              <select value={assetId || ''} onChange={e => applyAsset(qr.assets.find((a: any) => a.asset_id === Number(e.target.value)) || null)} className="select-field mt-1">
+                <option value="">— ไม่ระบุ / อื่น ๆ —</option>
+                {qr.assets.map((a: any) => <option key={a.asset_id} value={a.asset_id}>{assetTypeOf(a.asset_type)?.icon} {a.name} ({a.asset_code})</option>)}
+              </select>
+            </label>
+          )}
+          {qr.open_tickets?.length > 0 && (
+            <div className="text-xs text-orange-400">
+              ⏳ จุดนี้มีงานค้างอยู่แล้ว {qr.open_tickets.length} ใบ — ตรวจก่อนแจ้งซ้ำ:
+              {qr.open_tickets.map((t: any) => (
+                <a key={t.ticket_id} href={`/dashboard/${t.ticket_id}`} className="block text-gray-300 hover:text-gold-400 truncate">• {t.ticket_number} {t.description}</a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.branch}</label>
@@ -164,7 +225,7 @@ export default function TicketForm() {
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.locationDetail}</label>
-          <input type="text" value={locationDetail} onChange={e => setLocationDetail(e.target.value)}
+          <input type="text" value={locationDetail} onChange={e => { setLocationDetail(e.target.value); if (qr?.location && e.target.value !== qr.location.name) setLocationId(null); }}
             className="input-field" placeholder={t.ticket.locationPlaceholder} required />
         </div>
 
