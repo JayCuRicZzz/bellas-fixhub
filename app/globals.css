@@ -4,9 +4,40 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ธีมสว่าง/มืด — สลับด้วย data-theme="light|dark" ที่ <html>  (components/themetoggle.tsx)
+   สี navy / gray / ink ของ Tailwind อ่านจากตัวแปรด้านล่าง (ช่อง RGB เพื่อให้ /opacity ใช้ได้)
+   ค่าเริ่มต้น = มืด (หน้าตาเดิมของระบบ)
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root, :root[data-theme="dark"]{
+  --navy-50:240 243 249; --navy-100:217 224 240; --navy-200:179 194 225; --navy-300:141 164 210; --navy-400:103 134 195; --navy-500:65 104 180; --navy-600:26 39 68; --navy-700:22 32 57; --navy-800:17 26 46; --navy-900:13 20 35; --navy-950:10 15 26;
+  --gray-50:249 250 251; --gray-100:243 244 246; --gray-200:229 231 235; --gray-300:209 213 219; --gray-400:156 163 175; --gray-500:107 114 128; --gray-600:75 85 99; --gray-700:55 65 81; --gray-800:31 41 55; --gray-900:17 24 39; --gray-950:3 7 18;
+  --ink:255 255 255;
+  --scroll-track:#0d1423; --scroll-thumb:#2a3a5c; --scroll-hover:#3a4d75;
+  --sk-a:#1a2744; --sk-b:#243356; color-scheme:dark;
+  /* หน้า login (inline style) */
+  --lg-bg:linear-gradient(135deg,#0a0f1a 0%,#111a2e 40%,#1a2744 100%); --lg-card:rgba(17,26,46,.9);
+  --lg-card-line:rgba(255,255,255,.08); --lg-card-shadow:0 20px 60px rgba(0,0,0,.4);
+  --lg-input:rgba(255,255,255,.05); --lg-input-line:rgba(255,255,255,.1); --lg-chip:rgba(255,255,255,.06);
+  --lg-ink:#ffffff; --lg-label:#8da4d2; --lg-sub:#6786c3; --lg-err:#fca5a5;
+}
+:root[data-theme="light"]{
+  --navy-50:20 28 46; --navy-100:38 50 74; --navy-200:61 75 102; --navy-300:74 93 128; --navy-400:97 119 160; --navy-500:139 156 188; --navy-600:211 219 232; --navy-700:230 235 243; --navy-800:255 255 255; --navy-900:233 238 246; --navy-950:238 242 248;
+  --gray-50:3 7 18; --gray-100:17 24 39; --gray-200:31 41 55; --gray-300:51 65 85; --gray-400:71 85 105; --gray-500:100 116 139; --gray-600:124 136 153; --gray-700:203 213 225; --gray-800:229 231 235; --gray-900:243 244 246; --gray-950:249 250 251;
+  --ink:15 27 51;
+  --scroll-track:#e6ebf3; --scroll-thumb:#b9c4d6; --scroll-hover:#94a3bd;
+  --sk-a:#e3e8f0; --sk-b:#f1f4f9; color-scheme:light;
+  --lg-bg:linear-gradient(135deg,#f4f7fb 0%,#e9eef6 45%,#dde5f1 100%); --lg-card:rgba(255,255,255,.92);
+  --lg-card-line:rgba(15,27,51,.10); --lg-card-shadow:0 20px 50px -18px rgba(15,27,51,.25);
+  --lg-input:#f5f7fb; --lg-input-line:rgba(15,27,51,.16); --lg-chip:rgba(15,27,51,.05);
+  --lg-ink:#0f1b33; --lg-label:#3d4f73; --lg-sub:#4a5d80; --lg-err:#b42318;
+}
+
 @layer base {
+  html { background: rgb(var(--navy-950)); }
   body {
     @apply bg-navy-950 text-gray-100 font-sans;
+    transition: background-color .35s ease, color .35s ease;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
@@ -63,14 +94,14 @@
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0d1423; border-radius: 3px; }
-::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3a4d75; }
+::-webkit-scrollbar-track { background: var(--scroll-track); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-hover); }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a3a5c #0d1423;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
 
 /* Skeleton loading */
@@ -79,7 +110,7 @@
   100% { background-position: 200% 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #1a2744 25%, #243356 50%, #1a2744 75%);
+  background: linear-gradient(90deg, var(--sk-a) 25%, var(--sk-b) 50%, var(--sk-a) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 0.5rem;
@@ -115,7 +146,7 @@
     min-height: 40px;
   }
   .card-hover:active {
-    background: rgba(255,255,255,0.05);
+    background: rgb(var(--gray-100) / 0.05);
   }
 }
 
@@ -132,6 +163,103 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* ═══ โหมดสว่าง: สีตัวอักษร/พื้นจาง ๆ ที่ออกแบบไว้บนพื้นมืด → ปรับให้อ่านชัดบนพื้นขาว ═══ */
+:root[data-theme="light"] .card { box-shadow: 0 1px 3px rgba(15,27,51,.08), 0 4px 14px -6px rgba(15,27,51,.10); }
+:root[data-theme="light"] .card-hover:hover { box-shadow: 0 10px 25px -8px rgba(15,27,51,.18); }
+:root[data-theme="light"] .text-gold-300,:root[data-theme="light"] .text-gold-400,:root[data-theme="light"] .text-gold-500,:root[data-theme="light"] .hover\:text-gold-400:hover,:root[data-theme="light"] .hover\:text-gold-500:hover{color:#8a6a0e}
+:root[data-theme="light"] .text-gold-500\/70{color:#8a6a0eb3}
+/* ตัวอักษรบนปุ่มทอง/ป้ายสีต้องเข้มเสมอ ไม่กลับสีตามธีม */
+:root[data-theme="light"] .text-navy-900{color:#0d1423}
+:root[data-theme="light"] .text-navy-900\/80{color:#0d1423cc}
+:root[data-theme="light"] .text-navy-700{color:#162039}
+:root[data-theme="light"] .bg-black\/70,:root[data-theme="light"] .bg-black\/80{background-color:rgba(15,27,51,.55)}
+:root[data-theme="light"] .text-red-200,:root[data-theme="light"] .text-red-300,:root[data-theme="light"] .text-red-400,:root[data-theme="light"] .hover\:text-red-300:hover,:root[data-theme="light"] .hover\:text-red-400:hover{color:#b91c1c}
+:root[data-theme="light"] .text-red-400\/80{color:#b91c1ccc}
+:root[data-theme="light"] .bg-red-900\/20,:root[data-theme="light"] .bg-red-900\/30,:root[data-theme="light"] .bg-red-900\/40,:root[data-theme="light"] .hover\:bg-red-900\/20:hover,:root[data-theme="light"] .hover\:bg-red-900\/30:hover{background-color:#fee2e2}
+:root[data-theme="light"] .border-red-700,:root[data-theme="light"] .border-red-800{border-color:#fca5a5}
+:root[data-theme="light"] .text-blue-200,:root[data-theme="light"] .text-blue-300,:root[data-theme="light"] .text-blue-400,:root[data-theme="light"] .hover\:text-blue-300:hover,:root[data-theme="light"] .hover\:text-blue-400:hover{color:#1d4ed8}
+:root[data-theme="light"] .text-blue-400\/80{color:#1d4ed8cc}
+:root[data-theme="light"] .bg-blue-900\/20,:root[data-theme="light"] .bg-blue-900\/30,:root[data-theme="light"] .bg-blue-900\/40,:root[data-theme="light"] .hover\:bg-blue-900\/20:hover,:root[data-theme="light"] .hover\:bg-blue-900\/30:hover{background-color:#dbeafe}
+:root[data-theme="light"] .border-blue-700,:root[data-theme="light"] .border-blue-800{border-color:#93c5fd}
+:root[data-theme="light"] .text-green-200,:root[data-theme="light"] .text-green-300,:root[data-theme="light"] .text-green-400,:root[data-theme="light"] .hover\:text-green-300:hover,:root[data-theme="light"] .hover\:text-green-400:hover{color:#15803d}
+:root[data-theme="light"] .text-green-400\/80{color:#15803dcc}
+:root[data-theme="light"] .bg-green-900\/20,:root[data-theme="light"] .bg-green-900\/30,:root[data-theme="light"] .bg-green-900\/40,:root[data-theme="light"] .hover\:bg-green-900\/20:hover,:root[data-theme="light"] .hover\:bg-green-900\/30:hover{background-color:#dcfce7}
+:root[data-theme="light"] .border-green-700,:root[data-theme="light"] .border-green-800{border-color:#86efac}
+:root[data-theme="light"] .text-emerald-200,:root[data-theme="light"] .text-emerald-300,:root[data-theme="light"] .text-emerald-400,:root[data-theme="light"] .hover\:text-emerald-300:hover,:root[data-theme="light"] .hover\:text-emerald-400:hover{color:#047857}
+:root[data-theme="light"] .text-emerald-400\/80{color:#047857cc}
+:root[data-theme="light"] .bg-emerald-900\/20,:root[data-theme="light"] .bg-emerald-900\/30,:root[data-theme="light"] .bg-emerald-900\/40,:root[data-theme="light"] .hover\:bg-emerald-900\/20:hover,:root[data-theme="light"] .hover\:bg-emerald-900\/30:hover{background-color:#d1fae5}
+:root[data-theme="light"] .border-emerald-700,:root[data-theme="light"] .border-emerald-800{border-color:#6ee7b7}
+:root[data-theme="light"] .text-amber-200,:root[data-theme="light"] .text-amber-300,:root[data-theme="light"] .text-amber-400,:root[data-theme="light"] .hover\:text-amber-300:hover,:root[data-theme="light"] .hover\:text-amber-400:hover{color:#b45309}
+:root[data-theme="light"] .text-amber-400\/80{color:#b45309cc}
+:root[data-theme="light"] .bg-amber-900\/20,:root[data-theme="light"] .bg-amber-900\/30,:root[data-theme="light"] .bg-amber-900\/40,:root[data-theme="light"] .hover\:bg-amber-900\/20:hover,:root[data-theme="light"] .hover\:bg-amber-900\/30:hover{background-color:#fef3c7}
+:root[data-theme="light"] .border-amber-700,:root[data-theme="light"] .border-amber-800{border-color:#fcd34d}
+:root[data-theme="light"] .text-orange-200,:root[data-theme="light"] .text-orange-300,:root[data-theme="light"] .text-orange-400,:root[data-theme="light"] .hover\:text-orange-300:hover,:root[data-theme="light"] .hover\:text-orange-400:hover{color:#c2410c}
+:root[data-theme="light"] .text-orange-400\/80{color:#c2410ccc}
+:root[data-theme="light"] .bg-orange-900\/20,:root[data-theme="light"] .bg-orange-900\/30,:root[data-theme="light"] .bg-orange-900\/40,:root[data-theme="light"] .hover\:bg-orange-900\/20:hover,:root[data-theme="light"] .hover\:bg-orange-900\/30:hover{background-color:#ffedd5}
+:root[data-theme="light"] .border-orange-700,:root[data-theme="light"] .border-orange-800{border-color:#fdba74}
+:root[data-theme="light"] .text-purple-200,:root[data-theme="light"] .text-purple-300,:root[data-theme="light"] .text-purple-400,:root[data-theme="light"] .hover\:text-purple-300:hover,:root[data-theme="light"] .hover\:text-purple-400:hover{color:#7e22ce}
+:root[data-theme="light"] .text-purple-400\/80{color:#7e22cecc}
+:root[data-theme="light"] .bg-purple-900\/20,:root[data-theme="light"] .bg-purple-900\/30,:root[data-theme="light"] .bg-purple-900\/40,:root[data-theme="light"] .hover\:bg-purple-900\/20:hover,:root[data-theme="light"] .hover\:bg-purple-900\/30:hover{background-color:#f3e8ff}
+:root[data-theme="light"] .border-purple-700,:root[data-theme="light"] .border-purple-800{border-color:#d8b4fe}
+:root[data-theme="light"] .text-yellow-200,:root[data-theme="light"] .text-yellow-300,:root[data-theme="light"] .text-yellow-400,:root[data-theme="light"] .hover\:text-yellow-300:hover,:root[data-theme="light"] .hover\:text-yellow-400:hover{color:#a16207}
+:root[data-theme="light"] .text-yellow-400\/80{color:#a16207cc}
+:root[data-theme="light"] .bg-yellow-900\/20,:root[data-theme="light"] .bg-yellow-900\/30,:root[data-theme="light"] .bg-yellow-900\/40,:root[data-theme="light"] .hover\:bg-yellow-900\/20:hover,:root[data-theme="light"] .hover\:bg-yellow-900\/30:hover{background-color:#fef9c3}
+:root[data-theme="light"] .border-yellow-700,:root[data-theme="light"] .border-yellow-800{border-color:#fde047}
+:root[data-theme="light"] .text-cyan-200,:root[data-theme="light"] .text-cyan-300,:root[data-theme="light"] .text-cyan-400,:root[data-theme="light"] .hover\:text-cyan-300:hover,:root[data-theme="light"] .hover\:text-cyan-400:hover{color:#0e7490}
+:root[data-theme="light"] .text-cyan-400\/80{color:#0e7490cc}
+:root[data-theme="light"] .bg-cyan-900\/20,:root[data-theme="light"] .bg-cyan-900\/30,:root[data-theme="light"] .bg-cyan-900\/40,:root[data-theme="light"] .hover\:bg-cyan-900\/20:hover,:root[data-theme="light"] .hover\:bg-cyan-900\/30:hover{background-color:#cffafe}
+:root[data-theme="light"] .border-cyan-700,:root[data-theme="light"] .border-cyan-800{border-color:#67e8f9}
+:root[data-theme="light"] .text-teal-200,:root[data-theme="light"] .text-teal-300,:root[data-theme="light"] .text-teal-400,:root[data-theme="light"] .hover\:text-teal-300:hover,:root[data-theme="light"] .hover\:text-teal-400:hover{color:#0f766e}
+:root[data-theme="light"] .text-teal-400\/80{color:#0f766ecc}
+:root[data-theme="light"] .bg-teal-900\/20,:root[data-theme="light"] .bg-teal-900\/30,:root[data-theme="light"] .bg-teal-900\/40,:root[data-theme="light"] .hover\:bg-teal-900\/20:hover,:root[data-theme="light"] .hover\:bg-teal-900\/30:hover{background-color:#ccfbf1}
+:root[data-theme="light"] .border-teal-700,:root[data-theme="light"] .border-teal-800{border-color:#5eead4}
+:root[data-theme="light"] .text-indigo-200,:root[data-theme="light"] .text-indigo-300,:root[data-theme="light"] .text-indigo-400,:root[data-theme="light"] .hover\:text-indigo-300:hover,:root[data-theme="light"] .hover\:text-indigo-400:hover{color:#4338ca}
+:root[data-theme="light"] .text-indigo-400\/80{color:#4338cacc}
+:root[data-theme="light"] .bg-indigo-900\/20,:root[data-theme="light"] .bg-indigo-900\/30,:root[data-theme="light"] .bg-indigo-900\/40,:root[data-theme="light"] .hover\:bg-indigo-900\/20:hover,:root[data-theme="light"] .hover\:bg-indigo-900\/30:hover{background-color:#e0e7ff}
+:root[data-theme="light"] .border-indigo-700,:root[data-theme="light"] .border-indigo-800{border-color:#a5b4fc}
+:root[data-theme="light"] .text-sky-200,:root[data-theme="light"] .text-sky-300,:root[data-theme="light"] .text-sky-400,:root[data-theme="light"] .hover\:text-sky-300:hover,:root[data-theme="light"] .hover\:text-sky-400:hover{color:#0369a1}
+:root[data-theme="light"] .text-sky-400\/80{color:#0369a1cc}
+:root[data-theme="light"] .bg-sky-900\/20,:root[data-theme="light"] .bg-sky-900\/30,:root[data-theme="light"] .bg-sky-900\/40,:root[data-theme="light"] .hover\:bg-sky-900\/20:hover,:root[data-theme="light"] .hover\:bg-sky-900\/30:hover{background-color:#e0f2fe}
+:root[data-theme="light"] .border-sky-700,:root[data-theme="light"] .border-sky-800{border-color:#7dd3fc}
+:root[data-theme="light"] .text-pink-200,:root[data-theme="light"] .text-pink-300,:root[data-theme="light"] .text-pink-400,:root[data-theme="light"] .hover\:text-pink-300:hover,:root[data-theme="light"] .hover\:text-pink-400:hover{color:#be185d}
+:root[data-theme="light"] .text-pink-400\/80{color:#be185dcc}
+:root[data-theme="light"] .bg-pink-900\/20,:root[data-theme="light"] .bg-pink-900\/30,:root[data-theme="light"] .bg-pink-900\/40,:root[data-theme="light"] .hover\:bg-pink-900\/20:hover,:root[data-theme="light"] .hover\:bg-pink-900\/30:hover{background-color:#fce7f3}
+:root[data-theme="light"] .border-pink-700,:root[data-theme="light"] .border-pink-800{border-color:#f9a8d4}
+:root[data-theme="light"] .text-rose-200,:root[data-theme="light"] .text-rose-300,:root[data-theme="light"] .text-rose-400,:root[data-theme="light"] .hover\:text-rose-300:hover,:root[data-theme="light"] .hover\:text-rose-400:hover{color:#be123c}
+:root[data-theme="light"] .text-rose-400\/80{color:#be123ccc}
+:root[data-theme="light"] .bg-rose-900\/20,:root[data-theme="light"] .bg-rose-900\/30,:root[data-theme="light"] .bg-rose-900\/40,:root[data-theme="light"] .hover\:bg-rose-900\/20:hover,:root[data-theme="light"] .hover\:bg-rose-900\/30:hover{background-color:#ffe4e6}
+:root[data-theme="light"] .border-rose-700,:root[data-theme="light"] .border-rose-800{border-color:#fda4af}
+:root[data-theme="light"] .text-violet-200,:root[data-theme="light"] .text-violet-300,:root[data-theme="light"] .text-violet-400,:root[data-theme="light"] .hover\:text-violet-300:hover,:root[data-theme="light"] .hover\:text-violet-400:hover{color:#6d28d9}
+:root[data-theme="light"] .text-violet-400\/80{color:#6d28d9cc}
+:root[data-theme="light"] .bg-violet-900\/20,:root[data-theme="light"] .bg-violet-900\/30,:root[data-theme="light"] .bg-violet-900\/40,:root[data-theme="light"] .hover\:bg-violet-900\/20:hover,:root[data-theme="light"] .hover\:bg-violet-900\/30:hover{background-color:#ede9fe}
+:root[data-theme="light"] .border-violet-700,:root[data-theme="light"] .border-violet-800{border-color:#c4b5fd}
+:root[data-theme="light"] .text-lime-200,:root[data-theme="light"] .text-lime-300,:root[data-theme="light"] .text-lime-400,:root[data-theme="light"] .hover\:text-lime-300:hover,:root[data-theme="light"] .hover\:text-lime-400:hover{color:#4d7c0f}
+:root[data-theme="light"] .text-lime-400\/80{color:#4d7c0fcc}
+:root[data-theme="light"] .bg-lime-900\/20,:root[data-theme="light"] .bg-lime-900\/30,:root[data-theme="light"] .bg-lime-900\/40,:root[data-theme="light"] .hover\:bg-lime-900\/20:hover,:root[data-theme="light"] .hover\:bg-lime-900\/30:hover{background-color:#ecfccb}
+:root[data-theme="light"] .border-lime-700,:root[data-theme="light"] .border-lime-800{border-color:#bef264}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   สวิตช์สว่าง/มืด — เม็ดยาสไลด์ฉากกลางวัน↔กลางคืน (แบบเดียวกับระบบใบเสนอราคา)
+   ภาพขับด้วย :root[data-theme] ไม่ใช่ state ของ React → ไม่กระพริบหลัง hydrate
+   ═══════════════════════════════════════════════════════════════════════════ */
+.tt-btn{ display:inline-flex; align-items:center; justify-content:center;
+         padding:3px; border:0; background:none; cursor:pointer; line-height:0; border-radius:20px; min-height:0 !important; min-width:0 !important; }
+.tt-btn:focus-visible{ outline:2px solid #d4a825; outline-offset:2px; }
+.tt{ display:block; width:64px; height:32px; border-radius:16px; box-shadow:0 0 0 1px rgba(255,255,255,.16); }
+:root[data-theme="light"] .tt{ box-shadow:0 0 0 1px rgba(15,27,51,.10), 0 2px 6px -2px rgba(15,27,51,.25); }
+@media (max-width:639px){ .tt{ width:52px; height:26px; border-radius:13px; } }
+.tt-el{ transition:opacity .45s ease; }
+.tt-day{ opacity:0; }
+:root[data-theme="light"] .tt-day{ opacity:1; }
+:root[data-theme="light"] .tt-night{ opacity:0; }
+/* ต้องมี transform-box — ไม่งั้น translateX ใน SVG คิดเป็นพิกเซลของหน้า ไม่ใช่หน่วยของ viewBox */
+.tt-knob{ transform-box:view-box; transform:translateX(32px);
+          transition:transform .5s cubic-bezier(.34,1.28,.5,1); }
+:root[data-theme="light"] .tt-knob{ transform:translateX(0); }
+.tt-btn:hover .tt{ filter:brightness(1.07); }
+.tt-btn:active .tt{ transform:scale(.97); }
+@media (prefers-reduced-motion:reduce){ .tt-el,.tt-knob{ transition:none; } }
 
 /* -----------------------------------------------
    PRINT STYLES

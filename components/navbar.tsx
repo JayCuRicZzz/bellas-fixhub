@@ -6,6 +6,7 @@ import { useI18n } from '../lib/i18n/i18n';
 import { getDepartmentByCode } from '../types';
 import { Menu, Bell, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import ThemeToggle from './themetoggle';
 
 // Track seen notification IDs in localStorage
 function getSeenIds(): Set<number> {
@@ -97,7 +98,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
           <Menu className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-lg sm:text-2xl font-black tracking-tight text-white drop-shadow-md">
+          <h1 className="text-lg sm:text-2xl font-black tracking-tight text-ink drop-shadow-md">
             Bellas <span className="text-gold-400 drop-shadow-sm">Fix</span>Hub
           </h1>
           <p className="text-[11px] sm:text-xs text-gray-400 hidden sm:block">
@@ -107,6 +108,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        <ThemeToggle />
         <div className="flex sm:hidden items-center gap-2">
           <span className="text-xs text-gray-400 truncate max-w-[80px]">{user?.full_name || user?.username}</span>
           <button onClick={logout} className="p-2 rounded-lg hover:bg-red-900/30 text-gray-400 hover:text-red-400 touch-manipulation transition-all duration-200 active:scale-90">
@@ -133,7 +135,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             {notifOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-navy-800 border border-navy-600 rounded-xl shadow-2xl overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-navy-700 flex items-center justify-between">
-                  <h3 className="text-white font-semibold text-sm">
+                  <h3 className="text-ink font-semibold text-sm">
                     {lang === 'th' ? 'การแจ้งเตือน' : 'Notifications'}
                   </h3>
                   <span className="text-xs text-gold-400 font-medium">{notifCount} {lang === 'th' ? 'รายการ' : 'items'}</span>
@@ -153,7 +155,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                       >
                         <div className="flex items-start justify-between">
                           <div className="min-w-0">
-                            <p className="text-white text-sm font-medium truncate">{n.ticket_number}</p>
+                            <p className="text-ink text-sm font-medium truncate">{n.ticket_number}</p>
                             <p className="text-gray-400 text-xs truncate mt-0.5">{n.location_detail}</p>
                           </div>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ml-2 ${
@@ -185,7 +187,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
           <div className="flex items-center gap-3 border-l border-navy-700 pl-4">
             <div className="text-right">
               <div className="flex items-center gap-2 justify-end">
-                <p className="text-sm font-medium text-white">{user?.full_name || user?.username}</p>
+                <p className="text-sm font-medium text-ink">{user?.full_name || user?.username}</p>
                 {userDept && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-navy-700 text-gray-400 border border-navy-600">
                     {userDept.icon} {lang === 'th' ? userDept.name_th : userDept.name_en}

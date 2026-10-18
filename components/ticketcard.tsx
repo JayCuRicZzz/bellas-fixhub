@@ -39,7 +39,7 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
             <span className="text-sm font-mono text-gold-500">{ticket.ticket_number}</span>
             <StatusBadge status={ticket.status} />
           </div>
-          <h3 className="text-white font-medium group-hover:text-gold-400 transition-colors line-clamp-1">
+          <h3 className="text-ink font-medium group-hover:text-gold-400 transition-colors line-clamp-1">
             {ticket.sub_th || ticket.main_th || ticket.location_detail}
           </h3>
         </div>

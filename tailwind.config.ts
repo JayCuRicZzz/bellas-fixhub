@@ -1,6 +1,8 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  // ธีมสลับด้วย data-theme ที่ <html> (ดู components/themetoggle.tsx) — สี navy/gray/ink อ่านจาก CSS variables
+  darkMode: ['selector', '[data-theme="dark"]'],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,18 +12,32 @@ const config: Config = {
     extend: {
       colors: {
         navy: {
-          50: '#f0f3f9',
-          100: '#d9e0f0',
-          200: '#b3c2e1',
-          300: '#8da4d2',
-          400: '#6786c3',
-          500: '#4168b4',
-          600: '#1a2744',
-          700: '#162039',
-          800: '#111a2e',
-          900: '#0d1423',
-          950: '#0a0f1a',
+          50: 'rgb(var(--navy-50) / <alpha-value>)',
+          100: 'rgb(var(--navy-100) / <alpha-value>)',
+          200: 'rgb(var(--navy-200) / <alpha-value>)',
+          300: 'rgb(var(--navy-300) / <alpha-value>)',
+          400: 'rgb(var(--navy-400) / <alpha-value>)',
+          500: 'rgb(var(--navy-500) / <alpha-value>)',
+          600: 'rgb(var(--navy-600) / <alpha-value>)',
+          700: 'rgb(var(--navy-700) / <alpha-value>)',
+          800: 'rgb(var(--navy-800) / <alpha-value>)',
+          900: 'rgb(var(--navy-900) / <alpha-value>)',
+          950: 'rgb(var(--navy-950) / <alpha-value>)',
         },
+        gray: {
+          50: 'rgb(var(--gray-50) / <alpha-value>)',
+          100: 'rgb(var(--gray-100) / <alpha-value>)',
+          200: 'rgb(var(--gray-200) / <alpha-value>)',
+          300: 'rgb(var(--gray-300) / <alpha-value>)',
+          400: 'rgb(var(--gray-400) / <alpha-value>)',
+          500: 'rgb(var(--gray-500) / <alpha-value>)',
+          600: 'rgb(var(--gray-600) / <alpha-value>)',
+          700: 'rgb(var(--gray-700) / <alpha-value>)',
+          800: 'rgb(var(--gray-800) / <alpha-value>)',
+          900: 'rgb(var(--gray-900) / <alpha-value>)',
+          950: 'rgb(var(--gray-950) / <alpha-value>)',
+        },
+        ink: 'rgb(var(--ink) / <alpha-value>)',
         gold: {
           50: '#fef9e7',
           100: '#fdf2c3',

@@ -14,7 +14,7 @@ export default function AIPage() {
             <Bot className="w-6 h-6 text-navy-900" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white flex items-center gap-2">
+            <h1 className="text-lg font-bold text-ink flex items-center gap-2">
               ที่ปรึกษางานซ่อม 🦞
               <Sparkles className="w-4 h-4 text-gold-500" />
             </h1>

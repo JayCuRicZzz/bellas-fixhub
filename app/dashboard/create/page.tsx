@@ -11,7 +11,7 @@ export default function CreateTicketPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 fade-in">
       <div>
-        <h2 className="text-2xl font-bold text-white">แจ้งซ่อมใหม่</h2>
+        <h2 className="text-2xl font-bold text-ink">แจ้งซ่อมใหม่</h2>
         <p className="text-gray-400 mt-1">กรอกข้อมูลเพื่อแจ้งซ่อมบำรุง</p>
       </div>
 
@@ -22,7 +22,7 @@ export default function CreateTicketPage() {
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
             mode === 'manual'
               ? 'bg-gold-500 text-navy-900'
-              : 'bg-navy-800 text-gray-400 hover:text-white'
+              : 'bg-navy-800 text-gray-400 hover:text-ink'
           }`}
         >
           <PlusCircle className="w-4 h-4" />
@@ -33,7 +33,7 @@ export default function CreateTicketPage() {
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
             mode === 'ai'
               ? 'bg-gold-500 text-navy-900'
-              : 'bg-navy-800 text-gray-400 hover:text-white'
+              : 'bg-navy-800 text-gray-400 hover:text-ink'
           }`}
         >
           <Sparkles className="w-4 h-4" />

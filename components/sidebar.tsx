@@ -94,7 +94,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="rounded-xl bg-white/90 p-2 inline-block mb-2 shadow-lg shadow-gold-500/10">
               <img src="/logo.jpg" alt="Bellas FixHub" className="h-10 w-auto" />
             </div>
-            <p className="text-base font-extrabold tracking-tight text-white group-hover:text-gold-400 transition-colors">
+            <p className="text-base font-extrabold tracking-tight text-ink group-hover:text-gold-400 transition-colors">
               Bellas <span className="text-gold-400">Fix</span>Hub
             </p>
             <p className="text-[10px] text-gray-500 mt-0.5">
@@ -109,7 +109,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* User info */}
         <div className="px-4 py-3 border-b border-navy-700/50">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-white truncate">{user?.full_name || user?.username}</p>
+            <p className="text-sm font-medium text-ink truncate">{user?.full_name || user?.username}</p>
             {userDept && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-navy-700 text-gray-400 flex-shrink-0">
                 {userDept.icon} {lang === 'th' ? userDept.name_th : userDept.name_en}
@@ -134,7 +134,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   transition-all duration-200 group relative
                   ${isActive
                     ? 'bg-gold-500/10 text-gold-500 border-l-2 border-gold-500 shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-navy-700/50 hover:pl-4 border-l-2 border-transparent'
+                    : 'text-gray-400 hover:text-ink hover:bg-navy-700/50 hover:pl-4 border-l-2 border-transparent'
                   }
                 `}
               >
@@ -154,7 +154,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div ref={langRef} className="relative">
             <button
               onClick={(e) => { e.stopPropagation(); setLangOpen(!langOpen); }}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700/50 w-full transition-all duration-200 group"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-ink hover:bg-navy-700/50 w-full transition-all duration-200 group"
             >
               <Globe className="w-5 h-5 group-hover:scale-110 transition-transform" />
               {LANGUAGES.find(l => l.code === lang)?.flag} {LANGUAGES.find(l => l.code === lang)?.label}
@@ -168,7 +168,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     className={`flex items-center gap-3 px-4 py-2.5 text-sm w-full text-left transition-colors ${
                       l.code === lang
                         ? 'bg-gold-500/10 text-gold-400 font-medium'
-                        : 'text-gray-300 hover:bg-navy-700/50 hover:text-white'
+                        : 'text-gray-300 hover:bg-navy-700/50 hover:text-ink'
                     }`}
                   >
                     <span className="text-base">{l.flag}</span>

@@ -35,19 +35,19 @@ export default function ReportsChart({ data }: { data: DailyReport }) {
       {/* Department Distribution */}
       {deptData.length > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4">จำนวนงานแยกตามแผนก</h3>
+          <h3 className="text-lg font-semibold text-ink mb-4">จำนวนงานแยกตามแผนก</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={deptData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1a2744" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--navy-600))" />
               <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
               <YAxis stroke="#6b7280" fontSize={12} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1a2744',
-                  border: '1px solid #2a3a5c',
+                  backgroundColor: 'rgb(var(--navy-800))',
+                  border: '1px solid rgb(var(--navy-600))',
                   borderRadius: '8px',
                 }}
-                labelStyle={{ color: '#fff' }}
+                labelStyle={{ color: 'rgb(var(--ink))' }}
               />
               <Bar dataKey="count" name="จำนวนงาน" fill="#d4a825" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -58,7 +58,7 @@ export default function ReportsChart({ data }: { data: DailyReport }) {
       {/* Status Distribution */}
       {statusData.length > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4">สถานะงาน</h3>
+          <h3 className="text-lg font-semibold text-ink mb-4">สถานะงาน</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -77,8 +77,8 @@ export default function ReportsChart({ data }: { data: DailyReport }) {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1a2744',
-                  border: '1px solid #2a3a5c',
+                  backgroundColor: 'rgb(var(--navy-800))',
+                  border: '1px solid rgb(var(--navy-600))',
                   borderRadius: '8px',
                 }}
               />
@@ -91,16 +91,16 @@ export default function ReportsChart({ data }: { data: DailyReport }) {
       {/* Branch Distribution */}
       {branchData.length > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4">จำนวนงานแยกตามสาขา</h3>
+          <h3 className="text-lg font-semibold text-ink mb-4">จำนวนงานแยกตามสาขา</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={branchData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1a2744" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--navy-600))" />
               <XAxis type="number" stroke="#6b7280" fontSize={12} allowDecimals={false} />
               <YAxis dataKey="name" type="category" stroke="#6b7280" fontSize={11} width={200} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1a2744',
-                  border: '1px solid #2a3a5c',
+                  backgroundColor: 'rgb(var(--navy-800))',
+                  border: '1px solid rgb(var(--navy-600))',
                   borderRadius: '8px',
                 }}
               />

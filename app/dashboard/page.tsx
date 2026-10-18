@@ -129,7 +129,7 @@ export default function DashboardPage() {
       {/* Welcome & Quick Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-bold text-ink">
             {lang === 'th' ? 'ยินดีต้อนรับ' : 'Welcome'}, <span className="text-gold-500">{userName}</span> 👋
           </h2>
           <p className="text-gray-400 mt-1">{lang === 'th' ? 'ภาพรวมการแจ้งซ่อมและสถานะงาน' : 'Overview of repair tickets and status'}</p>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <p className="text-gray-500 text-xs sm:text-sm truncate">{stat.label}</p>
                   <div className="flex items-baseline gap-2">
-                    <p className="text-xl sm:text-3xl font-bold text-white mt-0.5 sm:mt-1">{stat.value}</p>
+                    <p className="text-xl sm:text-3xl font-bold text-ink mt-0.5 sm:mt-1">{stat.value}</p>
                   </div>
                   {todayStats[stat.key] !== undefined && (
                     <p className="text-xs text-gray-500 mt-0.5">
@@ -192,7 +192,7 @@ export default function DashboardPage() {
       {/* Department Tabs — กรองตามแผนกผู้แจ้ง */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { value: '', label: 'ทั้งหมด', labelEn: 'All', icon: '🏢', count: stats.total, color: 'border-gray-500 text-gray-300', activeColor: 'bg-gray-500/20 border-gray-400 text-white' },
+          { value: '', label: 'ทั้งหมด', labelEn: 'All', icon: '🏢', count: stats.total, color: 'border-gray-500 text-gray-300', activeColor: 'bg-gray-500/20 border-gray-400 text-ink' },
           ...DEPARTMENTS.map(dept => ({
             value: dept.code,
             label: (lang === 'th' ? dept.name_th : dept.name_en),
@@ -207,7 +207,7 @@ export default function DashboardPage() {
             key={tab.value}
             onClick={() => setDeptFilter(tab.value)}
             className={`px-3 sm:px-4 py-2 rounded-xl border text-sm font-medium transition-all flex items-center gap-1.5 ${
-              deptFilter === tab.value ? tab.activeColor + ' shadow-lg' : tab.color + ' hover:border-gray-400 hover:text-white'
+              deptFilter === tab.value ? tab.activeColor + ' shadow-lg' : tab.color + ' hover:border-gray-400 hover:text-ink'
             }`}
           >
             <span className="text-lg">{tab.icon}</span>

@@ -87,7 +87,7 @@ export default function AITicketCreator() {
 
   return (
     <div className="card">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-gold-500" />
         AI วิเคราะห์และสร้างใบแจ้งซ่อม
       </h3>
@@ -111,19 +111,19 @@ export default function AITicketCreator() {
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="bg-navy-700 rounded-lg p-3">
               <p className="text-gray-500 text-xs">แผนก</p>
-              <p className="text-white font-medium">{result.department}</p>
+              <p className="text-ink font-medium">{result.department}</p>
             </div>
             <div className="bg-navy-700 rounded-lg p-3">
               <p className="text-gray-500 text-xs">หมวดหมู่</p>
-              <p className="text-white font-medium">{result.category}</p>
+              <p className="text-ink font-medium">{result.category}</p>
             </div>
             <div className="bg-navy-700 rounded-lg p-3">
               <p className="text-gray-500 text-xs">ระดับความสำคัญ</p>
-              <p className="text-white font-medium">{result.priority?.toUpperCase()}</p>
+              <p className="text-ink font-medium">{result.priority?.toUpperCase()}</p>
             </div>
             <div className="bg-navy-700 rounded-lg p-3">
               <p className="text-gray-500 text-xs">ห้อง</p>
-              <p className="text-white font-medium">{result.room_number || 'ไม่ระบุ'}</p>
+              <p className="text-ink font-medium">{result.room_number || 'ไม่ระบุ'}</p>
             </div>
           </div>
           <p className="text-sm text-gray-400">📝 {result.summary}</p>

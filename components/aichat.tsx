@@ -287,7 +287,7 @@ export default function AIChat() {
               <button
                 key={s}
                 onClick={() => handleSuggestionClick(s)}
-                className="text-xs px-3 py-1.5 bg-navy-700 hover:bg-navy-600 text-gray-400 hover:text-white rounded-full transition-all duration-200"
+                className="text-xs px-3 py-1.5 bg-navy-700 hover:bg-navy-600 text-gray-400 hover:text-ink rounded-full transition-all duration-200"
               >
                 {s}
               </button>

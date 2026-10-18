@@ -163,7 +163,7 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-ink flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-gold-500" />
             {t.reports.title}
           </h2>
@@ -226,7 +226,7 @@ export default function ReportsPage() {
             className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 ${
               deptFilter === tab.value
                 ? 'bg-gold-500/20 border-gold-500 text-gold-400 shadow-lg'
-                : 'border-navy-600 text-gray-400 hover:border-gray-400 hover:text-white'
+                : 'border-navy-600 text-gray-400 hover:border-gray-400 hover:text-ink'
             }`}
           >
             <span className="text-base">{tab.icon}</span>
@@ -309,7 +309,7 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-500 text-xs truncate">{card.label}</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white mt-1">{card.value}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-ink mt-1">{card.value}</p>
                 </div>
                 <div className={`p-2 rounded-xl ${card.bg}`}>
                   <Icon className={`w-5 h-5 ${card.color}`} />
@@ -322,7 +322,7 @@ export default function ReportsPage() {
 
       {/* Status Distribution */}
       <div className="card">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
           <Building2 className="w-5 h-5 text-gold-500" />
           {lang === 'th' ? 'การกระจายตามสถานะ' : 'Status Distribution'}
         </h3>
@@ -342,7 +342,7 @@ export default function ReportsPage() {
                         className={`h-full rounded-full transition-all duration-500 ${STATUS_COLORS[s.name] || 'bg-gray-500'} flex items-center justify-end pr-2`}
                         style={{ width: `${Math.max((s.count / maxByStatus) * 100, 2)}%` }}
                       >
-                        <span className="text-xs font-bold text-white drop-shadow-sm">{s.count}</span>
+                        <span className="text-xs font-bold text-ink drop-shadow-sm">{s.count}</span>
                       </div>
                     </div>
                   </div>
@@ -360,7 +360,7 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Department Breakdown */}
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-gold-500" />
             {lang === 'th' ? 'รายละเอียดตามแผนก' : 'Department Breakdown'}
           </h3>
@@ -383,7 +383,7 @@ export default function ReportsPage() {
                           <span className="mr-1.5">{getDepartmentIcon(d.name)}</span>
                           {getDepartmentName(d.name)}
                         </td>
-                        <td className="py-2.5 text-right text-white font-medium">{d.count}</td>
+                        <td className="py-2.5 text-right text-ink font-medium">{d.count}</td>
                         <td className="py-2.5 text-right text-gray-500">{pct}%</td>
                       </tr>
                     );
@@ -398,7 +398,7 @@ export default function ReportsPage() {
 
         {/* Branch Breakdown */}
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-gold-500" />
             {lang === 'th' ? 'รายละเอียดตามสาขา' : 'Branch Breakdown'}
           </h3>
@@ -418,7 +418,7 @@ export default function ReportsPage() {
                     return (
                       <tr key={d.name} className="border-b border-navy-700/50">
                         <td className="py-2.5 text-gray-300">🏨 {getBranchName(d.name)}</td>
-                        <td className="py-2.5 text-right text-white font-medium">{d.count}</td>
+                        <td className="py-2.5 text-right text-ink font-medium">{d.count}</td>
                         <td className="py-2.5 text-right text-gray-500">{pct}%</td>
                       </tr>
                     );
@@ -435,7 +435,7 @@ export default function ReportsPage() {
       {/* SLA Performance */}
       {slaCompliance && slaTotal > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-gold-500" />
             {lang === 'th' ? 'ประสิทธิภาพ SLA' : 'SLA Performance'}
           </h3>
@@ -453,7 +453,7 @@ export default function ReportsPage() {
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">{slaPercent}%</span>
+                <span className="text-2xl font-bold text-ink">{slaPercent}%</span>
               </div>
             </div>
             <div className="flex-1 space-y-3">
@@ -473,7 +473,7 @@ export default function ReportsPage() {
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-navy-700">
                 <span className="text-sm text-gray-400 font-medium">{lang === 'th' ? 'รวม SLA' : 'Total SLA'}</span>
-                <span className="text-sm font-bold text-white">{slaTotal}</span>
+                <span className="text-sm font-bold text-ink">{slaTotal}</span>
               </div>
             </div>
           </div>
@@ -483,7 +483,7 @@ export default function ReportsPage() {
       {/* Technician Performance */}
       {techData.length > 0 && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
             <Wrench className="w-5 h-5 text-gold-500" />
             {lang === 'th' ? 'ผลงานช่างรายบุคคล' : 'Technician Performance'}
           </h3>
@@ -502,7 +502,7 @@ export default function ReportsPage() {
               <tbody>
                 {techData.map((tech: any) => (
                   <tr key={tech.user_id} className="border-b border-navy-700/50 hover:bg-navy-800/30 transition-colors">
-                    <td className="py-2.5 text-white font-medium">
+                    <td className="py-2.5 text-ink font-medium">
                       <span className="mr-2">👤</span>{tech.full_name}
                       <span className="text-xs text-gray-500 ml-2">({lang === 'th' ? (tech.department === 'IT' ? 'ไอที' : 'ช่าง') : tech.department})</span>
                     </td>

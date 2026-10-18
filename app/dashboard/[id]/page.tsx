@@ -453,7 +453,7 @@ export default function TicketDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           กลับแดชบอร์ด
@@ -523,7 +523,7 @@ export default function TicketDetailPage() {
       <div className="card">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-bold text-white">{ticket.ticket_number}</h1>
+            <h1 className="text-xl font-bold text-ink">{ticket.ticket_number}</h1>
             <p className="text-gray-400 mt-1">{ticket.sub_th || ticket.main_th}</p>
           </div>
           <div className="flex gap-2">
@@ -548,22 +548,22 @@ export default function TicketDetailPage() {
           <div className="flex items-center gap-2 text-gray-400">
             <MapPin className="w-4 h-4 text-gray-500" />
             <span className="text-gray-500">สาขา:</span>
-            <span className="text-white">{branch?.branch_name || ticket.branch_code}</span>
+            <span className="text-ink">{branch?.branch_name || ticket.branch_code}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-400">
             <Wrench className="w-4 h-4 text-gray-500" />
             <span className="text-gray-500">แผนก:</span>
-            <span className="text-white">{ticket.dept_type || 'ทั่วไป'}</span>
+            <span className="text-ink">{ticket.dept_type || 'ทั่วไป'}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-400">
             <User className="w-4 h-4 text-gray-500" />
             <span className="text-gray-500">ผู้แจ้ง:</span>
-            <span className="text-white">{ticket.reporter_name || 'ไม่ระบุ'}</span>
+            <span className="text-ink">{ticket.reporter_name || 'ไม่ระบุ'}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-400">
             <Calendar className="w-4 h-4 text-gray-500" />
             <span className="text-gray-500">วันที่แจ้ง:</span>
-            <span className="text-white">{createdDate}</span>
+            <span className="text-ink">{createdDate}</span>
           </div>
         </div>
 
@@ -589,11 +589,11 @@ export default function TicketDetailPage() {
 
       {/* Details */}
       <div className="card">
-        <h3 className="text-lg font-semibold text-white mb-3">รายละเอียด</h3>
+        <h3 className="text-lg font-semibold text-ink mb-3">รายละเอียด</h3>
         <div className="space-y-3">
           <div>
             <p className="text-xs text-gray-500 mb-1">ตำแหน่งที่พบปัญหา</p>
-            <p className="text-white">{ticket.location_detail}</p>
+            <p className="text-ink">{ticket.location_detail}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">อาการเสีย</p>
@@ -658,7 +658,7 @@ export default function TicketDetailPage() {
       {['tech', 'it', 'sup', 'supit', 'admin', 'gm'].includes(user?.role || '') && 
        ticket.status !== 'CANCELLED' && ticket.status !== 'APPROVED' && (
         <div className="card no-print">
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-ink mb-3 flex items-center gap-2">
             <Camera className="w-5 h-5" />
             แนบรูปตอนซ่อม
           </h3>
@@ -701,7 +701,7 @@ export default function TicketDetailPage() {
       {/* KPI Rating (after APPROVED, only supervisor/admin/gm) */}
       {ticket.status === 'APPROVED' && canRate && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-3">ให้คะแนน KPI</h3>
+          <h3 className="text-lg font-semibold text-ink mb-3">ให้คะแนน KPI</h3>
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4, 5].map(star => {
               const filled = star <= (hoverRating || kpiRating);
@@ -731,12 +731,12 @@ export default function TicketDetailPage() {
 
       {/* Timeline / Status History */}
       <div className="card">
-        <h3 className="text-lg font-semibold text-white mb-3">สถานะ</h3>
+        <h3 className="text-lg font-semibold text-ink mb-3">สถานะ</h3>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-gold-500" />
             <div>
-              <p className="text-sm text-white">แจ้งซ่อม</p>
+              <p className="text-sm text-ink">แจ้งซ่อม</p>
               <p className="text-xs text-gray-500">{createdDate}</p>
             </div>
           </div>
@@ -744,7 +744,7 @@ export default function TicketDetailPage() {
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-blue-500" />
               <div>
-                <p className="text-sm text-white">รับงาน
+                <p className="text-sm text-ink">รับงาน
                   {ticket.accepted_by_name && <span className="text-xs text-gray-500 ml-2">โดย {ticket.accepted_by_name}</span>}
                 </p>
                 <p className="text-xs text-gray-500">
@@ -759,7 +759,7 @@ export default function TicketDetailPage() {
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-green-500" />
               <div>
-                <p className="text-sm text-white">ดำเนินการเสร็จ
+                <p className="text-sm text-ink">ดำเนินการเสร็จ
                   {ticket.resolved_by_name && <span className="text-xs text-gray-500 ml-2">โดย {ticket.resolved_by_name}</span>}
                 </p>
                 <p className="text-xs text-gray-500">
@@ -774,7 +774,7 @@ export default function TicketDetailPage() {
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
               <div>
-                <p className="text-sm text-white">อนุมัติ
+                <p className="text-sm text-ink">อนุมัติ
                   {ticket.approved_by_name && <span className="text-xs text-gray-500 ml-2">โดย {ticket.approved_by_name}</span>}
                 </p>
                 <p className="text-xs text-gray-500">
@@ -791,7 +791,7 @@ export default function TicketDetailPage() {
       {/* Difficulty Setting (supervisors only — during/resolve status) */}
       {['sup', 'supit', 'admin', 'gm'].includes(user?.role || '') && ticket.status !== 'APPROVED' && ticket.status !== 'CANCELLED' && (
         <div className="card no-print">
-          <h3 className="text-lg font-semibold text-white mb-3">ระดับความยากของงาน</h3>
+          <h3 className="text-lg font-semibold text-ink mb-3">ระดับความยากของงาน</h3>
           <div className="flex flex-wrap gap-2">
             {[
               { value: 'easy', label: '🟢 ง่าย' },
@@ -804,7 +804,7 @@ export default function TicketDetailPage() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                   difficulty === d.value
                     ? 'bg-gold-500/20 border-gold-500 text-gold-400'
-                    : 'bg-navy-700 border-navy-600 text-gray-400 hover:border-gray-400 hover:text-white'
+                    : 'bg-navy-700 border-navy-600 text-gray-400 hover:border-gray-400 hover:text-ink'
                 }`}>
                 {d.label}
               </button>
@@ -875,7 +875,7 @@ export default function TicketDetailPage() {
       {/* Activity Log */}
       {activityLogs.length > 0 && (
         <div className="card no-print">
-          <h3 className="text-lg font-semibold text-white mb-3">📋 บันทึกการดำเนินการ</h3>
+          <h3 className="text-lg font-semibold text-ink mb-3">📋 บันทึกการดำเนินการ</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {activityLogs.map((log: any, i: number) => (
               <div key={i} className="flex items-start gap-3 text-sm py-1.5 border-b border-navy-700/50 last:border-0">
@@ -894,7 +894,7 @@ export default function TicketDetailPage() {
                   'bg-navy-500'
                 }`} />
                 <div className="flex-1 min-w-0">
-                  <span className="text-white font-medium">{log.actionByName}</span>
+                  <span className="text-ink font-medium">{log.actionByName}</span>
                   <span className="text-gray-400 ml-1">
                     {log.action === 'ACCEPTED' ? 'รับงาน' :
                      log.action === 'START' ? 'เริ่มดำเนินการ' :
@@ -924,7 +924,7 @@ export default function TicketDetailPage() {
 
       {/* Action Buttons */}
       <div className="card no-print">
-        <h3 className="text-lg font-semibold text-white mb-3">ดำเนินการ</h3>
+        <h3 className="text-lg font-semibold text-ink mb-3">ดำเนินการ</h3>
         <div className="flex flex-wrap gap-2">
           {ticket.status === 'PENDING' && ['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '') && (
             <button
@@ -1037,7 +1037,7 @@ export default function TicketDetailPage() {
       {showPause && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-1">⏸️ พักงาน</h3>
+            <h3 className="text-xl font-bold text-ink mb-1">⏸️ พักงาน</h3>
             <p className="text-gray-400 text-sm mb-4">ระบุเหตุผลและวันที่คาดว่าจะดำเนินการต่อ</p>
             
             <label className="block text-sm text-gray-300 mb-2">เหตุผลที่พักงาน</label>
@@ -1069,7 +1069,7 @@ export default function TicketDetailPage() {
                   value={pauseCustomReason}
                   onChange={(e) => setPauseCustomReason(e.target.value)}
                   placeholder="ระบุเหตุผลที่พักงาน..."
-                  className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-white placeholder-gray-500 focus:border-gold-500 focus:outline-none"
+                  className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-ink placeholder-gray-500 focus:border-gold-500 focus:outline-none"
                 />
               </div>
             )}
@@ -1080,7 +1080,7 @@ export default function TicketDetailPage() {
               value={pauseEndDate}
               onChange={(e) => setPauseEndDate(e.target.value)}
               min={new Date().toISOString().split('T')[0]}
-              className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-white focus:border-gold-500 focus:outline-none mb-5"
+              className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-ink focus:border-gold-500 focus:outline-none mb-5"
             />
 
             <div className="flex gap-3">

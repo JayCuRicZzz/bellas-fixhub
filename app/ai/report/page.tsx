@@ -61,7 +61,7 @@ export default function AIReportPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 fade-in">
       <div>
-        <h2 className="text-2xl font-bold text-white">AI รายงานวิเคราะห์</h2>
+        <h2 className="text-2xl font-bold text-ink">AI รายงานวิเคราะห์</h2>
         <p className="text-gray-400 mt-1">สร้างรายงานสรุปด้วย AI จากข้อมูลการแจ้งซ่อม</p>
       </div>
 
@@ -75,14 +75,14 @@ export default function AIReportPage() {
       ) : report ? (
         <>
           <div className="card">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-gold-500" />
               ข้อมูลประจำวันนี้
             </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">จำนวนงานทั้งหมด</p>
-                <p className="text-2xl font-bold text-white">{report.total}</p>
+                <p className="text-2xl font-bold text-ink">{report.total}</p>
               </div>
               <div>
                 <p className="text-gray-500">เสร็จสิ้น</p>
@@ -126,7 +126,7 @@ export default function AIReportPage() {
 
           {summary && (
             <div className="card border-gold-500/30 fade-in">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-gold-500" />
                 AI รายงานสรุป
               </h3>

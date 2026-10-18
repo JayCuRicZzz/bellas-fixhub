@@ -266,11 +266,11 @@ export default function TicketForm() {
             <div className="flex items-center gap-2">
               <span className="text-3xl">✅</span>
               <div>
-                <p className="text-white font-bold">{lang === 'th' ? 'แจ้งซ่อมสำเร็จ' : 'Ticket Submitted'}</p>
+                <p className="text-ink font-bold">{lang === 'th' ? 'แจ้งซ่อมสำเร็จ' : 'Ticket Submitted'}</p>
                 <p className="text-navy-900/80 text-xs">{new Date().toLocaleString(lang === 'th' ? 'th-TH' : 'en-US')}</p>
               </div>
             </div>
-            <span className="bg-navy-900/30 text-white px-3 py-1 rounded-full text-xs font-mono font-bold">
+            <span className="bg-navy-900/30 text-ink px-3 py-1 rounded-full text-xs font-mono font-bold">
               {createdTicket.ticket_number}
             </span>
           </div>
@@ -280,19 +280,19 @@ export default function TicketForm() {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-gray-500 text-xs">{t.ticket.branch}</span>
-                <p className="text-white font-medium">🏨 {BRANCHES.find(b=>b.branch_code===createdTicket.branch_code)?.branch_name || createdTicket.branch_code}</p>
+                <p className="text-ink font-medium">🏨 {BRANCHES.find(b=>b.branch_code===createdTicket.branch_code)?.branch_name || createdTicket.branch_code}</p>
               </div>
               <div>
                 <span className="text-gray-500 text-xs">{lang === 'th' ? 'แผนกผู้แจ้ง' : 'Reporter Dept'}</span>
-                <p className="text-white font-medium">{DEPARTMENTS.find(d=>d.code===createdTicket.department)?.icon} {lang === 'th' ? DEPARTMENTS.find(d=>d.code===createdTicket.department)?.name_th : DEPARTMENTS.find(d=>d.code===createdTicket.department)?.name_en}</p>
+                <p className="text-ink font-medium">{DEPARTMENTS.find(d=>d.code===createdTicket.department)?.icon} {lang === 'th' ? DEPARTMENTS.find(d=>d.code===createdTicket.department)?.name_th : DEPARTMENTS.find(d=>d.code===createdTicket.department)?.name_en}</p>
               </div>
               <div>
                 <span className="text-gray-500 text-xs">{t.ticket.locationDetail}</span>
-                <p className="text-white">📍 {createdTicket.location_detail}</p>
+                <p className="text-ink">📍 {createdTicket.location_detail}</p>
               </div>
               <div>
                 <span className="text-gray-500 text-xs">{t.ticket.priority}</span>
-                <p className="text-white">{
+                <p className="text-ink">{
                   ({urgent:'🔴 ด่วนมาก',high:'🟠 ด่วน',medium:'🔵 ปานกลาง',low:'🟢 ต่ำ',non_urgent:'⚪ ทั่วไป'} as any)[createdTicket.priority] || createdTicket.priority
                 }</p>
               </div>

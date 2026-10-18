@@ -36,7 +36,7 @@ export default function AirconReportPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-ink flex items-center gap-2">
             <Wind className="w-6 h-6 text-cyan-400" />
             รายงานการเติมน้ำยาแอร์
           </h2>
@@ -51,14 +51,14 @@ export default function AirconReportPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <select value={period} onChange={e => setPeriod(e.target.value)}
-          className="bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm">
+          className="bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-ink text-sm">
           <option value="7">7 วันล่าสุด</option>
           <option value="14">14 วันล่าสุด</option>
           <option value="30">30 วันล่าสุด</option>
           <option value="90">90 วันล่าสุด</option>
         </select>
         <select value={branch} onChange={e => setBranch(e.target.value)}
-          className="bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm">
+          className="bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-ink text-sm">
           <option value="">ทุกสาขา</option>
           {BRANCHES.map(b => (
             <option key={b.branch_code} value={b.branch_code}>{b.branch_code} — {b.branch_name}</option>
@@ -84,7 +84,7 @@ export default function AirconReportPage() {
                 <Wind className="w-8 h-8 text-cyan-400" />
                 <div>
                   <p className="text-gray-400 text-xs">รายการแอร์ทั้งหมด</p>
-                  <p className="text-2xl font-bold text-white">{data.total_tickets}</p>
+                  <p className="text-2xl font-bold text-ink">{data.total_tickets}</p>
                 </div>
               </div>
             </div>
@@ -93,7 +93,7 @@ export default function AirconReportPage() {
                 <Building2 className="w-8 h-8 text-orange-400" />
                 <div>
                   <p className="text-gray-400 text-xs">ห้องที่เกี่ยวข้อง</p>
-                  <p className="text-2xl font-bold text-white">{data.rooms_affected}</p>
+                  <p className="text-2xl font-bold text-ink">{data.rooms_affected}</p>
                 </div>
               </div>
             </div>
@@ -102,7 +102,7 @@ export default function AirconReportPage() {
                 <AlertTriangle className="w-8 h-8 text-red-400" />
                 <div>
                   <p className="text-gray-400 text-xs">⚠️ เติมซ้ำใน 14 วัน</p>
-                  <p className="text-2xl font-bold text-white">{data.refill_alert_count}</p>
+                  <p className="text-2xl font-bold text-ink">{data.refill_alert_count}</p>
                 </div>
               </div>
             </div>
@@ -111,7 +111,7 @@ export default function AirconReportPage() {
                 <Wind className="w-8 h-8 text-gold-400" />
                 <div>
                   <p className="text-gray-400 text-xs">ระยะเวลาดู</p>
-                  <p className="text-2xl font-bold text-white">{period} วัน</p>
+                  <p className="text-2xl font-bold text-ink">{period} วัน</p>
                 </div>
               </div>
             </div>
@@ -128,14 +128,14 @@ export default function AirconReportPage() {
                   <div key={i} className="bg-navy-800 rounded-lg p-4 border border-red-500/20">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-white font-semibold">{alert.room}</p>
+                        <p className="text-ink font-semibold">{alert.room}</p>
                         <p className="text-red-400 text-sm mt-0.5">
                           ห่างกันเพียง {alert.days_between} วัน — อาจมีแอร์รั่ว!
                         </p>
                       </div>
                       <div className="text-right text-sm">
-                        <p className="text-gray-400">ครั้งที่ 1: <span className="text-white">{alert.refill2}</span></p>
-                        <p className="text-gray-400">ครั้งที่ 2: <span className="text-white">{alert.refill1}</span></p>
+                        <p className="text-gray-400">ครั้งที่ 1: <span className="text-ink">{alert.refill2}</span></p>
+                        <p className="text-gray-400">ครั้งที่ 2: <span className="text-ink">{alert.refill1}</span></p>
                       </div>
                     </div>
                     <div className="flex gap-4 mt-2 text-xs text-gray-500">
@@ -150,7 +150,7 @@ export default function AirconReportPage() {
 
           {/* All Tickets */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-white mb-4">📋 รายการแจ้งซ่อมแอร์ทั้งหมด ({period} วัน)</h3>
+            <h3 className="text-lg font-semibold text-ink mb-4">📋 รายการแจ้งซ่อมแอร์ทั้งหมด ({period} วัน)</h3>
             {data.tickets.length === 0 ? (
               <p className="text-gray-500 text-center py-4">ไม่มีรายการในช่วงเวลานี้</p>
             ) : (
@@ -174,8 +174,8 @@ export default function AirconReportPage() {
                             {t.ticket_number}
                           </Link>
                         </td>
-                        <td className="py-2 text-white">{t.branch_code}</td>
-                        <td className="py-2 text-white">{t.location_detail}</td>
+                        <td className="py-2 text-ink">{t.branch_code}</td>
+                        <td className="py-2 text-ink">{t.location_detail}</td>
                         <td className="py-2 text-gray-300 truncate max-w-[200px]">{t.description}</td>
                         <td className="py-2">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${

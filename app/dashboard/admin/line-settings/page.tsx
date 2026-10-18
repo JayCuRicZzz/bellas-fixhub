@@ -108,7 +108,7 @@ export default function LineSettingsPage() {
 
   return (
     <div className="space-y-6 fade-in max-w-2xl">
-      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+      <h2 className="text-2xl font-bold text-ink flex items-center gap-2">
         ⚙️ {lang === 'th' ? 'ตั้งค่า LINE Bot' : 'LINE Bot Settings'}
       </h2>
       <p className="text-gray-400 text-sm">
@@ -119,7 +119,7 @@ export default function LineSettingsPage() {
 
       <form onSubmit={handleSave} className="space-y-5">
         <div className="card space-y-4">
-          <h3 className="text-white font-semibold">🔑 LINE Access Token</h3>
+          <h3 className="text-ink font-semibold">🔑 LINE Access Token</h3>
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">Channel Access Token</label>
             <input type="text" value={accessToken} onChange={e => setAccessToken(e.target.value)}
@@ -128,7 +128,7 @@ export default function LineSettingsPage() {
         </div>
 
         <div className="card space-y-4">
-          <h3 className="text-white font-semibold">🎯 กลุ่มเป้าหมาย (LINE Group IDs)</h3>
+          <h3 className="text-ink font-semibold">🎯 กลุ่มเป้าหมาย (LINE Group IDs)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1.5">🔧 กลุ่มช่าง (Maintenance)</label>
@@ -177,7 +177,7 @@ export default function LineSettingsPage() {
         <p className="text-xs text-gray-500">{lang === 'th' ? 'กด "บันทึก" ก่อนทดสอบ หากเพิ่งเปลี่ยนค่า' : 'Save first if you just changed values.'}</p>
 
         <div className="card space-y-3">
-          <h3 className="font-semibold text-white">🖼️ {lang === 'th' ? 'สรุปรายวัน (รูปภาพ) — ส่งอัตโนมัติทุกวัน 22:00 น.' : 'Daily summary image — auto 22:00'}</h3>
+          <h3 className="font-semibold text-ink">🖼️ {lang === 'th' ? 'สรุปรายวัน (รูปภาพ) — ส่งอัตโนมัติทุกวัน 22:00 น.' : 'Daily summary image — auto 22:00'}</h3>
           <p className="text-xs text-gray-400">{lang === 'th'
             ? 'ส่งรูปตารางสรุปแต่ละสาขา + ข้อความสั้นใน 1 ครั้ง (นับโควตา 1 ข้อความต่อสมาชิกกลุ่ม)'
             : 'One push per group: image + short text (counts once per member).'}</p>

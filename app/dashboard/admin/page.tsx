@@ -224,7 +224,7 @@ export default function AdminPage() {
     <div className="max-w-5xl mx-auto space-y-6 fade-in">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-white">{t.admin.title}</h2>
+          <h2 className="text-2xl font-bold text-ink">{t.admin.title}</h2>
           <p className="text-gray-400 mt-1">จัดการบัญชีผู้ใช้และสิทธิ์</p>
         </div>
         <button
@@ -254,7 +254,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center pt-10 px-4 overflow-y-auto">
           <div className="bg-navy-800 border border-navy-600 rounded-xl shadow-2xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-bold text-ink">
                 {editingUser ? t.admin.editUser : t.admin.addUser}
               </h3>
               <button onClick={resetForm} className="p-1 hover:bg-navy-700 rounded text-gray-400">
@@ -374,9 +374,9 @@ export default function AdminPage() {
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
           <div className="bg-navy-800 border border-navy-600 rounded-xl shadow-2xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-bold text-white mb-2">{t.admin.confirmDelete}</h3>
+            <h3 className="text-lg font-bold text-ink mb-2">{t.admin.confirmDelete}</h3>
             <p className="text-gray-400 text-sm mb-4">
-              ต้องการลบผู้ใช้ <span className="text-white font-medium">{deleteConfirm.full_name}</span> ({deleteConfirm.username}) หรือไม่?
+              ต้องการลบผู้ใช้ <span className="text-ink font-medium">{deleteConfirm.full_name}</span> ({deleteConfirm.username}) หรือไม่?
             </p>
             <div className="flex gap-3">
               <button
@@ -423,7 +423,7 @@ export default function AdminPage() {
               {users.map((u, idx) => (
                 <tr key={u.id} className="border-b border-navy-700/50 hover:bg-navy-700/30">
                   <td className="py-2.5 px-3 text-gray-500">{idx + 1}</td>
-                  <td className="py-2.5 px-3 text-white font-medium">
+                  <td className="py-2.5 px-3 text-ink font-medium">
                     {u.username}
                     {u.employee_code && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" title="บัญชีเชื่อมกับ Bella HR">HR {u.employee_code}</span>}
                   </td>
@@ -454,7 +454,7 @@ export default function AdminPage() {
                       </button>
                       <button
                         onClick={() => openEditForm(u)}
-                        className="p-1.5 rounded hover:bg-navy-600 text-gray-400 hover:text-white"
+                        className="p-1.5 rounded hover:bg-navy-600 text-gray-400 hover:text-ink"
                         title={t.admin.editUser}
                       >
                         <Pencil className="w-4 h-4" />

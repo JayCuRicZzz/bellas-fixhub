@@ -47,7 +47,7 @@ export default function PerformanceReportPage() {
 
   return (
     <div className="space-y-6 fade-in">
-      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+      <h2 className="text-2xl font-bold text-ink flex items-center gap-2">
         <BarChart3 className="w-6 h-6 text-gold-500" /> รายงานประเมินผลช่าง
       </h2>
 
@@ -73,7 +73,7 @@ export default function PerformanceReportPage() {
                     <Users className="w-5 h-5 text-gold-500" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">{tech.technician_name}</h3>
+                    <h3 className="text-ink font-semibold">{tech.technician_name}</h3>
                     <p className="text-xs text-gray-500">งานทั้งหมด {tech.total_work} | อนุมัติ {tech.approved_count}</p>
                   </div>
                 </div>

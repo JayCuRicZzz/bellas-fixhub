@@ -226,10 +226,10 @@ export default function AdminPMPage() {
                   min={1}
                   value={freqVal}
                   onChange={e => setFreqVal(Number(e.target.value))}
-                  className="w-20 border border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-white"
+                  className="w-20 border border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-ink"
                   required
                 />
-                <select value={freqUnit} onChange={e => setFreqUnit(e.target.value)} className="border border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-white">
+                <select value={freqUnit} onChange={e => setFreqUnit(e.target.value)} className="border border-navy-600 rounded-lg px-3 py-2 bg-navy-700 text-ink">
                   <option value="day">วัน</option>
                   <option value="week">สัปดาห์</option>
                   <option value="month">เดือน</option>
