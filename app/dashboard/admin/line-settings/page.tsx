@@ -25,6 +25,24 @@ export default function LineSettingsPage() {
   const [testing, setTesting] = useState<'' | 'MAINT' | 'IT'>('');
   const [testMsg, setTestMsg] = useState('');
 
+  const handleSendSummary = async (group: 'MAINT' | 'IT') => {
+    setTesting(group); setTestMsg(''); setError('');
+    try {
+      const res = await fetch('/api/admin/line-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'send-summary', group }),
+      });
+      const d = await res.json();
+      if (res.ok && d.success) setTestMsg(lang === 'th' ? `ส่งรูปสรุปวันนี้เข้ากลุ่ม${group === 'IT' ? 'ไอที' : 'ช่าง'}แล้ว ✅` : `Summary sent ✅`);
+      else setError(d.reason || (d.error && JSON.stringify(d.error)) || 'ส่งไม่สำเร็จ');
+    } catch {
+      setError(lang === 'th' ? 'เกิดข้อผิดพลาด' : 'Connection error');
+    } finally {
+      setTesting('');
+    }
+  };
+
   const handleTest = async (group: 'MAINT' | 'IT') => {
     setTesting(group); setTestMsg(''); setError('');
     try {
@@ -157,6 +175,19 @@ export default function LineSettingsPage() {
           </button>
         </div>
         <p className="text-xs text-gray-500">{lang === 'th' ? 'กด "บันทึก" ก่อนทดสอบ หากเพิ่งเปลี่ยนค่า' : 'Save first if you just changed values.'}</p>
+
+        <div className="card space-y-3">
+          <h3 className="font-semibold text-white">🖼️ {lang === 'th' ? 'สรุปรายวัน (รูปภาพ) — ส่งอัตโนมัติทุกวัน 22:00 น.' : 'Daily summary image — auto 22:00'}</h3>
+          <p className="text-xs text-gray-400">{lang === 'th'
+            ? 'ส่งรูปตารางสรุปแต่ละสาขา + ข้อความสั้นใน 1 ครั้ง (นับโควตา 1 ข้อความต่อสมาชิกกลุ่ม)'
+            : 'One push per group: image + short text (counts once per member).'}</p>
+          <div className="flex flex-wrap gap-2">
+            <a href="/api/reports/daily-image?dept=MAINT" target="_blank" rel="noopener" className="btn-secondary text-sm">👁️ {lang === 'th' ? 'ดูตัวอย่าง (ช่าง)' : 'Preview (Maint)'}</a>
+            <a href="/api/reports/daily-image?dept=IT" target="_blank" rel="noopener" className="btn-secondary text-sm">👁️ {lang === 'th' ? 'ดูตัวอย่าง (ไอที)' : 'Preview (IT)'}</a>
+            <button type="button" disabled={!!testing} onClick={() => handleSendSummary('MAINT')} className="btn-secondary text-sm">📤 {lang === 'th' ? 'ส่งสรุปตอนนี้ (ช่าง)' : 'Send now (Maint)'}</button>
+            <button type="button" disabled={!!testing} onClick={() => handleSendSummary('IT')} className="btn-secondary text-sm">📤 {lang === 'th' ? 'ส่งสรุปตอนนี้ (ไอที)' : 'Send now (IT)'}</button>
+          </div>
+        </div>
       </form>
     </div>
   );

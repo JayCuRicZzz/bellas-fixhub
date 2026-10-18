@@ -6,7 +6,12 @@ const nextConfig = {
     ],
   },
   experimental: {
-    serverComponentsExternalPackages: ['postgres', 'sharp'],
+    serverComponentsExternalPackages: ['postgres', 'sharp', '@resvg/resvg-js'],
+    outputFileTracingIncludes: {
+      '/api/cron/daily-summary': ['./lib/fonts/**'],
+      '/api/reports/daily-image': ['./lib/fonts/**'],
+      '/api/admin/line-config': ['./lib/fonts/**'],
+    },
   },
   trailingSlash: false,
   poweredByHeader: false,

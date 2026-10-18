@@ -122,7 +122,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         returning sla_minutes`;
       await logActivity(ticketId, 'RESOLVED', current.status, 'RESOLVED', user, pending_reason);
       slaInfo = { resolved_by: userId, sla_minutes: row?.sla_minutes ?? null };
-      sendLineMessage(`✅ งานเสร็จแล้ว รอหัวหน้าตรวจ\n🔢 ${current.ticket_number}\n🏨 ${current.branch_code} 📍 ${current.location_detail}\n👷 ${actor}`, current.dept_type).catch(() => {});
+      // (no LINE push on resolve — counted in the daily summary image)
 
     } else if (status === 'APPROVED') {
       if (!isSupervisor) return NextResponse.json({ error: 'เฉพาะหัวหน้าเท่านั้นที่อนุมัติได้' }, { status: 403 });
@@ -143,7 +143,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         where ticket_id = ${ticketId}`;
       await logActivity(ticketId, 'REJECTED', current.status, 'PENDING', user, reason);
       slaInfo = { rejected_by: userId, reason };
-      sendLineMessage(`↩️ งานถูกตีกลับ\n🔢 ${current.ticket_number}\n📍 ${current.location_detail}\n📝 ${reason}\n👔 ${actor}`, current.dept_type).catch(() => {});
+      // (no LINE push on reject — technician sees it in the system / daily summary)
 
     } else if (status === 'FLAGGED') {
       if (!(isReporter || isSupervisor)) return NextResponse.json({ error: 'เฉพาะผู้แจ้งหรือหัวหน้าเท่านั้น' }, { status: 403 });

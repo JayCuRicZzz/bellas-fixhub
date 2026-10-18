@@ -114,13 +114,6 @@ export async function POST(req: NextRequest) {
       insert into fixhub.ticket_activity_log (ticket_id, action, old_status, new_status, action_by, action_by_name)
       values (${ticketId}, 'CREATED', null, 'PENDING', ${user.id}, ${user.full_name || user.username})`;
 
-    // LINE: new ticket → MAINT or IT group
-    const lineResult = await sendLineMessage(
-      `📢 มีงานแจ้งซ่อมใหม่!\n🔢 ${ticketNumber}\n🏨 ${branch_code}\n📍 ${location_detail}\n📝 ${descriptionThai}\n👤 ${user.full_name || user.username}`,
-      deptType
-    );
-    console.log('[Tickets] LINE result:', JSON.stringify({ deptType, result: lineResult }));
-
     // ---- duplicate & aircon-refill detection ----
     const alerts: string[] = [];
     const isRefrigerant = descriptionThai.includes('น้ำยา');
@@ -146,9 +139,18 @@ export async function POST(req: NextRequest) {
       const hoursAgo = Math.round((Date.now() - new Date(dupes[0].created_at).getTime()) / 3600000);
       alerts.push(`🔄 งานซ้ำ: ห้อง ${location_detail} แจ้งปัญหาเดียวกันเมื่อ ${hoursAgo} ชม.ที่แล้ว (${dupes[0].ticket_number})`);
     }
-    if (alerts.length > 0) {
-      sendLineMessage(`🚨 แจ้งเตือนอัตโนมัติ\n📋 ${ticketNumber} (${branch_code})\n📍 ${location_detail}\n\n${alerts.join('\n')}`, deptType).catch(() => {});
-    }
+    // LINE: ONE push per new ticket (duplicate / refrigerant alerts included in the same message)
+    const PRI: Record<string, string> = { urgent: '🔴 ด่วนมาก', high: '🟠 สูง', medium: '🔵 ปานกลาง', low: '⚪ น้อย', non_urgent: '⚫ ไม่เร่งด่วน' };
+    const lineText = [
+      `📢 งานแจ้งซ่อมใหม่ ${PRI[priority] || ''}`,
+      `🔢 ${ticketNumber}`,
+      `🏨 ${branch_code} 📍 ${location_detail}`,
+      `📝 ${descriptionThai}`,
+      `👤 ${user.full_name || user.username}`,
+      ...(alerts.length ? ['', ...alerts] : []),
+    ].join('\n');
+    const lineResult = await sendLineMessage(lineText, deptType);
+    console.log('[Tickets] LINE result:', JSON.stringify({ deptType, result: lineResult }));
 
     return NextResponse.json({
       success: true, ticket_number: ticketNumber, ticket_id: ticketId,

@@ -196,6 +196,16 @@ export default function ReportsPage() {
             <Printer className="w-4 h-4" />
             {lang === 'th' ? 'พิมพ์รายงาน' : 'Print Report'}
           </button>
+          {['admin', 'gm', 'sup', 'supit'].includes(user?.role || '') && (
+            <>
+              <a href="/api/reports/daily-image?dept=MAINT" target="_blank" rel="noopener" className="btn-secondary text-sm flex items-center gap-2">
+                🖼️ {lang === 'th' ? 'รูปสรุปวันนี้ (ช่าง)' : "Today's summary (Maint)"}
+              </a>
+              <a href="/api/reports/daily-image?dept=IT" target="_blank" rel="noopener" className="btn-secondary text-sm flex items-center gap-2">
+                🖼️ {lang === 'th' ? 'รูปสรุปวันนี้ (ไอที)' : "Today's summary (IT)"}
+              </a>
+            </>
+          )}
         </div>
       </div>
 

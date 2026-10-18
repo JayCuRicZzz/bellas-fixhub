@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { getLineConfig, setLineConfig } from '../../../../lib/line-config';
 import { pushLineText } from '../../../../lib/line';
+import { sendDailySummary } from '../../../../lib/daily-summary';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 function mask(token: string) {
   return token ? 'sk-' + token.slice(-8).padStart(12, '*') : '';
@@ -27,6 +29,10 @@ export async function POST(req: NextRequest) {
       if (!cfg.accessToken || !to) return NextResponse.json({ error: 'ยังไม่ได้ตั้งค่า token / target id' }, { status: 400 });
       const r = await pushLineText(to, `🔔 ทดสอบการแจ้งเตือนจาก Bellas FixHub (${body.group === 'IT' ? 'ไอที' : 'ช่าง'})`, cfg.accessToken);
       return NextResponse.json({ success: r.ok, status: r.status, result: r.result });
+    }
+    if (body.action === 'send-summary') {
+      const r = await sendDailySummary(body.group === 'IT' ? 'IT' : 'MAINT');
+      return NextResponse.json({ success: r.sent, ...r });
     }
     const cfg = await setLineConfig(body, user.id);
     return NextResponse.json({ success: true, targetIdMaint: cfg.targetIdMaint, targetIdIT: cfg.targetIdIT, configured: !!cfg.accessToken });
