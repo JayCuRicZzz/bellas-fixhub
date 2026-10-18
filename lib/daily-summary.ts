@@ -47,12 +47,14 @@ export interface DailySummary {
 }
 
 // ---------------------------------------------------------------- data
+// "วันนี้" = ย้อนหลัง 24 ชม. จากเวลาที่สรุป (ส่ง 22:00 → นับ 22:00 เมื่อวาน–22:00 วันนี้ ไม่มีช่วงตกหล่น)
 export async function buildSummary(dept: SummaryDept, now = new Date()): Promise<DailySummary> {
+  const since = new Date(now.getTime() - 24 * 3600 * 1000);
   const rows = await sql`
     select b.branch_code, b.branch_name_en as branch_name,
-      count(t.ticket_id) filter (where t.status <> 'CANCELLED' and (t.created_at at time zone ${BKK})::date = fixhub.today_bkk())::int as new_today,
+      count(t.ticket_id) filter (where t.status <> 'CANCELLED' and t.created_at > ${since} and t.created_at <= ${now})::int as new_today,
       count(t.ticket_id) filter (where t.status in ('RESOLVED','APPROVED')
-                                   and (t.resolved_at at time zone ${BKK})::date = fixhub.today_bkk())::int as done_today,
+                                   and t.resolved_at > ${since} and t.resolved_at <= ${now})::int as done_today,
       count(t.ticket_id) filter (where t.status = 'PENDING')::int as not_accepted,
       count(t.ticket_id) filter (where t.status in ('ACCEPTED','IN_PROGRESS','PAUSED'))::int as in_progress,
       count(t.ticket_id) filter (where t.status = 'RESOLVED')::int as awaiting,
@@ -80,7 +82,7 @@ export async function buildSummary(dept: SummaryDept, now = new Date()): Promise
     select coalesce(p.full_name, p.username) as name, count(*)::int as n
     from fixhub.tickets t join fixhub.profiles p on p.user_id = t.resolved_by
     where t.reporter_department = ${dept} and t.status in ('RESOLVED','APPROVED')
-      and (t.resolved_at at time zone ${BKK})::date = fixhub.today_bkk()
+      and t.resolved_at > ${since} and t.resolved_at <= ${now}
     group by p.user_id, p.full_name, p.username
     order by n desc, name limit 8`;
 
@@ -134,8 +136,8 @@ export function renderSummarySvg(s: DailySummary, now = new Date()): { svg: stri
 
   // KPI tiles
   const tiles = [
-    { label: 'แจ้งใหม่วันนี้', v: s.total.new_today, color: C.text },
-    { label: 'ซ่อมเสร็จวันนี้', v: s.total.done_today, color: C.green },
+    { label: 'แจ้งใหม่ 24 ชม.', v: s.total.new_today, color: C.text },
+    { label: 'ซ่อมเสร็จ 24 ชม.', v: s.total.done_today, color: C.green },
     { label: 'งานค้างทั้งหมด', v: s.total.open_total, color: s.total.open_total ? C.amber : C.green },
     { label: 'เกิน SLA', v: s.total.overdue, color: s.total.overdue ? C.red : C.green },
   ];
@@ -151,8 +153,8 @@ export function renderSummarySvg(s: DailySummary, now = new Date()): { svg: stri
   // branch table
   const cols = [
     { k: 'branch', label: 'สาขา', w: 300, align: 'start' as const },
-    { k: 'new_today', label: 'แจ้งวันนี้', w: 110 },
-    { k: 'done_today', label: 'เสร็จวันนี้', w: 110 },
+    { k: 'new_today', label: 'แจ้งใหม่', w: 110 },
+    { k: 'done_today', label: 'เสร็จ', w: 110 },
     { k: 'not_accepted', label: 'ยังไม่รับ', w: 110 },
     { k: 'in_progress', label: 'กำลังทำ', w: 110 },
     { k: 'awaiting', label: 'รอตรวจ', w: 100 },
@@ -229,11 +231,11 @@ export function renderSummarySvg(s: DailySummary, now = new Date()): { svg: stri
   }
 
   // closers (wraps to more lines; nobody is dropped)
-  parts.push(txt(P, y, 'ปิดงานวันนี้', 28, C.text, 700));
+  parts.push(txt(P, y, 'ปิดงาน 24 ชม. ล่าสุด', 28, C.text, 700));
   y += 22;
   if (s.closers.length === 0) {
     parts.push(`<rect x="${P}" y="${y}" width="${tableW}" height="70" rx="14" fill="${C.panel}" stroke="${C.line}"/>`);
-    parts.push(txt(P + 24, y + 45, 'ยังไม่มีการปิดงานวันนี้', 24, C.sub));
+    parts.push(txt(P + 24, y + 45, 'ยังไม่มีการปิดงานใน 24 ชม.', 24, C.sub));
     y += 110;
   } else {
     const chips: { x: number; row: number; w: number; label: string }[] = [];
@@ -285,7 +287,7 @@ export function summaryText(s: DailySummary, link: string): string {
   const waiting = s.branches.filter(b => b.not_accepted > 0).map(b => `${b.branch_code}(${b.not_accepted})`);
   const lines = [
     `📊 สรุปงาน${deptTh} ${s.dateLabel}`,
-    `แจ้งใหม่ ${s.total.new_today} · เสร็จวันนี้ ${s.total.done_today} · ค้าง ${s.total.open_total} · เกิน SLA ${s.total.overdue}`,
+    `(24 ชม.) แจ้งใหม่ ${s.total.new_today} · เสร็จ ${s.total.done_today} · ค้าง ${s.total.open_total} · เกิน SLA ${s.total.overdue}`,
   ];
   if (hot.length) lines.push(`🔴 เร่งด่วน: ${hot.join(' ')}`);
   if (waiting.length) lines.push(`⏳ ยังไม่มีคนรับ: ${waiting.join(' ')}`);
