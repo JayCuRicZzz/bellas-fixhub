@@ -17,7 +17,7 @@ export async function GET() {
     const [r] = await sql`select count(*)::int as n from fixhub.branches`;
     checks.db = `ok (${r.n} branches)`;
   } catch (e: any) {
-    checks.db = `error: ${e.message}`;
+    checks.db = 'error'; console.error('[health] db:', e.message);
   }
   const ok = checks.supabase_url && checks.anon_key && checks.service_role && checks.database_url && String(checks.db).startsWith('ok');
   return NextResponse.json({ ok, checks }, { status: ok ? 200 : 503 });

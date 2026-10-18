@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
       // HR staff logging in for the first time → create FixHub profile from HR record
       const prov = await provisionFromHr(data.user.id);
       if (!prov.ok) {
-        const msg = prov.reason === 'inactive' ? 'บัญชีพนักงานนี้ไม่ได้อยู่ในสถานะทำงาน'
+        const msg = prov.reason === 'blocked' ? 'บัญชีนี้ถูกระงับสิทธิ์ใช้งาน FixHub กรุณาติดต่อผู้ดูแลระบบ'
+          : prov.reason === 'inactive' ? 'บัญชีพนักงานนี้ไม่ได้อยู่ในสถานะทำงาน'
           : prov.reason === 'no_branch' ? 'ไม่พบสาขาของพนักงานในระบบ HR กรุณาติดต่อผู้ดูแลระบบ'
           : 'ไม่พบข้อมูลพนักงานในระบบ HR';
         if (isJson) return NextResponse.json({ success: false, message: msg }, { status: 403 });

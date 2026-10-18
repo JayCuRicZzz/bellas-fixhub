@@ -86,7 +86,10 @@ export async function updateUser(userId: string, input: Partial<NewUserInput>) {
   }
 
   const authPatch: any = {};
-  if (input.password) authPatch.password = input.password;
+  if (input.password) {
+    await assertFixhubAccount(userId);
+    authPatch.password = input.password;
+  }
   if (username !== current[0].username) {
     const { data: au } = await admin.auth.admin.getUserById(userId);
     if (au?.user && isFixhubEmail(au.user.email)) authPatch.email = usernameToEmail(username);
@@ -111,7 +114,16 @@ export async function updateUser(userId: string, input: Partial<NewUserInput>) {
   invalidateUserCache(userId);
 }
 
+/** บัญชี HR ใช้รหัสผ่านร่วมกับ Bella HR — ห้าม FixHub ไปเปลี่ยน (จะทำให้รหัส HR เปลี่ยนด้วย) */
+async function assertFixhubAccount(userId: string) {
+  const { data } = await supabaseAdmin().auth.admin.getUserById(userId);
+  if (data?.user && !isFixhubEmail(data.user.email)) {
+    throw new Error('บัญชีนี้ใช้รหัสผ่านของระบบ Bella HR — ให้เปลี่ยน/รีเซ็ตรหัสผ่านที่ระบบ HR');
+  }
+}
+
 export async function resetPassword(userId: string): Promise<string> {
+  await assertFixhubAccount(userId);
   const admin = supabaseAdmin();
   const temp = generateTempPassword();
   const { error } = await admin.auth.admin.updateUserById(userId, { password: temp });
@@ -124,18 +136,30 @@ export async function resetPassword(userId: string): Promise<string> {
 /** Delete a user. Auth account is removed only if it belongs to FixHub (not a shared HR account). */
 export async function deleteUser(userId: string) {
   const admin = supabaseAdmin();
-  await sql`delete from fixhub.profiles where user_id = ${userId}`; // cascades user_branches
   const { data } = await admin.auth.admin.getUserById(userId);
-  if (data?.user && isFixhubEmail(data.user.email)) {
-    await admin.auth.admin.deleteUser(userId);
+  if (data?.user && !isFixhubEmail(data.user.email)) {
+    // บัญชี HR: ถ้าลบแถวทิ้ง พนักงาน login ครั้งถัดไประบบจะสร้างให้ใหม่ → ใช้ "ระงับสิทธิ์" แทน
+    await sql`update fixhub.profiles set active = false, blocked = true, managed_by_hr = false where user_id = ${userId}`;
+    await sql`delete from fixhub.user_branches where user_id = ${userId}`;
+  } else {
+    await sql`delete from fixhub.profiles where user_id = ${userId}`; // cascades user_branches
+    if (data?.user) await admin.auth.admin.deleteUser(userId);
   }
+  invalidateUserCache(userId);
+}
+
+/** คืนสิทธิ์บัญชี HR ที่ถูกระงับ — กลับไปซิงก์ role/สาขาจาก HR ในการ login ครั้งถัดไป */
+export async function unblockUser(userId: string) {
+  await sql`update fixhub.profiles set blocked = false, active = true, managed_by_hr = true where user_id = ${userId}`;
+  const p = await sql`select branch_code from fixhub.profiles where user_id = ${userId}`;
+  if (p[0]?.branch_code) await sql`insert into fixhub.user_branches (user_id, branch_code) values (${userId}, ${p[0].branch_code}) on conflict do nothing`;
   invalidateUserCache(userId);
 }
 
 export async function listUsers() {
   const rows = await sql`
     select p.user_id as id, p.username, p.full_name, p.role, p.department, p.branch_code,
-           p.password_reset_required, p.active, p.created_at, p.employee_code, p.managed_by_hr, p.last_login_at,
+           p.password_reset_required, p.active, p.blocked, p.created_at, p.employee_code, p.managed_by_hr, p.last_login_at,
            coalesce(array_agg(ub.branch_code order by ub.branch_code) filter (where ub.branch_code is not null), '{}') as branches
     from fixhub.profiles p
     left join fixhub.user_branches ub on ub.user_id = p.user_id

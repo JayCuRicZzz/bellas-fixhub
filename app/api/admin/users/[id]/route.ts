@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '../../../../../lib/auth';
-import { deleteUser, resetPassword, updateUser, validateRole, validateUsername } from '../../../../../lib/users';
+import { deleteUser, resetPassword, unblockUser, updateUser, validateRole, validateUsername } from '../../../../../lib/users';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +46,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (action === 'reset_password') {
       const temp = await resetPassword(params.id);
       return NextResponse.json({ success: true, message: 'รีเซ็ตรหัสผ่านสำเร็จ', temp_password: temp });
+    }
+    if (action === 'unblock') {
+      await unblockUser(params.id);
+      return NextResponse.json({ success: true, message: 'คืนสิทธิ์ผู้ใช้แล้ว' });
     }
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (err: any) {

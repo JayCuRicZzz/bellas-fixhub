@@ -178,7 +178,8 @@ export default function TicketDetailPage() {
         fetchTicket();
       } else {
         setError(data.error || 'อัพเดทสถานะไม่สำเร็จ');
-        setTimeout(() => setError(''), 3000);
+        setTimeout(() => setError(''), 4000);
+        if (res.status === 409) fetchTicket(); // คนอื่นเปลี่ยนสถานะไปแล้ว → โหลดสถานะล่าสุด
       }
     } catch {
       setError('เกิดข้อผิดพลาด');
@@ -201,9 +202,12 @@ export default function TicketDetailPage() {
       if (res.ok) {
         setKpiRating(rating);
         fetchTicket();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || 'ให้คะแนนไม่สำเร็จ'); setTimeout(() => setError(''), 4000);
       }
     } catch (err) {
-      console.error('Failed to rate:', err);
+      setError('เกิดข้อผิดพลาด'); setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -220,9 +224,12 @@ export default function TicketDetailPage() {
       if (res.ok) {
         setDifficulty(level);
         fetchTicket();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || 'บันทึกระดับความยากไม่สำเร็จ'); setTimeout(() => setError(''), 4000);
       }
     } catch (err) {
-      console.error('Failed to set difficulty:', err);
+      setError('เกิดข้อผิดพลาด'); setTimeout(() => setError(''), 4000);
     }
   };
 
@@ -498,13 +505,13 @@ export default function TicketDetailPage() {
                 </button>
                 <button
                   onClick={() => setShowPrintView(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-400"
+                  className="px-4 py-2 bg-[#d1d5db] text-[#374151] rounded-lg text-sm font-medium hover:bg-[#9ca3af]"
                 >
                   ปิด
                 </button>
               </div>
             </div>
-            <div className="border rounded-lg p-4 bg-gray-50 text-black">
+            <div className="border rounded-lg p-4 bg-[#f9fafb] text-black">
               {printContent}
             </div>
           </div>
@@ -513,8 +520,8 @@ export default function TicketDetailPage() {
 
       {/* Error toast */}
       {error && (
-        <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />
+        <div role="alert" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md bg-red-600 text-white shadow-xl px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
       )}
@@ -937,7 +944,7 @@ export default function TicketDetailPage() {
             </button>
           )}
           {(ticket.status === 'PENDING' || ticket.status === 'ACCEPTED') &&
-           ['tech', 'it', 'sup', 'supit', 'admin', 'gm'].includes(user?.role || '') && (
+           ['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '') && (
             <button
               onClick={() => handleStatusUpdate('IN_PROGRESS')}
               disabled={actionLoading === 'IN_PROGRESS'}
@@ -953,7 +960,7 @@ export default function TicketDetailPage() {
             <button
               onClick={() => {
                 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-                setPauseEndDate(tomorrow.toISOString().split('T')[0]);
+                setPauseEndDate(tomorrow.toLocaleDateString('sv-SE'));
                 setShowPause(true);
               }}
               disabled={actionLoading === 'PAUSED'}
@@ -975,7 +982,7 @@ export default function TicketDetailPage() {
             </button>
           )}
           {(ticket.status === 'PENDING' || ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS') &&
-           ['tech', 'it', 'sup', 'supit', 'admin', 'gm'].includes(user?.role || '') && (
+           ['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '') && (
             <button
               onClick={() => handleStatusUpdate('RESOLVED')}
               disabled={actionLoading === 'RESOLVED'}
@@ -985,7 +992,8 @@ export default function TicketDetailPage() {
               ซ่อมเสร็จ
             </button>
           )}
-          {ticket.status === 'RESOLVED' && ['sup', 'supit', 'admin', 'gm'].includes(user?.role || '') && (
+          {ticket.status === 'RESOLVED' && ['sup', 'supit', 'admin', 'gm'].includes(user?.role || '') &&
+           (ticket.resolved_by !== user?.id || ['admin', 'gm'].includes(user?.role || '')) && (
             <button
               onClick={() => handleStatusUpdate('APPROVED')}
               disabled={actionLoading === 'APPROVED'}
@@ -1009,7 +1017,7 @@ export default function TicketDetailPage() {
           )}
           {/* FLAG — reporter says work not satisfactory */}
           {(ticket.status === 'RESOLVED' || ticket.status === 'APPROVED') &&
-           ['front', 'house', 'admin', 'gm'].includes(user?.role || '') && (
+           (ticket.reporter_id === user?.id || ['sup', 'supit', 'admin', 'gm'].includes(user?.role || '')) && (
             <button
               onClick={() => handleStatusUpdate('FLAGGED')}
               disabled={actionLoading === 'FLAGGED'}
@@ -1020,7 +1028,8 @@ export default function TicketDetailPage() {
             </button>
           )}
           {ticket.status !== 'CANCELLED' && ticket.status !== 'APPROVED' &&
-           ['sup', 'supit', 'admin', 'gm'].includes(user?.role || '') && (
+           (['sup', 'supit', 'admin', 'gm'].includes(user?.role || '') ||
+            (ticket.reporter_id === user?.id && ticket.status === 'PENDING')) && (
             <button
               onClick={() => handleStatusUpdate('CANCELLED')}
               disabled={actionLoading === 'CANCELLED'}
@@ -1079,7 +1088,7 @@ export default function TicketDetailPage() {
               type="date"
               value={pauseEndDate}
               onChange={(e) => setPauseEndDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={new Date().toLocaleDateString('sv-SE')}
               className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-ink focus:border-gold-500 focus:outline-none mb-5"
             />
 

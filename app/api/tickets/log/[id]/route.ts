@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '../../../../../lib/db';
 import { getUserFromRequest } from '../../../../../lib/auth';
+import { ticketAccess } from '../../../../../lib/ticket-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!ticketId) return NextResponse.json([]);
 
   try {
+    const acc = await ticketAccess(user, ticketId);
+    if (acc === 'notfound') return NextResponse.json([], { status: 404 });
+    if (acc === 'denied') return NextResponse.json({ error: 'ไม่มีสิทธิ์ดูใบงานนี้' }, { status: 403 });
     const rows = await sql`
       select al.*, p.full_name as action_by_name_display
       from fixhub.ticket_activity_log al

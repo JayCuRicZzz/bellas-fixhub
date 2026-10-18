@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '../../../lib/db';
 import { getUserFromRequest, getUserBranches, getWorkDeptScope } from '../../../lib/auth';
+import { SUPABASE_URL } from '../../../lib/supabase';
+import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
 
@@ -69,9 +71,12 @@ export async function POST(req: NextRequest) {
     const priority = VALID_PRIORITY.includes(body.priority) ? body.priority : 'medium';
     const difficulty = VALID_DIFFICULTY.includes(body.difficulty) ? body.difficulty : 'medium';
 
-    if (!branch_code || !category_id || !location_detail || !description) {
+    if (!branch_code || !category_id || !String(location_detail || '').trim() || !String(description || '').trim()) {
       return NextResponse.json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, { status: 400 });
     }
+    // จำกัดความยาว (ข้อความ LINE ยาวเกิน 5,000 ตัวอักษรจะส่งไม่ออก)
+    if (String(location_detail).length > 200) return NextResponse.json({ error: 'ห้อง/ตำแหน่ง ยาวเกิน 200 ตัวอักษร' }, { status: 400 });
+    if (String(description).length > 2000) return NextResponse.json({ error: 'รายละเอียดอาการยาวเกิน 2,000 ตัวอักษร' }, { status: 400 });
 
     // Branch must be one the user can access (admin/gm = all)
     const userBranches = await getUserBranches(user.id, user.role);
@@ -104,7 +109,9 @@ export async function POST(req: NextRequest) {
     const ticketNumber: string = created.ticket_number;
 
     if (Array.isArray(images) && images.length > 0) {
-      const rows = images.slice(0, 5).filter((u: any) => typeof u === 'string' && u).map((url: string) => ({
+      // รับเฉพาะรูปที่อัปโหลดผ่านระบบ (อยู่ใน Storage ของเรา) — กันลิงก์ภายนอก
+      const allowedPrefix = `${SUPABASE_URL}/storage/v1/object/public/${IMAGE_BUCKET}/`;
+      const rows = images.slice(0, 5).filter((u: any) => typeof u === 'string' && u.startsWith(allowedPrefix)).map((url: string) => ({
         ticket_id: ticketId, image_url: url, image_type: 'report', uploaded_by: user.id,
       }));
       if (rows.length) await sql`insert into fixhub.ticket_images ${sql(rows, 'ticket_id', 'image_url', 'image_type', 'uploaded_by')}`;

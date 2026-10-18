@@ -1,12 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../components/authprovider';
-import { useI18n } from '../../../lib/i18n/i18n';
+import { AuthProvider, useAuth } from '../../../components/authprovider';
+import { I18nProvider, useI18n } from '../../../lib/i18n/i18n';
 import { useRouter } from 'next/navigation';
 import { Lock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+// หน้านี้อยู่นอก /dashboard layout จึงต้องห่อ provider เอง (เดิมไม่มี → useAuth ค้าง loading ตลอด)
 export default function SetPasswordPage() {
+  return (
+    <I18nProvider>
+      <AuthProvider>
+        <SetPasswordContent />
+      </AuthProvider>
+    </I18nProvider>
+  );
+}
+
+function SetPasswordContent() {
   const { user, token, loading: authLoading } = useAuth();
   const { t, lang } = useI18n();
   const router = useRouter();

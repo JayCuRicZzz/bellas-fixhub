@@ -46,7 +46,7 @@ async function mapRole(deptCode: string | null, isHead: boolean): Promise<RoleMa
 
 export type ProvisionResult =
   | { ok: true; created: boolean }
-  | { ok: false; reason: 'not_employee' | 'inactive' | 'no_branch' };
+  | { ok: false; reason: 'not_employee' | 'inactive' | 'no_branch' | 'blocked' };
 
 /**
  * Create or refresh the FixHub profile for an HR-linked auth user.
@@ -65,7 +65,9 @@ export async function provisionFromHr(authUserId: string): Promise<ProvisionResu
     ? (await sql`select 1 from fixhub.branches where branch_code = ${emp.branch_code}`).length > 0
     : false;
 
-  const existing = await sql`select user_id, managed_by_hr, username from fixhub.profiles where user_id = ${authUserId}`;
+  const existing = await sql`select user_id, managed_by_hr, username, blocked from fixhub.profiles where user_id = ${authUserId}`;
+  // แอดมินระงับสิทธิ์ไว้ → HR sync ห้ามเปิดคืน
+  if (existing.length && existing[0].blocked) return { ok: false, reason: 'blocked' };
   const { role, department } = await mapRole(emp.dept_code, emp.is_department_head);
   const username = emp.employee_code.toLowerCase();
 
@@ -92,6 +94,8 @@ export async function provisionFromHr(authUserId: string): Promise<ProvisionResu
         employee_id = ${emp.employee_id}, employee_code = ${emp.employee_code}, active = true, last_login_at = now()
       where user_id = ${authUserId}`;
     if (branchOk) {
+      // ย้ายสาขาใน HR → สิทธิ์สาขาใน FixHub ตามสาขาปัจจุบันเท่านั้น (ลบสาขาเก่าออก)
+      await sql`delete from fixhub.user_branches where user_id = ${authUserId} and branch_code <> ${emp.branch_code}`;
       await sql`insert into fixhub.user_branches (user_id, branch_code) values (${authUserId}, ${emp.branch_code}) on conflict do nothing`;
     }
   } else {

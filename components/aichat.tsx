@@ -153,7 +153,8 @@ export default function AIChat() {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ticket_number) throw new Error(data.error || 'create failed');
 
       setPendingTicket(null);
       setMessages(prev => [
@@ -164,13 +165,13 @@ export default function AIChat() {
           content: `✅ แจ้งซ่อมสำเร็จ!\nเลขที่ใบงาน: ${data.ticket_number}\nทีมช่างจะดำเนินการตรวจสอบและซ่อมแซมโดยเร็วที่สุด`,
         },
       ]);
-    } catch {
+    } catch (e: any) {
       setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: '❌ เกิดข้อผิดพลาดในการสร้างใบแจ้งซ่อม กรุณาลองใหม่อีกครั้ง',
+          content: `❌ สร้างใบแจ้งซ่อมไม่สำเร็จ${e?.message && e.message !== 'create failed' ? ` (${e.message})` : ''} กรุณาลองใหม่ หรือแจ้งผ่านเมนู "แจ้งซ่อมใหม่"`,
         },
       ]);
     } finally {

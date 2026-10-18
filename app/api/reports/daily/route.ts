@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
              count(*) filter (where t.status = 'APPROVED' and t.sla_deadline is not null)::int as sla_total,
              count(*) filter (where t.status = 'APPROVED' and t.resolved_at <= t.sla_deadline)::int as sla_on_time,
              count(*) filter (where t.status = 'APPROVED' and t.resolved_at >  t.sla_deadline)::int as sla_overdue,
-             count(*) filter (where t.status not in ('APPROVED','CANCELLED') and t.sla_deadline < now())::int as overdue_open
+             count(*) filter (where t.status not in ('RESOLVED','APPROVED','CANCELLED') and t.sla_deadline < now())::int as overdue_open
       from fixhub.tickets_full t
       where ${scope.whereFrag}`;
 

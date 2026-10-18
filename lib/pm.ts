@@ -46,7 +46,10 @@ export async function processDuePmTickets(): Promise<number> {
       const deptType: string = pm.dept_type;
       const deptCode = deptType === 'IT' ? 'IT' : 'EN';
       const reporterDept = deptType === 'IT' ? 'IT' : 'MAINT';
-      const nextRun = calcNextRun(pm.frequency_value, pm.frequency_unit, new Date());
+      // นับรอบถัดไปจากกำหนดเดิม (ไม่ใช่เวลาที่ cron รัน) → ไม่เลื่อนช้าไปรอบละ 1 ชม.
+      // ถ้าค้างหลายรอบ (ระบบปิดไปนาน) ข้ามไปรอบแรกที่ยังไม่ถึง — สร้างใบงานครั้งเดียว
+      let nextRun = calcNextRun(pm.frequency_value, pm.frequency_unit, new Date(pm.next_run));
+      for (let i = 0; nextRun <= new Date() && i < 1000; i++) nextRun = calcNextRun(pm.frequency_value, pm.frequency_unit, nextRun);
 
       const result = await sql.begin(async (tx) => {
         // lock row; skip if another worker already advanced it
@@ -54,7 +57,7 @@ export async function processDuePmTickets(): Promise<number> {
         if (!locked || new Date(locked.next_run) > new Date()) return null;
 
         const sla = await tx`select sla_minutes from fixhub.sla_config where priority = 'medium'`;
-        const slaMinutes: number = sla[0]?.sla_minutes || 480;
+        const slaMinutes: number = sla[0]?.sla_minutes || 240;
 
         const [t] = await tx`
           insert into fixhub.tickets

@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
   if (!user || !['admin', 'gm', 'sup', 'supit'].includes(user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const dept = (new URL(req.url).searchParams.get('dept') === 'IT' ? 'IT' : 'MAINT') as SummaryDept;
+  let dept = (new URL(req.url).searchParams.get('dept') === 'IT' ? 'IT' : 'MAINT') as SummaryDept;
+  // หัวหน้าช่างดูได้เฉพาะสรุปงานช่าง · หัวหน้าไอทีเฉพาะงานไอที (admin/gm ดูได้ทั้งคู่)
+  if (user.role === 'sup') dept = 'MAINT';
+  if (user.role === 'supit') dept = 'IT';
   try {
     const png = renderSummaryPng(await buildSummary(dept));
     return new NextResponse(new Uint8Array(png), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' } });

@@ -222,7 +222,7 @@ function classifyRequest(text: string): AIClassificationResult {
 interface ReportData { total:number; completed:number; pending:number; inProgress:number; byDepartment:{name:string;count:number}[]; byBranch:{name:string;count:number}[]; byCategory:{name:string;count:number}[]; }
 
 function generateReportSummary(data: ReportData): string {
-  const d = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const d = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',weekday:'long',timeZone:'Asia/Bangkok'});
   const rate = data.total>0?Math.round((data.completed/data.total)*100):0;
   let s = `📊 **รายงานประจำวันที่ ${d}**\n\n**สรุปภาพรวม**\n• งานทั้งหมด: ${data.total} รายการ\n• เสร็จแล้ว: ${data.completed} (${rate}%)\n• กำลังทำ: ${data.inProgress}\n• รอ: ${data.pending}\n`;
   if (data.byDepartment.length>0) { s+=`\n**แยกตามแผนก:**\n`; data.byDepartment.forEach(x=>{s+=`• ${x.name}: ${x.count}\n`;}); }

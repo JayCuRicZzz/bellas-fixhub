@@ -5,6 +5,7 @@ import { AuthProvider } from '../../components/authprovider';
 import { I18nProvider } from '../../lib/i18n/i18n';
 import Navbar from '../../components/navbar';
 import Sidebar from '../../components/sidebar';
+import ResetGuard from '../../components/resetguard';
 
 export default function AILayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -12,6 +13,7 @@ export default function AILayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider>
       <AuthProvider>
+        <ResetGuard>
         <div className="flex h-screen overflow-hidden">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -21,6 +23,7 @@ export default function AILayout({ children }: { children: React.ReactNode }) {
             </main>
           </div>
         </div>
+        </ResetGuard>
       </AuthProvider>
     </I18nProvider>
   );

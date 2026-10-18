@@ -10,7 +10,7 @@ export async function pushLineText(to: string, text: string, accessToken: string
   const response = await fetch('https://api.line.me/v2/bot/message/push', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
+    body: JSON.stringify({ to, messages: [{ type: 'text', text: text.length > 4900 ? text.slice(0, 4900) + '…' : text }] }),
   });
   const result = await response.json().catch(() => ({}));
   return { ok: response.ok, status: response.status, result };

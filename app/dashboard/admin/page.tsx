@@ -13,6 +13,9 @@ interface AdminUser {
   id: string;
   employee_code?: string | null;
   managed_by_hr?: boolean;
+  blocked?: boolean;
+  active?: boolean;
+  last_login_at?: string | null;
   username: string;
   full_name: string;
   role: string;
@@ -210,6 +213,19 @@ export default function AdminPage() {
     }
   };
 
+  const handleUnblock = async (u: AdminUser) => {
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'unblock' }),
+      });
+      const data = await res.json();
+      if (res.ok) { setSuccessMsg(data.message || 'คืนสิทธิ์แล้ว'); setTimeout(() => setSuccessMsg(''), 3000); fetchUsers(); }
+      else setError(data.error || 'เกิดข้อผิดพลาด');
+    } catch { setError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); }
+  };
+
   // Only admin can access
   if (user?.role !== 'admin') {
     return (
@@ -276,6 +292,9 @@ export default function AdminPage() {
                   name="fixhub-new-username"
                 />
               </div>
+              {editingUser?.employee_code ? (
+              <div className="text-xs text-gray-500 self-end pb-2">🔒 บัญชี Bella HR — รหัสผ่านเปลี่ยนได้ที่ระบบ HR เท่านั้น</div>
+              ) : (
               <div>
                 <label className="block text-sm text-gray-400 mb-1">
                   {t.admin.password} {editingUser ? '(เว้นว่างเพื่อไม่เปลี่ยน)' : '(เว้นว่าง = ระบบสร้างรหัสชั่วคราวให้)'}
@@ -291,6 +310,7 @@ export default function AdminPage() {
                   placeholder={editingUser ? t.admin.leaveEmpty : 'อย่างน้อย 6 ตัวอักษร'}
                 />
               </div>
+              )}
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t.admin.fullName} *</label>
                 <input
@@ -376,8 +396,11 @@ export default function AdminPage() {
           <div className="bg-navy-800 border border-navy-600 rounded-xl shadow-2xl w-full max-w-sm p-6">
             <h3 className="text-lg font-bold text-ink mb-2">{t.admin.confirmDelete}</h3>
             <p className="text-gray-400 text-sm mb-4">
-              ต้องการลบผู้ใช้ <span className="text-ink font-medium">{deleteConfirm.full_name}</span> ({deleteConfirm.username}) หรือไม่?
+              {deleteConfirm.employee_code ? 'ระงับสิทธิ์ใช้งาน FixHub ของ' : 'ต้องการลบผู้ใช้'} <span className="text-ink font-medium">{deleteConfirm.full_name}</span> ({deleteConfirm.username}) หรือไม่?
             </p>
+            {deleteConfirm.employee_code && (
+              <p className="text-xs text-gray-500 mb-4">บัญชีนี้เชื่อมกับ Bella HR — จะไม่ลบบัญชี HR แต่จะเข้า FixHub ไม่ได้จนกว่าจะกด "คืนสิทธิ์"</p>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => handleDelete(deleteConfirm)}
@@ -426,6 +449,10 @@ export default function AdminPage() {
                   <td className="py-2.5 px-3 text-ink font-medium">
                     {u.username}
                     {u.employee_code && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" title="บัญชีเชื่อมกับ Bella HR">HR {u.employee_code}</span>}
+                    {u.blocked && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30">ระงับสิทธิ์</span>}
+                    <div className="text-[10px] text-gray-500 font-normal">
+                      {u.last_login_at ? `เข้าล่าสุด ${new Date(u.last_login_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}` : 'ยังไม่เคยเข้าใช้'}
+                    </div>
                   </td>
                   <td className="py-2.5 px-3 text-gray-300">{u.full_name}</td>
                   <td className="py-2.5 px-3">
@@ -445,6 +472,12 @@ export default function AdminPage() {
                   </td>
                   <td className="py-2.5 px-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {u.blocked ? (
+                        <button onClick={() => handleUnblock(u)} className="px-2 py-1 rounded text-xs bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20">
+                          คืนสิทธิ์
+                        </button>
+                      ) : (<>
+                      {!u.employee_code && (
                       <button
                         onClick={() => handleResetPassword(u)}
                         className="p-1.5 rounded hover:bg-blue-900/30 text-gray-400 hover:text-blue-400"
@@ -452,6 +485,7 @@ export default function AdminPage() {
                       >
                         <Key className="w-4 h-4" />
                       </button>
+                      )}
                       <button
                         onClick={() => openEditForm(u)}
                         className="p-1.5 rounded hover:bg-navy-600 text-gray-400 hover:text-ink"
@@ -462,10 +496,11 @@ export default function AdminPage() {
                       <button
                         onClick={() => setDeleteConfirm(u)}
                         className="p-1.5 rounded hover:bg-red-900/30 text-gray-400 hover:text-red-400"
-                        title={t.admin.deleteUser}
+                        title={u.employee_code ? 'ระงับสิทธิ์' : t.admin.deleteUser}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                      </>)}
                     </div>
                   </td>
                 </tr>

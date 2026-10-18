@@ -5,6 +5,7 @@ import { AuthProvider } from '../../components/authprovider';
 import { I18nProvider } from '../../lib/i18n/i18n';
 import Navbar from '../../components/navbar';
 import Sidebar from '../../components/sidebar';
+import ResetGuard from '../../components/resetguard';
 
 export default function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default function DashboardLayout({
   return (
     <I18nProvider>
       <AuthProvider>
+        <ResetGuard>
         <div className="flex h-screen overflow-hidden">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -25,6 +27,7 @@ export default function DashboardLayout({
             </main>
           </div>
         </div>
+        </ResetGuard>
       </AuthProvider>
     </I18nProvider>
   );
