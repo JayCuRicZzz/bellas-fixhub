@@ -122,7 +122,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map(item => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            // เลือกเมนูที่ href ตรงยาวที่สุดเท่านั้น (เดิม /dashboard/admin ติดไฮไลต์ซ้อนกับเมนูย่อย)
+            const matches = (h: string) => pathname === h || (h !== '/dashboard' && pathname.startsWith(h + '/'));
+            const best = navItems.filter(n => matches(n.href)).sort((a, b) => b.href.length - a.href.length)[0];
+            const isActive = best?.href === item.href;
             const Icon = item.icon;
             return (
               <Link

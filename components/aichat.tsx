@@ -13,13 +13,18 @@ const QUICK_SUGGESTIONS = [
   'ห้อง 1202 ไฟกระพริบ',
 ];
 
+function welcomeText(user: any) {
+  const branch = user?.branch_code ? (BRANCHES.find(b => b.branch_code === user.branch_code)?.branch_name || user.branch_code) : '';
+  return `สวัสดี${user?.full_name ? ` คุณ${user.full_name}` : ''}! 👋\n\nผมคือที่ปรึกษางานซ่อม 🦞 — ถามวิธีแก้ไขเบื้องต้น หรือบอกปัญหาให้ผมช่วยสร้างใบงานให้${branch ? `\n\nสาขาปัจจุบัน: ${branch}` : ''}`;
+}
+
 export default function AIChat() {
   const { user, token } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: `สวัสดี${user?.full_name ? ` คุณ${user.full_name}` : ''}! 👋\n\nผมคือที่ปรึกษางานซ่อม 🦞 — ถามวิธีแก้ไขเบื้องต้น หรือบอกปัญหาให้ผมช่วยสร้างใบงานให้\n\nสาขาปัจจุบัน: ${BRANCHES.find(b => b.branch_code === user?.branch_code)?.branch_name || user?.branch_code}`,
+      content: welcomeText(user),
     },
   ]);
   const [input, setInput] = useState('');
@@ -27,6 +32,10 @@ export default function AIChat() {
   const [pendingTicket, setPendingTicket] = useState<any>(null);
   const [creatingTicket, setCreatingTicket] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  // ข้อมูลผู้ใช้โหลดทีหลัง → อัปเดตข้อความต้อนรับเมื่อได้ user (เดิมขึ้น "สาขาปัจจุบัน: undefined")
+  useEffect(() => {
+    setMessages(m => m.map(x => x.id === 'welcome' ? { ...x, content: welcomeText(user) } : x));
+  }, [user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
