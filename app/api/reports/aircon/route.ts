@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const branches = branch && userBranches.includes(branch) ? [branch] : userBranches;
 
     const rows = await sql`
-      select t.ticket_id, t.ticket_number, t.branch_code, t.location_detail, t.description, t.created_at, t.status,
+      select t.ticket_id, t.ticket_number, t.branch_code, t.location_detail, t.description, t.pending_reason, t.created_at, t.status,
              t.main_th as category_name, t.technician_name,
              (fixhub.today_bkk() - (t.created_at at time zone 'Asia/Bangkok')::date)::int as days_ago
       from fixhub.tickets_full t
@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
 
     const refillAlerts: any[] = [];
     for (const [key, tickets] of Object.entries(byRoom)) {
-      const refills = tickets.filter((t: any) => t.description.includes('น้ำยา'));
+      // นับทั้งอาการที่ผู้แจ้งเขียน และบันทึกของช่างตอนซ่อมเสร็จ (เช่น "เติมน้ำยา R32")
+      const refills = tickets.filter((t: any) => t.status !== 'CANCELLED' && `${t.description || ''} ${t.pending_reason || ''}`.includes('น้ำยา'));
       for (let i = 1; i < refills.length; i++) {
         const daysBetween = Math.round((new Date(refills[i - 1].created_at).getTime() - new Date(refills[i].created_at).getTime()) / 86400000);
         if (daysBetween <= 14) {

@@ -55,6 +55,8 @@ export default function TicketDetailPage() {
 
   // Pause work modal
   const [showPause, setShowPause] = useState(false);
+  const [showResolve, setShowResolve] = useState(false);
+  const [resolveNote, setResolveNote] = useState('');
   const [pauseReason, setPauseReason] = useState('อะไหล่ไม่มี/รอสั่งซื้อ');
   const [pauseEndDate, setPauseEndDate] = useState('');
   const [pauseCustomReason, setPauseCustomReason] = useState('');
@@ -163,7 +165,7 @@ export default function TicketDetailPage() {
     }
   };
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: string, extra: Record<string, any> = {}) => {
     setActionLoading(newStatus);
     try {
       const res = await fetch(`/api/tickets/${id}`, {
@@ -172,7 +174,7 @@ export default function TicketDetailPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...extra }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -994,7 +996,7 @@ export default function TicketDetailPage() {
           {(ticket.status === 'PENDING' || ticket.status === 'ACCEPTED' || ticket.status === 'IN_PROGRESS') &&
            ['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '') && (
             <button
-              onClick={() => handleStatusUpdate('RESOLVED')}
+              onClick={() => { setResolveNote(''); setShowResolve(true); }}
               disabled={actionLoading === 'RESOLVED'}
               className="btn-primary text-sm flex items-center gap-2 bg-green-600 hover:bg-green-700"
             >
@@ -1053,6 +1055,33 @@ export default function TicketDetailPage() {
       </div>
 
       {/* Pause Work Modal */}
+      {/* ซ่อมเสร็จ — บันทึกสิ่งที่ทำ (แสดงในใบงานเป็นหมายเหตุ · ใส่คำว่า "น้ำยา" ระบบนับในรายงานน้ำยาแอร์) */}
+      {showResolve && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-ink mb-1">✅ ซ่อมเสร็จ</h3>
+            <p className="text-gray-400 text-sm mb-4">บันทึกสั้น ๆ ว่าทำอะไรไป — หัวหน้าและผู้แจ้งจะเห็นในใบงาน</p>
+            <label htmlFor="resolve-note" className="block text-sm text-gray-300 mb-2">สิ่งที่ทำ</label>
+            <textarea id="resolve-note" value={resolveNote} onChange={e => setResolveNote(e.target.value)} rows={3} maxLength={1000}
+              placeholder="เช่น ล้างคอยล์เย็น เติมน้ำยา R32 ทดสอบเย็นปกติ"
+              className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-ink placeholder-gray-500 focus:border-gold-500 focus:outline-none mb-2" />
+            <p className="text-xs text-gray-500 mb-5">อย่าลืมแนบรูปหลังซ่อม และบันทึกอะไหล่ที่ใช้ (ถ้ามี) ก่อนกดยืนยัน</p>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => { setShowResolve(false); await handleStatusUpdate('RESOLVED', resolveNote.trim() ? { pending_reason: resolveNote.trim() } : {}); }}
+                disabled={actionLoading === 'RESOLVED'}
+                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-semibold text-sm"
+              >
+                ยืนยันซ่อมเสร็จ
+              </button>
+              <button onClick={() => setShowResolve(false)} className="flex-1 py-2.5 bg-navy-700 hover:bg-navy-600 text-gray-300 rounded-lg text-sm">
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPause && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl">
