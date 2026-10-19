@@ -191,6 +191,8 @@ export default function AdminPage() {
   };
 
   const handleResetPassword = async (u: AdminUser) => {
+    // กดพลาดครั้งเดียว = รหัสเดิมใช้ไม่ได้ทันที → ต้องยืนยันก่อน
+    if (!window.confirm(`รีเซ็ตรหัสผ่านของ ${u.username} (${u.full_name})?\nรหัสเดิมจะใช้ไม่ได้ทันที และระบบจะแสดงรหัสชั่วคราวให้ครั้งเดียว`)) return;
     try {
       const res = await fetch(`/api/admin/users/${u.id}`, {
         method: 'PATCH',
