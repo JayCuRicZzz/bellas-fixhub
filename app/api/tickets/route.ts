@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
         ${branch ? sql`and t.branch_code = ${branch}` : sql``}
         ${department ? sql`and t.reporter_department = ${department === 'MAINTENANCE' ? 'MAINT' : department}` : sql``}
         ${deptType ? sql`and t.dept_type = ${deptType === 'ช่าง' ? 'MAINTENANCE' : deptType === 'ไอที' ? 'IT' : deptType}` : sql``}
-        ${room ? (roomRe ? sql`and t.location_detail ~ ${roomRe}` : sql`and t.location_detail ilike ${'%' + room + '%'}`) : sql``}
+        ${room ? (roomRe ? sql`and (t.room_no = ${room.toUpperCase()} or (t.room_no is null and t.location_detail ~ ${roomRe}))` : (ROOM_RE.test(room.toUpperCase()) ? sql`and t.room_no = ${room.toUpperCase()}` : sql`and t.location_detail ilike ${'%' + room + '%'}`)) : sql``}
         ${q ? sql`and (t.ticket_number ilike ${'%' + q + '%'} or t.location_detail ilike ${'%' + q + '%'} or t.description ilike ${'%' + q + '%'})` : sql``}
       order by t.ticket_id desc
       limit ${limit}`;
@@ -77,13 +77,34 @@ function reporterOrigin(user: { branch_code?: string; department?: string; role?
   return [user.branch_code, d].filter(Boolean).join(' - ') || '-';
 }
 
+const ROOM_RE = /^[0-9]{2,4}[A-Z]?$/;
+
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const body = await req.json();
-    const { branch_code, category_id, location_detail, description, images } = body;
+    const { branch_code, category_id, description, images } = body;
+    // ── ตำแหน่ง: ห้องพัก = เบอร์ห้องบังคับเป็นตัวเลข · พื้นที่ส่วนกลาง = ชื่อพื้นที่ ──
+    const note = String(body.location_note || '').trim().slice(0, 100);
+    let location_detail = String(body.location_detail || '').trim();
+    let roomNo: string | null = null;
+    if (body.location_kind === 'room') {
+      roomNo = String(body.room_no || '').trim().toUpperCase();
+      if (!ROOM_RE.test(roomNo)) return NextResponse.json({ error: 'เบอร์ห้องต้องเป็นตัวเลข 2–4 หลัก (เช่น 305, 1201 หรือ 305A)' }, { status: 400 });
+      location_detail = `ห้อง ${roomNo}${note ? ` · ${note}` : ''}`;
+    } else if (body.location_kind === 'area') {
+      const area = String(body.area_name || '').trim().slice(0, 60);
+      if (!area) return NextResponse.json({ error: 'กรุณาเลือกพื้นที่' }, { status: 400 });
+      if (area === 'อื่น ๆ' && !note) return NextResponse.json({ error: 'กรุณาระบุพื้นที่' }, { status: 400 });
+      location_detail = area === 'อื่น ๆ' ? note : `${area}${note ? ` · ${note}` : ''}`;
+    } else {
+      // ช่องทางเดิม (AI ช่วยแจ้ง / แชต AI): ดึงเลขห้องจากข้อความถ้ามี
+      const m = location_detail.match(/(?:^|[^0-9])([0-9]{2,4}[A-Za-z]?)(?:[^0-9A-Za-z]|$)/);
+      roomNo = m ? m[1].toUpperCase() : null;
+      if (roomNo && /^[0-9]{2,4}[A-Za-z]?$/.test(location_detail.trim())) location_detail = `ห้อง ${roomNo}`;
+    }
     const priority = VALID_PRIORITY.includes(body.priority) ? body.priority : 'medium';
     const difficulty = VALID_DIFFICULTY.includes(body.difficulty) ? body.difficulty : 'medium';
 
@@ -126,11 +147,11 @@ export async function POST(req: NextRequest) {
     const [created] = await sql`
       insert into fixhub.tickets
         (ticket_number, branch_code, category_id, reporter_id, reporter_department, location_detail, description,
-         priority, difficulty, status, sla_deadline, location_id, asset_id)
+         priority, difficulty, status, sla_deadline, location_id, asset_id, room_no)
       values
         (fixhub.next_ticket_number(${branch_code}, ${deptCode}), ${branch_code}, ${Number(category_id)}, ${user.id}, ${reporterDept},
          ${String(location_detail).trim()}, ${descriptionThai}, ${priority}, ${difficulty}, 'PENDING',
-         now() + make_interval(mins => ${slaMinutes}), ${locationId}, ${assetId})
+         now() + make_interval(mins => ${slaMinutes}), ${locationId}, ${assetId}, ${roomNo})
       returning ticket_id, ticket_number, created_at`;
 
     const ticketId: number = created.ticket_id;
@@ -155,7 +176,7 @@ export async function POST(req: NextRequest) {
     if (isRefrigerant) {
       const refills = await sql`
         select ticket_number, created_at from fixhub.tickets
-        where branch_code = ${branch_code} and location_detail = ${location_detail}
+        where branch_code = ${branch_code} and ${roomNo ? sql`room_no = ${roomNo}` : sql`location_detail = ${location_detail}`}
           and ticket_id <> ${ticketId} and created_at >= now() - interval '14 days'
           and description like '%น้ำยา%'
         order by created_at desc limit 1`;
@@ -166,7 +187,7 @@ export async function POST(req: NextRequest) {
     }
     const dupes = await sql`
       select ticket_number, created_at from fixhub.tickets
-      where branch_code = ${branch_code} and location_detail = ${location_detail}
+      where branch_code = ${branch_code} and ${roomNo ? sql`room_no = ${roomNo}` : sql`location_detail = ${location_detail}`}
         and category_id = ${Number(category_id)} and ticket_id <> ${ticketId}
         and created_at >= now() - interval '1 day'
       order by created_at desc limit 1`;

@@ -12,6 +12,10 @@ interface SlaConfig {
   [priority: string]: { sla_hours: number; sla_minutes: number };
 }
 
+// พื้นที่ส่วนกลาง (เลือกจากรายการ → ค้นและสรุปได้ตรงกัน) · ตัวสุดท้าย = อื่น ๆ ต้องพิมพ์ระบุ
+const AREAS = ['ล็อบบี้', 'ฟร้อนท์', 'ทางเดิน / บันได', 'ลิฟต์', 'สระว่ายน้ำ', 'ห้องอาหาร / บาร์', 'ครัว', 'ห้องประชุม',
+  'ลานจอดรถ', 'สวน / ภายนอกอาคาร', 'ดาดฟ้า', 'ห้องเครื่อง / ห้องปั๊ม', 'ห้องพนักงาน / ออฟฟิศ', 'ห้องเก็บของ / Store', 'อื่น ๆ'];
+
 export default function TicketForm() {
   const { user, token } = useAuth();
   const { t, lang } = useI18n();
@@ -19,7 +23,15 @@ export default function TicketForm() {
   const [department, setDepartment] = useState('MAINTENANCE');
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState('');
-  const [locationDetail, setLocationDetail] = useState('');
+  // ตำแหน่ง: ห้องพัก (เบอร์ห้องบังคับเป็นตัวเลข) หรือ พื้นที่ส่วนกลาง (เลือกจากรายการ) + รายละเอียดเพิ่ม
+  const [locKind, setLocKind] = useState<'room' | 'area'>('room');
+  const [roomNo, setRoomNo] = useState('');
+  const [areaName, setAreaName] = useState('');
+  const [locNote, setLocNote] = useState('');
+  const roomOk = /^[0-9]{2,4}[A-Za-z]?$/.test(roomNo.trim());
+  const isOtherArea = locKind === 'area' && areaName === 'อื่น ๆ';
+  const locationDetail = isOtherArea ? locNote.trim()
+    : (locKind === 'room' ? (roomNo.trim() ? `ห้อง ${roomNo.trim().toUpperCase()}` : '') : areaName) + (locNote.trim() ? ` · ${locNote.trim()}` : '');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'non_urgent' | 'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [loading, setLoading] = useState(false);
@@ -55,8 +67,11 @@ export default function TicketForm() {
         if (!ok) { setQrError(d.error || 'QR ไม่ถูกต้อง'); return; }
         setQr(d);
         setBranchCode(d.branch_code);
-        if (d.location) { setLocationId(d.location.location_id); setLocationDetail(d.location.name); }
-        else if (d.asset) setLocationDetail(d.asset.name);
+        if (d.location) {
+          setLocationId(d.location.location_id);
+          if (d.location.kind === 'room' || /^[0-9]{2,4}[A-Za-z]?$/.test(d.location.code || '')) { setLocKind('room'); setRoomNo(d.location.code); }
+          else { setLocKind('area'); setAreaName(d.location.name); }
+        } else if (d.asset) { setLocKind('area'); setAreaName(AREAS[AREAS.length - 1]); setLocNote(d.asset.name); }
         if (d.asset) applyAsset(d.asset);
       })
       .catch(() => setQrError('โหลดข้อมูล QR ไม่สำเร็จ'));
@@ -125,6 +140,8 @@ export default function TicketForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (locKind === 'room' && !roomOk) { setError('เบอร์ห้องต้องเป็นตัวเลข 2–4 หลัก (เช่น 305, 1201)'); return; }
+    if (locKind === 'area' && !areaName) { setError('กรุณาเลือกพื้นที่'); return; }
     setLoading(true);
     setUploadingImages(true);
 
@@ -151,7 +168,10 @@ export default function TicketForm() {
         body: JSON.stringify({
           branch_code: branchCode,
           category_id: Number(categoryId),
-          location_detail: locationDetail,
+          location_kind: locKind,
+          room_no: locKind === 'room' ? roomNo.trim() : undefined,
+          area_name: locKind === 'area' ? areaName : undefined,
+          location_note: locNote.trim() || undefined,
           description,
           priority,
           reporter_department: department,
@@ -165,7 +185,8 @@ export default function TicketForm() {
       if (res.ok) {
         setSuccess(true);
         setCreatedTicket({ ticket_number: data.ticket_number, branch_code: branchCode, location_detail: locationDetail, description, priority, department });
-        setLocationDetail(qr?.location?.name || '');  // สแกน QR มา → แจ้งเรื่องอื่นของห้องเดิมต่อได้
+        if (!qr?.location) { setRoomNo(''); setAreaName(''); }  // สแกน QR มา → แจ้งเรื่องอื่นของห้องเดิมต่อได้
+        setLocNote('');
         if (!qr?.location) setLocationId(null);
         setDescription('');
         setImages([]);
@@ -212,7 +233,7 @@ export default function TicketForm() {
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.branch}</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.branch} <span className="text-red-400">*</span></label>
           <select value={branchCode} onChange={e => setBranchCode(e.target.value)} className="select-field" required>
             <option value="">{lang === 'th' ? 'เลือกสาขา' : 'Select branch'}</option>
             {accessibleBranches.map(b => (
@@ -224,9 +245,31 @@ export default function TicketForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.locationDetail}</label>
-          <input type="text" value={locationDetail} onChange={e => { setLocationDetail(e.target.value); if (qr?.location && e.target.value !== qr.location.name) setLocationId(null); }}
-            className="input-field" placeholder={t.ticket.locationPlaceholder} required />
+          <span className="block text-sm font-medium text-gray-300 mb-1.5">{lang === 'th' ? 'ตำแหน่งที่เสีย' : 'Location'} <span className="text-red-400">*</span></span>
+          <div className="flex gap-1.5 mb-2" role="radiogroup" aria-label="ประเภทตำแหน่ง">
+            {([['room', lang === 'th' ? '🛏️ ห้องพัก' : 'Guest room'], ['area', lang === 'th' ? '📍 พื้นที่ส่วนกลาง' : 'Common area']] as const).map(([k, l]) => (
+              <button key={k} type="button" role="radio" aria-checked={locKind === k}
+                onClick={() => { setLocKind(k); setLocationId(null); }}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm border ${locKind === k ? 'border-gold-500 bg-gold-500/10 text-gold-400 font-medium' : 'border-navy-600 bg-navy-800 text-gray-400'}`}>{l}</button>
+            ))}
+          </div>
+          {locKind === 'room' ? (
+            <>
+              <input type="text" inputMode="numeric" value={roomNo} maxLength={5} aria-label="เบอร์ห้อง"
+                onChange={e => { setRoomNo(e.target.value.replace(/[^0-9A-Za-z]/g, '')); setLocationId(null); }}
+                pattern="[0-9]{2,4}[A-Za-z]?" title="ตัวเลข 2–4 หลัก เช่น 305 หรือ 1201"
+                className="input-field" placeholder={lang === 'th' ? 'เบอร์ห้อง เช่น 305' : 'Room no. e.g. 305'} required />
+              {roomNo && !roomOk && <p className="text-xs text-red-400 mt-1">เบอร์ห้องต้องเป็นตัวเลข 2–4 หลัก (เช่น 305, 1201)</p>}
+            </>
+          ) : (
+            <select value={areaName} onChange={e => { setAreaName(e.target.value); setLocationId(null); }} className="select-field" required aria-label="พื้นที่">
+              <option value="">{lang === 'th' ? '— เลือกพื้นที่ —' : '— Select area —'}</option>
+              {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          )}
+          <input type="text" value={locNote} onChange={e => setLocNote(e.target.value)} maxLength={100}
+            className="input-field mt-2" required={locKind === 'area' && areaName === AREAS[AREAS.length - 1]}
+            placeholder={locKind === 'room' ? (lang === 'th' ? 'จุดในห้อง (ไม่บังคับ) เช่น ห้องน้ำ, ระเบียง' : 'Spot in room (optional)') : (areaName === AREAS[AREAS.length - 1] ? 'ระบุพื้นที่ *' : 'ระบุเพิ่ม (ไม่บังคับ) เช่น ชั้น 4, หน้าลิฟต์')} />
         </div>
 
         <div>
@@ -241,7 +284,7 @@ export default function TicketForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.category}</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.category} <span className="text-red-400">*</span></label>
           <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="select-field" required>
             {categories.map(c => (
               <option key={c.category_id} value={c.category_id}>
@@ -270,7 +313,7 @@ export default function TicketForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.description}</label>
+        <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.description} <span className="text-red-400">*</span></label>
         <textarea value={description} onChange={e => setDescription(e.target.value)}
           className="input-field min-h-[120px] resize-y" placeholder={t.ticket.descriptionPlaceholder} required />
       </div>
