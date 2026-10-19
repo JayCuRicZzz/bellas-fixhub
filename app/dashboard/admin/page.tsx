@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/authprovider';
 import { useI18n } from '../../../lib/i18n/i18n';
 import { BRANCHES } from '../../../types';
+import { DEPARTMENTS, deptTh } from '../../../lib/departments';
 import {
   UserPlus, Pencil, Trash2, X, Loader2, Shield, RefreshCw, Key,
 } from 'lucide-react';
@@ -38,9 +39,7 @@ const ROLE_OPTIONS = [
 
 const DEPT_OPTIONS = [
   { value: '', label: 'ไม่ระบุ' },
-  { value: 'ช่าง', label: 'ฝ่ายช่าง' },
-  { value: 'ไอที', label: 'ฝ่ายไอที' },
-  { value: 'ทั่วไป', label: 'ทั่วไป' },
+  ...DEPARTMENTS.map(d => ({ value: d.code, label: `${d.th} (${d.code})` })),
 ];
 
 export default function AdminPage() {
@@ -344,6 +343,10 @@ export default function AdminPage() {
                   {DEPT_OPTIONS.map(d => (
                     <option key={d.value} value={d.value}>{d.label}</option>
                   ))}
+                  {/* ค่าเดิมที่ไม่อยู่ในรายการ — แสดงไว้ ไม่ให้ถูกล้างเป็น "ไม่ระบุ" ตอนกดบันทึก */}
+                  {formDepartment && !DEPT_OPTIONS.some(d => d.value === formDepartment) && (
+                    <option value={formDepartment}>{deptTh(formDepartment)} (ค่าเดิม)</option>
+                  )}
                 </select>
               </div>
               <div>
@@ -460,7 +463,7 @@ export default function AdminPage() {
                       {u.role}
                     </span>
                   </td>
-                  <td className="py-2.5 px-3 text-gray-400">{u.department || '-'}</td>
+                  <td className="py-2.5 px-3 text-gray-400">{deptTh(u.department) || '-'}</td>
                   <td className="py-2.5 px-3">
                     <div className="flex flex-wrap gap-1">
                       {(u.branches || []).map(bc => (

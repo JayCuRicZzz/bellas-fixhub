@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '../../../../../lib/auth';
 import { deleteUser, resetPassword, unblockUser, updateUser, validateRole, validateUsername } from '../../../../../lib/users';
+import { DEPT_CODES } from '../../../../../lib/departments';
+import sql from '../../../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +24,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const uErr = validateUsername(username);
     if (uErr) return NextResponse.json({ error: uErr }, { status: 400 });
     if (!validateRole(role)) return NextResponse.json({ error: 'role ไม่ถูกต้อง' }, { status: 400 });
+    if (department && !DEPT_CODES.has(String(department))) {
+      // ค่าเก่าที่ไม่อยู่ในรายการ (เช่น "ช่าง") บันทึกซ้ำได้ แต่ตั้งค่าใหม่นอกรายการไม่ได้
+      const cur = await sql`select department from fixhub.profiles where user_id = ${params.id}`;
+      if (cur[0]?.department !== department) return NextResponse.json({ error: 'แผนกไม่ถูกต้อง' }, { status: 400 });
+    }
     if (password && String(password).length < 6) {
       return NextResponse.json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }, { status: 400 });
     }

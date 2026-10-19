@@ -5,6 +5,7 @@ import { SUPABASE_URL } from '../../../lib/supabase';
 import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
+import { deptTh } from '../../../lib/departments';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,15 +66,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ชื่อแผนกตามระบบ Bella HR (public.departments) + รหัสที่ FixHub ใช้เอง
-const DEPT_TH: Record<string, string> = {
-  EN: 'ช่าง', MAINT: 'ช่าง', MAINTENANCE: 'ช่าง', IT: 'ไอที', FO: 'ต้อนรับ', HK: 'แม่บ้าน', FB: 'ห้องอาหารและบาร์',
-  MK: 'ครัว', ACC: 'บัญชีและการเงิน', PU: 'จัดซื้อ', HR: 'ฝ่ายบุคคล', GE: 'ทั่วไป/สวน', DR: 'พนักงานขับรถ',
-  EXEC: 'ฝ่ายบริหาร', GM: 'ฝ่ายบริหาร', ADMIN: 'ผู้ดูแลระบบ',
-};
 /** "BV - ต้อนรับ" — สาขาและแผนกของผู้แจ้ง สำหรับข้อความ LINE */
 function reporterOrigin(user: { branch_code?: string; department?: string; role?: string }) {
-  const d = user.department ? (DEPT_TH[user.department.toUpperCase()] || user.department) : (user.role === 'gm' ? 'ฝ่ายบริหาร' : '');
+  const d = user.department ? deptTh(user.department) : (user.role === 'gm' ? 'ฝ่ายบริหาร' : '');
   return [user.branch_code, d].filter(Boolean).join(' - ') || '-';
 }
 
