@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '../../../../lib/auth';
+import { getUserFromRequest, isBackOffice } from '../../../../lib/auth';
 import { createUser, listUsers, validateRole, validateUsername } from '../../../../lib/users';
 
 export const dynamic = 'force-dynamic';
 
 async function requireAdmin(req: NextRequest) {
   const user = await getUserFromRequest(req);
-  if (!user || user.role !== 'admin') return null;
+  if (!user || !isBackOffice(user.role)) return null;  // admin + GM
   return user;
 }
 
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     const uErr = validateUsername(username);
     if (uErr) return NextResponse.json({ error: uErr }, { status: 400 });
     if (!validateRole(role)) return NextResponse.json({ error: 'role ไม่ถูกต้อง' }, { status: 400 });
+    if (role === 'admin' && admin.role !== 'admin') return NextResponse.json({ error: 'เฉพาะแอดมินเท่านั้นที่ตั้งผู้ใช้เป็น admin ได้' }, { status: 403 });
     if (password && String(password).length < 6) {
       return NextResponse.json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }, { status: 400 });
     }

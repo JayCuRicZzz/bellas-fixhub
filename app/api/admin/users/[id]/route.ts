@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '../../../../../lib/auth';
+import { getUserFromRequest, isBackOffice } from '../../../../../lib/auth';
+import sql from '../../../../../lib/db';
 import { deleteUser, resetPassword, unblockUser, updateUser, validateRole, validateUsername } from '../../../../../lib/users';
 
 export const dynamic = 'force-dynamic';
 
 async function requireAdmin(req: NextRequest) {
   const user = await getUserFromRequest(req);
-  if (!user || user.role !== 'admin') return null;
+  if (!user || !isBackOffice(user.role)) return null;  // admin + GM
   return user;
+}
+
+/** GM จัดการผู้ใช้ได้ แต่แตะบัญชี admin ไม่ได้ และตั้งใครเป็น admin ไม่ได้ */
+async function gmBlocked(actor: { role: string }, targetId: string, newRole?: string) {
+  if (actor.role === 'admin') return null;
+  if (newRole === 'admin') return NextResponse.json({ error: 'เฉพาะแอดมินเท่านั้นที่ตั้งผู้ใช้เป็น admin ได้' }, { status: 403 });
+  const [t] = await sql`select role from fixhub.profiles where user_id = ${targetId}`;
+  if (t?.role === 'admin') return NextResponse.json({ error: 'บัญชีแอดมินแก้ไขได้โดยแอดมินเท่านั้น' }, { status: 403 });
+  return null;
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
@@ -25,8 +35,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (password && String(password).length < 6) {
       return NextResponse.json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }, { status: 400 });
     }
-    if (params.id === admin.id && role !== 'admin') {
-      return NextResponse.json({ error: 'ไม่สามารถลดสิทธิ์บัญชีของตัวเองได้' }, { status: 400 });
+    const blocked = await gmBlocked(admin, params.id, role);
+    if (blocked) return blocked;
+    if (params.id === admin.id && role !== admin.role) {
+      return NextResponse.json({ error: 'ไม่สามารถเปลี่ยนระดับสิทธิ์ของบัญชีตัวเองได้' }, { status: 400 });
     }
 
     await updateUser(params.id, { username, password, full_name, role, department, branch_codes });
@@ -43,6 +55,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   try {
     const { action } = await req.json();
+    const blocked = await gmBlocked(admin, params.id);
+    if (blocked) return blocked;
     if (action === 'reset_password') {
       const temp = await resetPassword(params.id);
       return NextResponse.json({ success: true, message: 'รีเซ็ตรหัสผ่านสำเร็จ', temp_password: temp });
@@ -66,6 +80,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (params.id === admin.id) {
       return NextResponse.json({ error: 'ไม่สามารถลบบัญชีของตัวเองได้' }, { status: 400 });
     }
+    const blocked = await gmBlocked(admin, params.id);
+    if (blocked) return blocked;
     await deleteUser(params.id);
     return NextResponse.json({ success: true, message: 'ลบผู้ใช้สำเร็จ' });
   } catch (err: any) {

@@ -36,7 +36,7 @@ export default function AdminPMPage() {
 
   // Block non-admin (including GM)
   useEffect(() => {
-    if (user && user.role !== 'admin') router.push('/dashboard');
+    if (user && !['admin', 'gm'].includes(user.role)) router.push('/dashboard');
   }, [user, router]);
 
   const [pmList, setPmList] = useState<PmItem[]>([]);

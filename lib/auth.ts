@@ -161,6 +161,10 @@ export function isTechnicianRole(role: string): boolean {
 export function isSupervisorRole(role: string): boolean {
   return ([ROLES.SUPERVISOR, ROLES.SUPERVISOR_IT] as string[]).includes(role);
 }
+/** ตั้งค่าหลังบ้าน (PM · LINE · เร่งงาน · ผู้ใช้ · ทรัพย์สิน/อะไหล่) — admin และ GM */
+export function isBackOffice(role?: string | null): boolean {
+  return role === 'admin' || role === 'gm';
+}
 export function isAdminOrGm(role: string): boolean {
   return role === 'admin' || role === 'gm';
 }

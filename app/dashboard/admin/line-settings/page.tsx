@@ -14,7 +14,7 @@ export default function LineSettingsPage() {
 
   // Block non-admin (including GM)
   useEffect(() => {
-    if (user && user.role !== 'admin') router.push('/dashboard');
+    if (user && !['admin', 'gm'].includes(user.role)) router.push('/dashboard');
   }, [user, router]);
 
   const [accessToken, setAccessToken] = useState('');
@@ -123,8 +123,9 @@ export default function LineSettingsPage() {
           <h3 className="text-ink font-semibold">🔑 LINE Access Token</h3>
           <div>
             <label className="block text-sm text-gray-400 mb-1.5">Channel Access Token</label>
-            <input type="text" value={accessToken} onChange={e => setAccessToken(e.target.value)}
-              className="input-field font-mono text-sm" placeholder="กรอก LINE Access Token..." />
+            <input type="text" value={accessToken} onChange={e => setAccessToken(e.target.value)} disabled={user?.role !== 'admin'}
+              className="input-field font-mono text-sm disabled:opacity-60" placeholder="กรอก LINE Access Token..." />
+            {user?.role !== 'admin' && <p className="text-xs text-gray-500 mt-1">Token เปลี่ยนได้เฉพาะแอดมิน</p>}
           </div>
         </div>
 

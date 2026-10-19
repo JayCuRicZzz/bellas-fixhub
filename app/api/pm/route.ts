@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '../../../lib/db';
-import { getUserFromRequest, getUserBranches } from '../../../lib/auth';
+import { getUserFromRequest, getUserBranches, isBackOffice } from '../../../lib/auth';
 import { calcNextRun, processDuePmTickets, FREQ_UNITS } from '../../../lib/pm';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const branch = searchParams.get('branch') || '';
-    const includeInactive = searchParams.get('all') === '1' && user.role === 'admin';
+    const includeInactive = searchParams.get('all') === '1' && isBackOffice(user.role);
 
     if (searchParams.get('check') === '1') {
       if (!['admin', 'gm', 'sup', 'supit'].includes(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
-  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  if (!user || !isBackOffice(user.role)) return NextResponse.json({ error: 'เฉพาะแอดมิน/GM' }, { status: 403 });
 
   try {
     const { branch_code, title, description, category_id, frequency_value, frequency_unit, first_run } = await req.json();

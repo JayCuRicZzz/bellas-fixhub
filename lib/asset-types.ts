@@ -29,5 +29,5 @@ export const ASSET_TYPES: AssetType[] = [
 ];
 
 export const assetTypeOf = (code: string) => ASSET_TYPES.find(t => t.code === code);
-export const MANAGER_ROLES = ['admin', 'sup', 'supit'];
+export const MANAGER_ROLES = ['admin', 'gm', 'sup', 'supit'];
 export const isAssetManager = (role?: string) => !!role && MANAGER_ROLES.includes(role);
