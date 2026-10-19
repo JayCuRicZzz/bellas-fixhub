@@ -97,6 +97,8 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         <button onClick={onMenuClick} className="lg:hidden p-2 rounded-lg hover:bg-navy-700 text-gray-400 touch-manipulation transition-all duration-200 active:scale-90">
           <Menu className="w-5 h-5" />
         </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon.svg" alt="" aria-hidden="true" className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-md flex-shrink-0" />
         <div>
           <h1 className="text-lg sm:text-2xl font-black tracking-tight text-ink drop-shadow-md">
             Bellas <span className="text-gold-400 drop-shadow-sm">Fix</span>Hub

@@ -94,7 +94,7 @@ function SetPasswordContent() {
             width: 80, height: 80, borderRadius: 20, overflow: 'hidden',
             boxShadow: '0 8px 30px rgba(212,168,37,0.3)', background: '#0d1423',
           }}>
-            <img src="/logo.jpg" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src="/icon.svg" alt="Bellas FixHub" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <h1 style={{ color: 'var(--lg-ink)', fontSize: '1.3rem', fontWeight: 700, margin: '1rem 0 4px' }}>
             {lang === 'th' ? 'ตั้งรหัสผ่านครั้งแรก' : 'Set Your Password'}
