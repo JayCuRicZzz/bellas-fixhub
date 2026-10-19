@@ -5,7 +5,7 @@ import { SUPABASE_URL } from '../../../lib/supabase';
 import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
-import { deptTh } from '../../../lib/departments';
+import { formatNewTicketLine, assetLineOf } from '../../../lib/line-format';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,12 +64,6 @@ export async function GET(req: NextRequest) {
     console.error('[Tickets] Error:', err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
-
-/** "BV - ต้อนรับ" — สาขาและแผนกของผู้แจ้ง สำหรับข้อความ LINE */
-function reporterOrigin(user: { branch_code?: string; department?: string; role?: string }) {
-  const d = user.department ? deptTh(user.department) : (user.role === 'gm' ? 'ฝ่ายบริหาร' : '');
-  return [user.branch_code, d].filter(Boolean).join(' - ') || '-';
 }
 
 const ROOM_RE = /^[0-9]{2,4}[A-Z]?$/;
@@ -198,22 +192,15 @@ export async function POST(req: NextRequest) {
                   and t.status <> 'CANCELLED' and t.created_at > now() - interval '90 days') as n90
         from fixhub.assets a where a.asset_id = ${assetId}`;
       if (a) {
-        const inWarranty = a.warranty_until && new Date(a.warranty_until) >= new Date();
-        assetLine = `🧰 ${a.asset_code} ${a.name}${inWarranty ? ' (ยังอยู่ในประกัน — แจ้งผู้ขายก่อนซ่อมเอง)' : ''}`;
+        assetLine = assetLineOf(a as any);
         if (a.n90 >= 2) alerts.push(`🔁 อุปกรณ์นี้ซ่อมไปแล้ว ${a.n90} ครั้งใน 90 วัน — ควรพิจารณาเปลี่ยนเครื่อง`);
       }
     }
     // LINE: ONE push per new ticket (duplicate / refrigerant alerts included in the same message)
-    const PRI: Record<string, string> = { urgent: '🔴 ด่วนมาก', high: '🟠 สูง', medium: '🔵 ปานกลาง', low: '⚪ น้อย', non_urgent: '⚫ ไม่เร่งด่วน' };
-    const lineText = [
-      `📢 งานแจ้งซ่อมใหม่ ${PRI[priority] || ''}`,
-      `🔢 ${ticketNumber}`,
-      `🏨 ${branch_code} 📍 ${location_detail}`,
-      ...(assetLine ? [assetLine] : []),
-      `📝 ${descriptionThai}`,
-      `👤 ${user.full_name || user.username} ( ${reporterOrigin(user)} )`,
-      ...(alerts.length ? ['', ...alerts] : []),
-    ].join('\n');
+    const lineText = formatNewTicketLine({
+      priority, ticketNumber, branchCode: branch_code, locationDetail: location_detail, assetLine,
+      description: descriptionThai, reporterName: user.full_name || user.username, reporter: user, alerts,
+    });
     const lineResult = await sendLineMessage(lineText, deptType);
     console.log('[Tickets] LINE result:', JSON.stringify({ deptType, result: lineResult }));
 

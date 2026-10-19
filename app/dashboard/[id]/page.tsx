@@ -39,6 +39,7 @@ export default function TicketDetailPage() {
   const [error, setError] = useState('');
   const [showPrintView, setShowPrintView] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [lineText, setLineText] = useState('');
   const [kpiRating, setKpiRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [images, setImages] = useState<any[]>([]);
@@ -290,17 +291,30 @@ export default function TicketDetailPage() {
     }
   };
 
+  // ข้อความเดียวกับที่ระบบส่งเข้า LINE อัตโนมัติ (สร้างที่เซิร์ฟเวอร์ด้วยฟังก์ชันเดียวกัน)
+  // โหลดไว้ก่อน เพื่อให้ตอนกดปุ่มคัดลอกได้ทันที — Safari บนมือถือไม่ยอมคัดลอกถ้ารอโหลดหลังกด
+  const loadLineText = async (): Promise<string> => {
+    const res = await fetch(`/api/tickets/${id}/line-text`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.text) throw new Error(data.error || 'โหลดข้อความไม่สำเร็จ');
+    setLineText(data.text);
+    return data.text;
+  };
+
+  useEffect(() => {
+    if (ticket?.ticket_id) loadLineText().catch(() => setLineText(''));
+  }, [ticket?.ticket_id, ticket?.status]);
+
   const handleCopyLine = async () => {
     if (!ticket) return;
-    const branch = BRANCHES.find(b => b.branch_code === ticket.branch_code);
-    const branchName = branch?.branch_name || ticket.branch_code;
-    const text = `🔧 แจ้งซ่อม #${ticket.ticket_number}\n📍 สาขา: ${branchName} | ห้อง: ${ticket.location_detail}\n📝 ${ticket.description}\n🏷️ สถานะ: ${STATUS_LABELS[ticket.status] || ticket.status}`;
     try {
+      const text = lineText || await loadLineText();
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Copy failed:', err);
+      alert('คัดลอกไม่สำเร็จ: ' + (err?.message || 'ลองกดอีกครั้ง'));
     }
   };
 
