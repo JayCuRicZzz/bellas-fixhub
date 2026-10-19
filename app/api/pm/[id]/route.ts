@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '../../../../lib/db';
-import { getUserFromRequest, isBackOffice } from '../../../../lib/auth';
+import { getUserFromRequest } from '../../../../lib/auth';
 import { FREQ_UNITS } from '../../../../lib/pm';
 
 export const dynamic = 'force-dynamic';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getUserFromRequest(req);
-  if (!user || !isBackOffice(user.role)) return NextResponse.json({ error: 'เฉพาะแอดมิน/GM' }, { status: 403 });
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   try {
     const id = parseInt(params.id, 10);
     const b = await req.json();
@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getUserFromRequest(req);
-  if (!user || !isBackOffice(user.role)) return NextResponse.json({ error: 'เฉพาะแอดมิน/GM' }, { status: 403 });
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   try {
     const id = parseInt(params.id, 10);
     await sql`update fixhub.pm_schedules set active = false where id = ${id}`;

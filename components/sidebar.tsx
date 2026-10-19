@@ -72,8 +72,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     navItems.push({ href: '/dashboard/parts', label: '📦 อะไหล่ & สต็อก', icon: Package });
   }
 
-  // ตั้งค่าหลังบ้าน — admin และ GM
-  if (['admin', 'gm'].includes(user?.role || '')) {
+  // Add admin links for admin only (not GM)
+  if (user?.role === 'admin') {
     navItems.push({ href: '/dashboard/admin/pm', label: '⚙️ จัดการ PM', icon: Wrench });
     navItems.push({ href: '/dashboard/admin', label: t.nav.admin || 'Admin', icon: Shield });
     navItems.push({ href: '/dashboard/admin/line-settings', label: '⚙️ LINE Bot', icon: Shield });

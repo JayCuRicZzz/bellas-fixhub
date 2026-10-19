@@ -50,7 +50,7 @@ export default function AdminPage() {
 
   // Block non-admin (including GM)
   useEffect(() => {
-    if (user && !['admin', 'gm'].includes(user.role)) router.push('/dashboard');
+    if (user && user.role !== 'admin') router.push('/dashboard');
   }, [user, router]);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -226,8 +226,8 @@ export default function AdminPage() {
     } catch { setError('เกิดข้อผิดพลาดในการเชื่อมต่อ'); }
   };
 
-  // admin + GM (GM แตะบัญชี admin ไม่ได้ — กันทั้งหน้าเว็บและ API)
-  if (!['admin', 'gm'].includes(user?.role || '')) {
+  // Only admin can access
+  if (user?.role !== 'admin') {
     return (
       <div className="max-w-3xl mx-auto text-center py-12">
         <Shield className="w-12 h-12 text-gray-600 mx-auto mb-3" />
@@ -329,7 +329,7 @@ export default function AdminPage() {
                   onChange={e => setFormRole(e.target.value)}
                   className="select-field"
                 >
-                  {ROLE_OPTIONS.filter(r => user?.role === 'admin' || r.value !== 'admin').map(r => (
+                  {ROLE_OPTIONS.map(r => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>
@@ -472,9 +472,7 @@ export default function AdminPage() {
                   </td>
                   <td className="py-2.5 px-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {user?.role !== 'admin' && u.role === 'admin' ? (
-                        <span className="text-xs text-gray-500">เฉพาะแอดมิน</span>
-                      ) : u.blocked ? (
+                      {u.blocked ? (
                         <button onClick={() => handleUnblock(u)} className="px-2 py-1 rounded text-xs bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20">
                           คืนสิทธิ์
                         </button>

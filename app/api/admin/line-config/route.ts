@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest, isBackOffice } from '../../../../lib/auth';
+import { getUserFromRequest } from '../../../../lib/auth';
 import { getLineConfig, setLineConfig } from '../../../../lib/line-config';
 import { pushLineText } from '../../../../lib/line';
 import { sendDailySummary } from '../../../../lib/daily-summary';
@@ -13,14 +13,14 @@ function mask(token: string) {
 
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
-  if (!user || !isBackOffice(user.role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const cfg = await getLineConfig();
   return NextResponse.json({ accessToken: mask(cfg.accessToken), targetIdMaint: cfg.targetIdMaint, targetIdIT: cfg.targetIdIT, configured: !!cfg.accessToken });
 }
 
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
-  if (!user || !isBackOffice(user.role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const body = await req.json();
     if (body.action === 'test') {
@@ -34,9 +34,7 @@ export async function POST(req: NextRequest) {
       const r = await sendDailySummary(body.group === 'IT' ? 'IT' : 'MAINT');
       return NextResponse.json({ success: r.sent, ...r });
     }
-    // Token เปลี่ยนได้เฉพาะ admin · GM แก้ได้แค่ Group ID
-    const patch = user.role === 'admin' ? body : { targetIdMaint: body.targetIdMaint, targetIdIT: body.targetIdIT };
-    const cfg = await setLineConfig(patch, user.id);
+    const cfg = await setLineConfig(body, user.id);
     return NextResponse.json({ success: true, targetIdMaint: cfg.targetIdMaint, targetIdIT: cfg.targetIdIT, configured: !!cfg.accessToken });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
