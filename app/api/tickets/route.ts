@@ -6,6 +6,7 @@ import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
 import { formatNewTicketLine, assetLineOf } from '../../../lib/line-format';
+import { toLineImageUrls } from '../../../lib/line-images';
 
 export const dynamic = 'force-dynamic';
 
@@ -201,7 +202,10 @@ export async function POST(req: NextRequest) {
       priority, ticketNumber, branchCode: branch_code, locationDetail: location_detail, assetLine,
       description: descriptionThai, reporterName: user.full_name || user.username, reporter: user, alerts,
     });
-    const lineResult = await sendLineMessage(lineText, deptType);
+    // แนบรูปที่ผู้แจ้งถ่าย (สูงสุด 4) ไปในครั้งเดียวกับข้อความ — ไม่เพิ่มโควตา LINE
+    const reportImages = Array.isArray(images) ? images : [];
+    const lineImages = reportImages.length ? await toLineImageUrls(reportImages, ticketId) : [];
+    const lineResult = await sendLineMessage(lineText, deptType, lineImages);
     console.log('[Tickets] LINE result:', JSON.stringify({ deptType, result: lineResult }));
 
     return NextResponse.json({
