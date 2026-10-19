@@ -98,7 +98,10 @@ const C = {
   bg: '#0b1220', panel: '#121b2e', panel2: '#17223a', line: '#24314d',
   text: '#e8edf7', sub: '#94a3c4', gold: '#e5b840', green: '#34c47c', red: '#ef5350', amber: '#f5a524', blue: '#5b9cff',
 };
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// สระอำ (U+0E33) ใน resvg + Sarabun: ตัว "า" หายเหลือแต่นิคหิต (เช่น "ประจำ" → "ประจํ")
+//   → แยกเป็น นิคหิต (U+0E4D) + สระอา (U+0E32) ก่อนวาด ซึ่งเป็นรูปแบบที่ฟอนต์จัดตำแหน่งได้ถูก
+const thaiFix = (s: string) => s.replace(/\u0E33/g, '\u0E4D\u0E32');
+const esc = (s: string) => thaiFix(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const seg = typeof Intl !== 'undefined' && (Intl as any).Segmenter ? new (Intl as any).Segmenter('th', { granularity: 'grapheme' }) : null;
 function clip(s: string, max: number) {
   const g: string[] = seg ? Array.from(seg.segment(s || ''), (x: any) => x.segment) : Array.from(s || '');
