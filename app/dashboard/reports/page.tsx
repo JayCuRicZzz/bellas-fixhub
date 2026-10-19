@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../components/authprovider';
 import { useI18n } from '../../../lib/i18n/i18n';
+import RoomHistory from '../../../components/roomhistory';
 import { DEPARTMENTS, BRANCHES, DailyReport } from '../../../types';
 import {
   BarChart3, Calendar, TrendingUp, Printer, Loader2, AlertTriangle,
@@ -28,7 +29,6 @@ export default function ReportsPage() {
   const [workTypeFilter, setWorkTypeFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [techData, setTechData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -276,23 +276,8 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Search input */}
-      <div className="card flex items-center gap-3 no-print">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={lang === 'th' ? 'ค้นหาด้วยเบอร์ห้อง / สถานที่ / ตำแหน่ง...' : 'Search by room / location / position...'}
-          className="input-field py-2 text-sm flex-1"
-        />
-        <button
-          onClick={() => window.print()}
-          className="btn-primary text-sm flex items-center gap-2"
-        >
-          <Printer className="w-4 h-4" />
-          {lang === 'th' ? 'พิมพ์ / PDF' : 'Print / PDF'}
-        </button>
-      </div>
+      {/* ประวัติซ่อมตามเบอร์ห้อง */}
+      <RoomHistory token={token} branches={user?.branches} />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">

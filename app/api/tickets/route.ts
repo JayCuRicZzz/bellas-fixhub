@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
     const branch = searchParams.get('branch') || '';
     const department = searchParams.get('department') || '';
     const q = (searchParams.get('q') || '').trim();
+    // ?room=305 → ประวัติซ่อมของห้อง/จุด (เลขห้องต้องตรงทั้งตัว: 305 ไม่ติด 1305 หรือ 3051)
+    const room = (searchParams.get('room') || '').trim().slice(0, 60);
+    const roomRe = /^\d+$/.test(room) ? `(^|[^0-9])${room}([^0-9]|$)` : '';
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '100', 10) || 100, 1), 500);
 
     const statuses = status.split(',').map(s => s.trim()).filter(s => VALID_STATUS.includes(s));
@@ -39,6 +42,7 @@ export async function GET(req: NextRequest) {
         ${branch ? sql`and t.branch_code = ${branch}` : sql``}
         ${department ? sql`and t.reporter_department = ${department === 'MAINTENANCE' ? 'MAINT' : department}` : sql``}
         ${deptType ? sql`and t.dept_type = ${deptType === 'ช่าง' ? 'MAINTENANCE' : deptType === 'ไอที' ? 'IT' : deptType}` : sql``}
+        ${room ? (roomRe ? sql`and t.location_detail ~ ${roomRe}` : sql`and t.location_detail ilike ${'%' + room + '%'}`) : sql``}
         ${q ? sql`and (t.ticket_number ilike ${'%' + q + '%'} or t.location_detail ilike ${'%' + q + '%'} or t.description ilike ${'%' + q + '%'})` : sql``}
       order by t.ticket_id desc
       limit ${limit}`;
