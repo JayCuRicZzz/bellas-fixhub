@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role === 'gm') return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });  // GM ไม่เห็นทรัพย์สิน/อะไหล่
   const partId = Number(req.nextUrl.searchParams.get('part_id')) || 0;
   const branch = req.nextUrl.searchParams.get('branch') || '';
   const branches = await getUserBranches(user.id, user.role);

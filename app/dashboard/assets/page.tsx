@@ -4,6 +4,7 @@
 //   แท็บ "ห้อง/จุด": เพิ่มทีละช่วง (301-320) · พิมพ์ QR ติดห้อง
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/authprovider';
 import { BRANCHES } from '../../../types';
 import { ASSET_TYPES, assetTypeOf, isAssetManager } from '../../../lib/asset-types';
@@ -23,6 +24,8 @@ const baht = (n: any) => Number(n || 0).toLocaleString('th-TH', { maximumFractio
 
 export default function AssetsPage() {
   const { user, token } = useAuth();
+  const router = useRouter();
+  useEffect(() => { if (user?.role === 'gm') router.replace('/dashboard'); }, [user, router]);  // GM ไม่เห็นหน้านี้
   const canManage = isAssetManager(user?.role);
   const auth = useMemo<Record<string, string>>(() => (token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>)), [token]);
   const myBranches = useMemo(() => (user?.branches?.length ? BRANCHES.filter(b => user.branches!.includes(b.branch_code)) : BRANCHES), [user]);

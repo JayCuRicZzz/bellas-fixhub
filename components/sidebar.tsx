@@ -66,8 +66,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Aircon report link for all users
   navItems.push({ href: '/dashboard/reports/aircon', label: '🧊 เติมน้ำยาแอร์', icon: Wind });
 
-  // ทรัพย์สิน/QR และอะไหล่ — ช่าง ไอที หัวหน้า ผู้บริหาร
-  if (['tech', 'it', 'sup', 'supit', 'admin', 'gm'].includes(user?.role || '')) {
+  // ทรัพย์สิน/QR และอะไหล่ — ช่าง ไอที หัวหน้า แอดมิน (GM ไม่เห็น)
+  if (['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '')) {
     navItems.push({ href: '/dashboard/assets', label: '🧰 ทรัพย์สิน & QR', icon: QrCode });
     navItems.push({ href: '/dashboard/parts', label: '📦 อะไหล่ & สต็อก', icon: Package });
   }

@@ -28,6 +28,7 @@ function expandCodes(input: string): string[] {
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role === 'gm') return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });  // GM ไม่เห็นทรัพย์สิน/อะไหล่
   const branch = req.nextUrl.searchParams.get('branch') || '';
   const branches = await getUserBranches(user.id, user.role);
   try {

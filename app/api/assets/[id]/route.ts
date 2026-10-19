@@ -20,6 +20,7 @@ async function loadAsset(id: number, branches: string[]) {
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role === 'gm') return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });  // GM ไม่เห็นทรัพย์สิน/อะไหล่
   const branches = await getUserBranches(user.id, user.role);
   const asset = await loadAsset(Number(params.id), branches);
   if (!asset) return NextResponse.json({ error: 'ไม่พบอุปกรณ์' }, { status: 404 });

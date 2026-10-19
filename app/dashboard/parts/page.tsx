@@ -2,6 +2,7 @@
 // อะไหล่ & สต็อก — รายการอะไหล่ · คงเหลือต่อสาขา · รับเข้า/ปรับยอด · ประวัติเคลื่อนไหว
 //   ช่าง/ไอทีเบิกใช้จากหน้าใบงาน (ตัดสต็อกสาขาของใบงานอัตโนมัติ)
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/authprovider';
 import { BRANCHES } from '../../../types';
 import { isAssetManager } from '../../../lib/asset-types';
@@ -13,6 +14,8 @@ const KIND_TH: Record<string, string> = { IN: 'รับเข้า', USE: 'เ
 
 export default function PartsPage() {
   const { user, token } = useAuth();
+  const router = useRouter();
+  useEffect(() => { if (user?.role === 'gm') router.replace('/dashboard'); }, [user, router]);  // GM ไม่เห็นหน้านี้
   const canManage = isAssetManager(user?.role);
   const auth = useMemo<Record<string, string>>(() => (token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>)), [token]);
   const myBranches = useMemo(() => (user?.branches?.length ? BRANCHES.filter(b => user.branches!.includes(b.branch_code)) : BRANCHES), [user]);

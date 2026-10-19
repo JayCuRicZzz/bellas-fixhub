@@ -12,6 +12,7 @@ const dateOrNull = (v: any) => (v && !isNaN(new Date(v).getTime()) ? String(v).s
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role === 'gm') return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });  // GM ไม่เห็นทรัพย์สิน/อะไหล่
   const sp = req.nextUrl.searchParams;
   const branch = sp.get('branch') || '';
   const type = sp.get('type') || '';
