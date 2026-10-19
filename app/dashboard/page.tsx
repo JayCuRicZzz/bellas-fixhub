@@ -8,6 +8,7 @@ import TicketCard from '../../components/ticketcard';
 import { Ticket, DEPARTMENTS } from '../../types';
 import { LayoutDashboard, Clock, Wrench, CheckCircle2, AlertTriangle, PlusCircle, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import PushToggle from '../../components/pushtoggle';
 
 export default function DashboardPage() {
   const { user, token } = useAuth();
@@ -145,6 +146,9 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* แจ้งเตือนงานใหม่บนมือถือ — เฉพาะคนที่รับงาน */}
+      {['tech', 'sup', 'it', 'supit', 'admin'].includes(user?.role || '') && <PushToggle token={token} />}
 
       {/* Stats Cards - Clickable */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">

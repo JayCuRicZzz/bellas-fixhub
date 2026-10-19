@@ -12,7 +12,7 @@ const publicPaths = [
   '/api/auth/login', '/api/auth/logout', '/api/auth/set-password',
   '/api/setup', '/api/cron/pm-check', '/api/cron/daily-summary', '/api/cron/escalate', '/api/health',
 ];
-const staticPrefixes = ['/_next', '/favicon.ico', '/uploads', '/manifest.json', '/icon-', '/logo.jpg', '/logo.png', '/it-indy-404.jpg', '/icon.svg', '/apple-touch-icon.png', '/favicon-'];
+const staticPrefixes = ['/_next', '/favicon.ico', '/uploads', '/manifest.json', '/icon-', '/logo.jpg', '/logo.png', '/it-indy-404.jpg', '/icon.svg', '/apple-touch-icon.png', '/favicon-', '/sw.js'];
 
 function decodeExp(token: string): number {
   try {

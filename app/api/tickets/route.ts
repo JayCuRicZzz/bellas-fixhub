@@ -5,7 +5,8 @@ import { SUPABASE_URL } from '../../../lib/supabase';
 import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
-import { formatNewTicketLine, assetLineOf } from '../../../lib/line-format';
+import { formatNewTicketLine, assetLineOf, PRIORITY_LINE } from '../../../lib/line-format';
+import { sendPushToUsers, workersFor } from '../../../lib/webpush';
 import { toLineImageUrls } from '../../../lib/line-images';
 
 export const dynamic = 'force-dynamic';
@@ -207,6 +208,16 @@ export async function POST(req: NextRequest) {
     const lineImages = reportImages.length ? await toLineImageUrls(reportImages, ticketId) : [];
     const lineResult = await sendLineMessage(lineText, deptType, lineImages);
     console.log('[Tickets] LINE result:', JSON.stringify({ deptType, result: lineResult }));
+
+    // แจ้งเตือนบนมือถือ (Web Push) ถึงช่าง/ไอทีของสาขานั้นที่เปิดรับไว้ — ฟรี ใช้คู่กับ LINE
+    const pushTo = await workersFor(branch_code, deptType === 'IT' ? 'IT' : 'MAINT', user.id).catch(() => [] as string[]);
+    const pushResult = await sendPushToUsers(pushTo, {
+      title: `🔧 งานใหม่ ${branch_code} · ${location_detail}`.slice(0, 80),
+      body: `${PRIORITY_LINE[priority] || ''} ${descriptionThai}`.trim().slice(0, 160),
+      url: `/dashboard/${ticketId}`,
+      tag: `ticket-${ticketId}`,
+    });
+    console.log('[Tickets] push result:', JSON.stringify({ to: pushTo.length, ...pushResult }));
 
     return NextResponse.json({
       success: true, ticket_number: ticketNumber, ticket_id: ticketId,
