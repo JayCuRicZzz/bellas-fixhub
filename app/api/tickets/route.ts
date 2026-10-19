@@ -65,6 +65,18 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ชื่อแผนกตามระบบ Bella HR (public.departments) + รหัสที่ FixHub ใช้เอง
+const DEPT_TH: Record<string, string> = {
+  EN: 'ช่าง', MAINT: 'ช่าง', MAINTENANCE: 'ช่าง', IT: 'ไอที', FO: 'ต้อนรับ', HK: 'แม่บ้าน', FB: 'ห้องอาหารและบาร์',
+  MK: 'ครัว', ACC: 'บัญชีและการเงิน', PU: 'จัดซื้อ', HR: 'ฝ่ายบุคคล', GE: 'ทั่วไป/สวน', DR: 'พนักงานขับรถ',
+  EXEC: 'ฝ่ายบริหาร', GM: 'ฝ่ายบริหาร', ADMIN: 'ผู้ดูแลระบบ',
+};
+/** "BV - ต้อนรับ" — สาขาและแผนกของผู้แจ้ง สำหรับข้อความ LINE */
+function reporterOrigin(user: { branch_code?: string; department?: string; role?: string }) {
+  const d = user.department ? (DEPT_TH[user.department.toUpperCase()] || user.department) : (user.role === 'gm' ? 'ฝ่ายบริหาร' : '');
+  return [user.branch_code, d].filter(Boolean).join(' - ') || '-';
+}
+
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -183,7 +195,7 @@ export async function POST(req: NextRequest) {
       `🏨 ${branch_code} 📍 ${location_detail}`,
       ...(assetLine ? [assetLine] : []),
       `📝 ${descriptionThai}`,
-      `👤 ${user.full_name || user.username}`,
+      `👤 ${user.full_name || user.username} ( ${reporterOrigin(user)} )`,
       ...(alerts.length ? ['', ...alerts] : []),
     ].join('\n');
     const lineResult = await sendLineMessage(lineText, deptType);
