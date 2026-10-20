@@ -1,4 +1,5 @@
 'use client';
+import { useX } from '../lib/i18n/extra';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -33,6 +34,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { t, lang, setLang } = useI18n();
+  const x = useX();
 
   // Language dropdown state
   const [langOpen, setLangOpen] = useState(false);
@@ -61,20 +63,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   // PM link for all users
-  navItems.push({ href: '/dashboard/pm', label: '📅 ตาราง PM', icon: ClipboardList });
+  navItems.push({ href: '/dashboard/pm', label: x('menuPm'), icon: ClipboardList });
 
   // Aircon report link for all users
-  navItems.push({ href: '/dashboard/reports/aircon', label: '🧊 เติมน้ำยาแอร์', icon: Wind });
+  navItems.push({ href: '/dashboard/reports/aircon', label: x('menuAircon'), icon: Wind });
 
   // ทรัพย์สิน/QR และอะไหล่ — ช่าง ไอที หัวหน้า แอดมิน (GM ไม่เห็น)
   if (['tech', 'it', 'sup', 'supit', 'admin'].includes(user?.role || '')) {
-    navItems.push({ href: '/dashboard/assets', label: '🧰 ทรัพย์สิน & QR', icon: QrCode });
-    navItems.push({ href: '/dashboard/parts', label: '📦 อะไหล่ & สต็อก', icon: Package });
+    navItems.push({ href: '/dashboard/assets', label: x('menuAssets'), icon: QrCode });
+    navItems.push({ href: '/dashboard/parts', label: x('menuParts'), icon: Package });
   }
 
   // Add admin links for admin only (not GM)
   if (user?.role === 'admin') {
-    navItems.push({ href: '/dashboard/admin/pm', label: '⚙️ จัดการ PM', icon: Wrench });
+    navItems.push({ href: '/dashboard/admin/pm', label: x('menuPmAdmin'), icon: Wrench });
     navItems.push({ href: '/dashboard/admin', label: t.nav.admin || 'Admin', icon: Shield });
     navItems.push({ href: '/dashboard/admin/line-settings', label: '⚙️ LINE Bot', icon: Shield });
   }
@@ -106,7 +108,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               Bellas <span className="text-gold-400">Fix</span>Hub
             </p>
             <p className="text-[10px] text-gray-500 mt-0.5">
-              {lang === 'th' ? 'ระบบแจ้งซ่อมบำรุงช่างและไอที' : 'Maintenance & IT Repair System'} · BellaVilla Pattaya
+              {x('appTagline')} · BellaVilla Pattaya
             </p>
           </Link>
           <button onClick={onClose} className="lg:hidden absolute right-4 top-3 p-1 rounded-lg hover:bg-navy-700 text-gray-400">

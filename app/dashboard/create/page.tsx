@@ -1,4 +1,5 @@
 'use client';
+import { useX } from '../../../lib/i18n/extra';
 
 import TicketForm from '../../../components/ticketform';
 import AITicketCreator from '../../../components/aiticketcreator';
@@ -7,12 +8,13 @@ import { useState } from 'react';
 
 export default function CreateTicketPage() {
   const [mode, setMode] = useState<'manual' | 'ai'>('manual');
+  const x = useX();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 fade-in">
       <div>
-        <h2 className="text-2xl font-bold text-ink">แจ้งซ่อมใหม่</h2>
-        <p className="text-gray-400 mt-1">กรอกข้อมูลเพื่อแจ้งซ่อมบำรุง</p>
+        <h2 className="text-2xl font-bold text-ink">{x('newTicket')}</h2>
+        <p className="text-gray-400 mt-1">{x('newTicketSub')}</p>
       </div>
 
       {/* Mode toggle */}
@@ -26,7 +28,7 @@ export default function CreateTicketPage() {
           }`}
         >
           <PlusCircle className="w-4 h-4" />
-          กรอกข้อมูลเอง
+          {x('manualMode')}
         </button>
         <button
           onClick={() => setMode('ai')}
@@ -37,7 +39,7 @@ export default function CreateTicketPage() {
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          AI ช่วยสร้าง
+          {x('aiMode')}
         </button>
       </div>
 

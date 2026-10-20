@@ -4,6 +4,7 @@ import { uploadImageFile } from '../lib/image-client';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './authprovider';
 import { useI18n } from '../lib/i18n/i18n';
+import { useX } from '../lib/i18n/extra';
 import { BRANCHES, Category, DEPARTMENTS } from '../types';
 import { assetTypeOf } from '../lib/asset-types';
 import { AlertCircle, Send, Loader2, Camera, X, ImagePlus, Clock } from 'lucide-react';
@@ -19,6 +20,7 @@ const AREAS = ['ล็อบบี้', 'ฟร้อนท์', 'ทางเ�
 export default function TicketForm() {
   const { user, token } = useAuth();
   const { t, lang } = useI18n();
+  const x = useX();
   const [branchCode, setBranchCode] = useState(user?.branches?.length === 1 ? user.branches[0] : (user?.branch_code || ''));
   const [department, setDepartment] = useState('MAINTENANCE');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -64,7 +66,7 @@ export default function TicketForm() {
     fetch(`/api/qr/${encodeURIComponent(qrToken)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(async r => ({ ok: r.ok, d: await r.json() }))
       .then(({ ok, d }) => {
-        if (!ok) { setQrError(d.error || 'QR ไม่ถูกต้อง'); return; }
+        if (!ok) { setQrError(d.error || x('qrInvalid')); return; }
         setQr(d);
         setBranchCode(d.branch_code);
         if (d.location) {
@@ -74,7 +76,7 @@ export default function TicketForm() {
         } else if (d.asset) { setLocKind('area'); setAreaName(AREAS[AREAS.length - 1]); setLocNote(d.asset.name); }
         if (d.asset) applyAsset(d.asset);
       })
-      .catch(() => setQrError('โหลดข้อมูล QR ไม่สำเร็จ'));
+      .catch(() => setQrError(x('qrLoadFail')));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -128,7 +130,7 @@ export default function TicketForm() {
   const getSlaLabel = (p: string) => {
     const s = slaConfig[p];
     if (!s) return null;
-    return `${s.sla_hours} ${lang === 'th' ? 'ชม.' : 'h'}`;
+    return `${s.sla_hours} ${x('hours')}`;
   };
 
   // Filter branches to only those the user has access to
@@ -140,8 +142,8 @@ export default function TicketForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (locKind === 'room' && !roomOk) { setError('เบอร์ห้องต้องเป็นตัวเลข 2–5 หลัก (เช่น 305, 1201, 10502)'); return; }
-    if (locKind === 'area' && !areaName) { setError('กรุณาเลือกพื้นที่'); return; }
+    if (locKind === 'room' && !roomOk) { setError(x('roomNoErr')); return; }
+    if (locKind === 'area' && !areaName) { setError(x('areaRequired')); return; }
     setLoading(true);
     setUploadingImages(true);
 
@@ -152,7 +154,7 @@ export default function TicketForm() {
         if (!up.ok) {
           setUploadingImages(false);
           setLoading(false);
-          setError(up.error || 'อัปโหลดรูปไม่สำเร็จ');
+          setError(up.error || x('uploadFailed'));
           return;
         }
         uploadedUrls.push(up.url!);
@@ -191,10 +193,10 @@ export default function TicketForm() {
         setDescription('');
         setImages([]);
       } else {
-        setError(data.error || (lang === 'th' ? 'เกิดข้อผิดพลาด' : 'Error occurred'));
+        setError(data.error || x('error'));
       }
     } catch {
-      setError(lang === 'th' ? 'เกิดข้อผิดพลาดในการเชื่อมต่อ' : 'Connection error');
+      setError(x('connError'));
     } finally {
       setLoading(false);
       setUploadingImages(false);
@@ -208,22 +210,22 @@ export default function TicketForm() {
       {qr && (
         <div className="px-4 py-3 rounded-lg bg-gold-500/10 border border-gold-500/30 text-sm space-y-2">
           <div className="text-ink font-medium">
-            📷 แจ้งซ่อมจาก QR: {qr.location?.name || ''}{qr.asset ? ` · ${assetTypeOf(qr.asset.asset_type)?.icon || '🧰'} ${qr.asset.name} (${qr.asset.asset_code})` : ''}
+            📷 {x('qrFrom')}: {qr.location?.name || ''}{qr.asset ? ` · ${assetTypeOf(qr.asset.asset_type)?.icon || '🧰'} ${qr.asset.name} (${qr.asset.asset_code})` : ''}
           </div>
           {qr.asset?.warranty_until && new Date(qr.asset.warranty_until) >= new Date() && (
-            <div className="text-amber-400 text-xs">🛡️ อุปกรณ์นี้ยังอยู่ในประกันถึง {new Date(qr.asset.warranty_until).toLocaleDateString('th-TH')} — ช่างควรติดต่อผู้ขายก่อนซ่อมเอง</div>
+            <div className="text-amber-400 text-xs">🛡️ {x('warranty')} {new Date(qr.asset.warranty_until).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB')} {x('warrantyTail')}</div>
           )}
           {!qr.asset && qr.assets?.length > 0 && (
-            <label className="block text-xs text-gray-400">อุปกรณ์ที่เสีย (ถ้ารู้)
+            <label className="block text-xs text-gray-400">{x('equipment')}
               <select value={assetId || ''} onChange={e => applyAsset(qr.assets.find((a: any) => a.asset_id === Number(e.target.value)) || null)} className="select-field mt-1">
-                <option value="">— ไม่ระบุ / อื่น ๆ —</option>
+                <option value="">{x('notSpecified')}</option>
                 {qr.assets.map((a: any) => <option key={a.asset_id} value={a.asset_id}>{assetTypeOf(a.asset_type)?.icon} {a.name} ({a.asset_code})</option>)}
               </select>
             </label>
           )}
           {qr.open_tickets?.length > 0 && (
             <div className="text-xs text-orange-400">
-              ⏳ จุดนี้มีงานค้างอยู่แล้ว {qr.open_tickets.length} ใบ — ตรวจก่อนแจ้งซ้ำ:
+              ⏳ {x('openHere')} {qr.open_tickets.length} {x('openHereTail')}
               {qr.open_tickets.map((t: any) => (
                 <a key={t.ticket_id} href={`/dashboard/${t.ticket_id}`} className="block text-gray-300 hover:text-gold-400 truncate">• {t.ticket_number} {t.description}</a>
               ))}
@@ -235,7 +237,7 @@ export default function TicketForm() {
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.branch} <span className="text-red-400">*</span></label>
           <select value={branchCode} onChange={e => setBranchCode(e.target.value)} className="select-field" required>
-            <option value="">{lang === 'th' ? 'เลือกสาขา' : 'Select branch'}</option>
+            <option value="">{x('selectBranch')}</option>
             {accessibleBranches.map(b => (
               <option key={b.branch_code} value={b.branch_code}>
                 {b.branch_name}
@@ -245,9 +247,9 @@ export default function TicketForm() {
         </div>
 
         <div>
-          <span className="block text-sm font-medium text-gray-300 mb-1.5">{lang === 'th' ? 'ตำแหน่งที่เสีย' : 'Location'} <span className="text-red-400">*</span></span>
-          <div className="flex gap-1.5 mb-2" role="radiogroup" aria-label="ประเภทตำแหน่ง">
-            {([['room', lang === 'th' ? '🛏️ ห้องพัก' : 'Guest room'], ['area', lang === 'th' ? '📍 พื้นที่ส่วนกลาง' : 'Common area']] as const).map(([k, l]) => (
+          <span className="block text-sm font-medium text-gray-300 mb-1.5">{x('location')} <span className="text-red-400">*</span></span>
+          <div className="flex gap-1.5 mb-2" role="radiogroup" aria-label={x('location')}>
+            {([['room', x('guestRoom')], ['area', x('commonArea')]] as const).map(([k, l]) => (
               <button key={k} type="button" role="radio" aria-checked={locKind === k}
                 onClick={() => { setLocKind(k); setLocationId(null); }}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm border ${locKind === k ? 'border-gold-500 bg-gold-500/10 text-gold-400 font-medium' : 'border-navy-600 bg-navy-800 text-gray-400'}`}>{l}</button>
@@ -255,31 +257,31 @@ export default function TicketForm() {
           </div>
           {locKind === 'room' ? (
             <>
-              <input type="text" inputMode="numeric" value={roomNo} maxLength={6} aria-label="เบอร์ห้อง"
+              <input type="text" inputMode="numeric" value={roomNo} maxLength={6} aria-label="เบอร์ห้อง" title={x('roomNoErr')}
                 onChange={e => { setRoomNo(e.target.value.replace(/[^0-9A-Za-z]/g, '')); setLocationId(null); }}
-                pattern="[0-9]{2,5}[A-Za-z]?" title="ตัวเลข 2–5 หลัก เช่น 305, 1201 หรือ 10502"
-                className="input-field" placeholder={lang === 'th' ? 'เบอร์ห้อง เช่น 305' : 'Room no. e.g. 305'} required />
-              {roomNo && !roomOk && <p className="text-xs text-red-400 mt-1">เบอร์ห้องต้องเป็นตัวเลข 2–5 หลัก (เช่น 305, 1201, 10502)</p>}
+                pattern="[0-9]{2,5}[A-Za-z]?"
+                className="input-field" placeholder={x('roomNoPh')} required />
+              {roomNo && !roomOk && <p className="text-xs text-red-400 mt-1">{x('roomNoErr')}</p>}
             </>
           ) : (
-            <select value={areaName} onChange={e => { setAreaName(e.target.value); setLocationId(null); }} className="select-field" required aria-label="พื้นที่">
-              <option value="">{lang === 'th' ? '— เลือกพื้นที่ —' : '— Select area —'}</option>
-              {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+            <select value={areaName} onChange={e => { setAreaName(e.target.value); setLocationId(null); }} className="select-field" required aria-label={x('commonArea')}>
+              <option value="">{x('selectArea')}</option>
+              {AREAS.map(a => <option key={a} value={a}>{x(a)}</option>)}
             </select>
           )}
           <input type="text" value={locNote} onChange={e => setLocNote(e.target.value)} maxLength={100}
             className="input-field mt-2" required={locKind === 'area' && areaName === AREAS[AREAS.length - 1]}
-            placeholder={locKind === 'room' ? (lang === 'th' ? 'จุดในห้อง (ไม่บังคับ) เช่น ห้องน้ำ, ระเบียง' : 'Spot in room (optional)') : (areaName === AREAS[AREAS.length - 1] ? 'ระบุพื้นที่ *' : 'ระบุเพิ่ม (ไม่บังคับ) เช่น ชั้น 4, หน้าลิฟต์')} />
+            placeholder={locKind === 'room' ? x('roomSpotPh') : (areaName === AREAS[AREAS.length - 1] ? x('otherAreaPh') + ' *' : x('areaNotePh'))} />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">
-            {lang === 'th' ? 'ประเภทงาน' : 'Work Type'} <span className="text-red-400">*</span>
+            {x('workType')} <span className="text-red-400">*</span>
           </label>
           <select value={department} onChange={e => { setDepartment(e.target.value); setCategoryId(''); }} className="select-field" required>
-            <option value="">{lang === 'th' ? 'เลือกประเภทงาน' : 'Select work type'}</option>
-            <option value="MAINTENANCE">🔧 {lang === 'th' ? 'งานช่าง' : 'Maintenance'}</option>
-            <option value="IT">💻 {lang === 'th' ? 'งานไอที' : 'IT'}</option>
+            <option value="">{x('selectWorkType')}</option>
+            <option value="MAINTENANCE">🔧 {x('maintenance')}</option>
+            <option value="IT">💻 {x('it')}</option>
           </select>
         </div>
 
@@ -297,11 +299,11 @@ export default function TicketForm() {
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">{t.ticket.priority}</label>
           <select value={priority} onChange={e => setPriority(e.target.value as any)} className="select-field">
-            <option value="non_urgent">{lang === 'th' ? '⚪ ไม่เร่งด่วน' : 'Non-urgent'}{getSlaLabel('non_urgent') ? ` - ${getSlaLabel('non_urgent')}` : ''}</option>
-            <option value="low">{lang === 'th' ? '🟢 ต่ำ' : 'Low'}{getSlaLabel('low') ? ` - ${getSlaLabel('low')}` : ''}</option>
-            <option value="medium">{lang === 'th' ? '🔵 ปานกลาง' : 'Medium'}{getSlaLabel('medium') ? ` - ${getSlaLabel('medium')}` : ''}</option>
-            <option value="high">{lang === 'th' ? '🟠 สูง' : 'High'}{getSlaLabel('high') ? ` - ${getSlaLabel('high')}` : ''}</option>
-            <option value="urgent">{lang === 'th' ? '🔴 ด่วนมาก' : 'Urgent'}{getSlaLabel('urgent') ? ` - ${getSlaLabel('urgent')}` : ''}</option>
+            <option value="non_urgent">{x('p_non_urgent')}{getSlaLabel('non_urgent') ? ` - ${getSlaLabel('non_urgent')}` : ''}</option>
+            <option value="low">{x('p_low')}{getSlaLabel('low') ? ` - ${getSlaLabel('low')}` : ''}</option>
+            <option value="medium">{x('p_medium')}{getSlaLabel('medium') ? ` - ${getSlaLabel('medium')}` : ''}</option>
+            <option value="high">{x('p_high')}{getSlaLabel('high') ? ` - ${getSlaLabel('high')}` : ''}</option>
+            <option value="urgent">{x('p_urgent')}{getSlaLabel('urgent') ? ` - ${getSlaLabel('urgent')}` : ''}</option>
           </select>
           {slaConfig[priority] && (
             <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
@@ -321,7 +323,7 @@ export default function TicketForm() {
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1.5">
           <Camera className="w-4 h-4" />
-          {lang === 'th' ? 'แนบรูปภาพ (ไม่เกิน 5 รูป)' : 'Attach Photos (max 5)'}
+          {x('attachPhotos')}
         </label>
         {images.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-3">
@@ -340,7 +342,7 @@ export default function TicketForm() {
           <button type="button" onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-navy-500 hover:border-gold-500 rounded-lg text-gray-400 hover:text-gold-400 transition-colors text-sm">
             <ImagePlus className="w-5 h-5" />
-            {lang === 'th' ? 'แตะเพื่อเลือกรูปภาพ' : 'Tap to select photos'}
+            {x('tapPhotos')}
           </button>
         )}
         <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
@@ -354,7 +356,7 @@ export default function TicketForm() {
 
       <button type="submit" disabled={loading || success} className="btn-primary flex items-center gap-2">
         {loading ? (
-          <><Loader2 className="w-5 h-5 animate-spin" />{uploadingImages ? (lang === 'th' ? 'กำลังอัพโหลดรูป...' : 'Uploading photos...') : t.ticket.submitting}</>
+          <><Loader2 className="w-5 h-5 animate-spin" />{uploadingImages ? x('uploadingPhotos') : t.ticket.submitting}</>
         ) : (
           <><Send className="w-5 h-5" />{t.ticket.submit}</>
         )}
@@ -370,7 +372,7 @@ export default function TicketForm() {
             <div className="flex items-center gap-2">
               <span className="text-3xl">✅</span>
               <div>
-                <p className="text-ink font-bold">{lang === 'th' ? 'แจ้งซ่อมสำเร็จ' : 'Ticket Submitted'}</p>
+                <p className="text-ink font-bold">{x('submitted')}</p>
                 <p className="text-navy-900/80 text-xs">{new Date().toLocaleString(lang === 'th' ? 'th-TH' : 'en-US')}</p>
               </div>
             </div>
@@ -387,7 +389,7 @@ export default function TicketForm() {
                 <p className="text-ink font-medium">🏨 {BRANCHES.find(b=>b.branch_code===createdTicket.branch_code)?.branch_name || createdTicket.branch_code}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-xs">{lang === 'th' ? 'แผนกผู้แจ้ง' : 'Reporter Dept'}</span>
+                <span className="text-gray-500 text-xs">{x('reporterDept')}</span>
                 <p className="text-ink font-medium">{DEPARTMENTS.find(d=>d.code===createdTicket.department)?.icon} {lang === 'th' ? DEPARTMENTS.find(d=>d.code===createdTicket.department)?.name_th : DEPARTMENTS.find(d=>d.code===createdTicket.department)?.name_en}</p>
               </div>
               <div>
@@ -397,7 +399,7 @@ export default function TicketForm() {
               <div>
                 <span className="text-gray-500 text-xs">{t.ticket.priority}</span>
                 <p className="text-ink">{
-                  ({urgent:'🔴 ด่วนมาก',high:'🟠 ด่วน',medium:'🔵 ปานกลาง',low:'🟢 ต่ำ',non_urgent:'⚪ ทั่วไป'} as any)[createdTicket.priority] || createdTicket.priority
+                  x('p_' + createdTicket.priority)
                 }</p>
               </div>
             </div>
@@ -419,13 +421,13 @@ export default function TicketForm() {
               }}
               className="flex-1 bg-green-600 hover:bg-green-500 text-white rounded-lg py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-2"
             >
-              {copied ? '✅ ' + (lang === 'th' ? 'คัดลอกแล้ว' : 'Copied!') : '📋 ' + (lang === 'th' ? 'คัดลอกส่ง LINE' : 'Copy for LINE')}
+              {copied ? '✅ ' + x('copied') : '📋 ' + x('copyLine')}
             </button>
             <button
               onClick={() => { setSuccess(false); setCreatedTicket(null); }}
               className="px-4 py-2.5 bg-navy-700 hover:bg-navy-600 text-gray-300 rounded-lg text-sm font-medium transition-all"
             >
-              {lang === 'th' ? 'แจ้งใหม่' : 'New Ticket'}
+              {x('reportAnother')}
             </button>
           </div>
         </div>

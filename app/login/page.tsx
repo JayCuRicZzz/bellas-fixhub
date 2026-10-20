@@ -1,4 +1,5 @@
 'use client';
+import { useX } from '../../lib/i18n/extra';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -18,6 +19,7 @@ function safeRedirect(): string {
 
 function LoginContent() {
   const { t, lang, setLang } = useI18n();
+  const x = useX();
   const { login } = useAuth();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -139,7 +141,7 @@ function LoginContent() {
             cursor: loading ? 'wait' : 'pointer', transition: 'all 0.2s', letterSpacing: '0.5px', opacity: loading ? 0.7 : 1,
           }} onMouseEnter={e => { if(!loading) { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 8px 25px rgba(212,168,37,0.4)'; }}}
             onMouseLeave={e => { if(!loading) { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none'; }}}>
-            {loading ? '⏳ กำลังเข้าสู่ระบบ...' : t.auth.login}
+            {loading ? x('loggingIn') : t.auth.login}
           </button>
 
         </form>
@@ -176,7 +178,7 @@ function AuthProviderWrapper() {
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--lg-bg)' }}>
-        <div style={{ color: '#d4a825', fontSize: '1rem' }}>⏳ กำลังโหลด...</div>
+        <div style={{ color: '#d4a825', fontSize: '1rem' }}>⏳ ...</div>
       </div>
     );
   }

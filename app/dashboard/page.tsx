@@ -1,4 +1,5 @@
 'use client';
+import { useX } from '../../lib/i18n/extra';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../components/authprovider';
@@ -13,6 +14,7 @@ import PushToggle from '../../components/pushtoggle';
 export default function DashboardPage() {
   const { user, token } = useAuth();
   const { t, lang } = useI18n();
+  const x = useX();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0 });
@@ -131,18 +133,18 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-ink">
-            {lang === 'th' ? 'ยินดีต้อนรับ' : 'Welcome'}, <span className="text-gold-500">{userName}</span> 👋
+            {x('welcome')}, <span className="text-gold-500">{userName}</span> 👋
           </h2>
-          <p className="text-gray-400 mt-1">{lang === 'th' ? 'ภาพรวมการแจ้งซ่อมและสถานะงาน' : 'Overview of repair tickets and status'}</p>
+          <p className="text-gray-400 mt-1">{x('dashSub')}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/dashboard/create" className="btn-primary text-sm inline-flex items-center gap-2 shadow-lg shadow-gold-500/20">
             <PlusCircle className="w-4 h-4" />
-            {lang === 'th' ? 'แจ้งซ่อมใหม่' : 'New Ticket'}
+            {x('newTicket')}
           </Link>
           <Link href="/dashboard/reports" className="btn-secondary text-sm inline-flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            {lang === 'th' ? 'ดูรายงาน' : 'View Reports'}
+            {x('viewReports')}
           </Link>
         </div>
       </div>
@@ -174,7 +176,7 @@ export default function DashboardPage() {
                   </div>
                   {todayStats[stat.key] !== undefined && (
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {lang === 'th' ? 'วันนี้' : 'Today'}: <span className="text-gold-400 font-medium">{todayStats[stat.key]}</span>
+                      {x('today')}: <span className="text-gold-400 font-medium">{todayStats[stat.key]}</span>
                     </p>
                   )}
                 </div>
@@ -215,7 +217,7 @@ export default function DashboardPage() {
             }`}
           >
             <span className="text-lg">{tab.icon}</span>
-            {lang === 'th' ? tab.label : tab.labelEn}
+            {tab.value === '' ? x('all') : (lang === 'th' ? tab.label : tab.labelEn)}
             <span className="ml-1 px-1.5 py-0.5 rounded-full bg-navy-900/80 text-xs font-bold text-gold-500">{tab.count}</span>
           </button>
         ))}
@@ -251,7 +253,7 @@ export default function DashboardPage() {
         <div className="card text-center py-12">
           <AlertTriangle className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <p className="text-gray-500 text-lg">{t.dashboard.noTickets}</p>
-          <p className="text-gray-600 text-sm mt-1">{lang === 'th' ? 'ยังไม่มีรายการแจ้งซ่อมที่ตรงกับเงื่อนไข' : 'No repair tickets match your filter criteria'}</p>
+          <p className="text-gray-600 text-sm mt-1">{x('noTickets')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
