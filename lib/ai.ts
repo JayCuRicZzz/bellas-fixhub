@@ -172,7 +172,7 @@ function isAskingForHelp(text: string): boolean {
 function parseTicketFromText(text: string, branchCode: string): AIChatResult {
   const textLower = text.toLowerCase();
   let roomNumber: string | null = null;
-  const rm = text.match(/ห้อง\s*(\d+[a-zA-Z]?)/i) || text.match(/room\s*(\d+[a-zA-Z]?)/i) || text.match(/(\d{3,4})/);
+  const rm = text.match(/ห้อง\s*(\d+[a-zA-Z]?)/i) || text.match(/room\s*(\d+[a-zA-Z]?)/i) || text.match(/(\d{3,5})/);
   if (rm) roomNumber = rm[1];
 
   let department = 'ช่าง';

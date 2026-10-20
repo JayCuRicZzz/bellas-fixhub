@@ -28,7 +28,7 @@ export default function TicketForm() {
   const [roomNo, setRoomNo] = useState('');
   const [areaName, setAreaName] = useState('');
   const [locNote, setLocNote] = useState('');
-  const roomOk = /^[0-9]{2,4}[A-Za-z]?$/.test(roomNo.trim());
+  const roomOk = /^[0-9]{2,5}[A-Za-z]?$/.test(roomNo.trim());
   const isOtherArea = locKind === 'area' && areaName === 'อื่น ๆ';
   const locationDetail = isOtherArea ? locNote.trim()
     : (locKind === 'room' ? (roomNo.trim() ? `ห้อง ${roomNo.trim().toUpperCase()}` : '') : areaName) + (locNote.trim() ? ` · ${locNote.trim()}` : '');
@@ -69,7 +69,7 @@ export default function TicketForm() {
         setBranchCode(d.branch_code);
         if (d.location) {
           setLocationId(d.location.location_id);
-          if (d.location.kind === 'room' || /^[0-9]{2,4}[A-Za-z]?$/.test(d.location.code || '')) { setLocKind('room'); setRoomNo(d.location.code); }
+          if (d.location.kind === 'room' || /^[0-9]{2,5}[A-Za-z]?$/.test(d.location.code || '')) { setLocKind('room'); setRoomNo(d.location.code); }
           else { setLocKind('area'); setAreaName(d.location.name); }
         } else if (d.asset) { setLocKind('area'); setAreaName(AREAS[AREAS.length - 1]); setLocNote(d.asset.name); }
         if (d.asset) applyAsset(d.asset);
@@ -140,7 +140,7 @@ export default function TicketForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (locKind === 'room' && !roomOk) { setError('เบอร์ห้องต้องเป็นตัวเลข 2–4 หลัก (เช่น 305, 1201)'); return; }
+    if (locKind === 'room' && !roomOk) { setError('เบอร์ห้องต้องเป็นตัวเลข 2–5 หลัก (เช่น 305, 1201, 10502)'); return; }
     if (locKind === 'area' && !areaName) { setError('กรุณาเลือกพื้นที่'); return; }
     setLoading(true);
     setUploadingImages(true);
@@ -255,11 +255,11 @@ export default function TicketForm() {
           </div>
           {locKind === 'room' ? (
             <>
-              <input type="text" inputMode="numeric" value={roomNo} maxLength={5} aria-label="เบอร์ห้อง"
+              <input type="text" inputMode="numeric" value={roomNo} maxLength={6} aria-label="เบอร์ห้อง"
                 onChange={e => { setRoomNo(e.target.value.replace(/[^0-9A-Za-z]/g, '')); setLocationId(null); }}
-                pattern="[0-9]{2,4}[A-Za-z]?" title="ตัวเลข 2–4 หลัก เช่น 305 หรือ 1201"
+                pattern="[0-9]{2,5}[A-Za-z]?" title="ตัวเลข 2–5 หลัก เช่น 305, 1201 หรือ 10502"
                 className="input-field" placeholder={lang === 'th' ? 'เบอร์ห้อง เช่น 305' : 'Room no. e.g. 305'} required />
-              {roomNo && !roomOk && <p className="text-xs text-red-400 mt-1">เบอร์ห้องต้องเป็นตัวเลข 2–4 หลัก (เช่น 305, 1201)</p>}
+              {roomNo && !roomOk && <p className="text-xs text-red-400 mt-1">เบอร์ห้องต้องเป็นตัวเลข 2–5 หลัก (เช่น 305, 1201, 10502)</p>}
             </>
           ) : (
             <select value={areaName} onChange={e => { setAreaName(e.target.value); setLocationId(null); }} className="select-field" required aria-label="พื้นที่">

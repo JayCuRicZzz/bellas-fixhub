@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-const ROOM_RE = /^[0-9]{2,4}[A-Z]?$/;
+const ROOM_RE = /^[0-9]{2,5}[A-Z]?$/;
 
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     let roomNo: string | null = null;
     if (body.location_kind === 'room') {
       roomNo = String(body.room_no || '').trim().toUpperCase();
-      if (!ROOM_RE.test(roomNo)) return NextResponse.json({ error: 'เบอร์ห้องต้องเป็นตัวเลข 2–4 หลัก (เช่น 305, 1201 หรือ 305A)' }, { status: 400 });
+      if (!ROOM_RE.test(roomNo)) return NextResponse.json({ error: 'เบอร์ห้องต้องเป็นตัวเลข 2–5 หลัก (เช่น 305, 1201, 10502 หรือ 305A)' }, { status: 400 });
       location_detail = `ห้อง ${roomNo}${note ? ` · ${note}` : ''}`;
     } else if (body.location_kind === 'area') {
       const area = String(body.area_name || '').trim().slice(0, 60);
@@ -92,9 +92,9 @@ export async function POST(req: NextRequest) {
       location_detail = area === 'อื่น ๆ' ? note : `${area}${note ? ` · ${note}` : ''}`;
     } else {
       // ช่องทางเดิม (AI ช่วยแจ้ง / แชต AI): ดึงเลขห้องจากข้อความถ้ามี
-      const m = location_detail.match(/(?:^|[^0-9])([0-9]{2,4}[A-Za-z]?)(?:[^0-9A-Za-z]|$)/);
+      const m = location_detail.match(/(?:^|[^0-9])([0-9]{2,5}[A-Za-z]?)(?:[^0-9A-Za-z]|$)/);
       roomNo = m ? m[1].toUpperCase() : null;
-      if (roomNo && /^[0-9]{2,4}[A-Za-z]?$/.test(location_detail.trim())) location_detail = `ห้อง ${roomNo}`;
+      if (roomNo && /^[0-9]{2,5}[A-Za-z]?$/.test(location_detail.trim())) location_detail = `ห้อง ${roomNo}`;
     }
     const priority = VALID_PRIORITY.includes(body.priority) ? body.priority : 'medium';
     const difficulty = VALID_DIFFICULTY.includes(body.difficulty) ? body.difficulty : 'medium';

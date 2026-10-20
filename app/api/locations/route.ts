@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (!list.length) return NextResponse.json({ error: 'กรุณาระบุเลขห้อง/จุด' }, { status: 400 });
     const prefix = typeof name_prefix === 'string' ? name_prefix.trim().slice(0, 30) : (k === 'room' ? 'ห้อง' : '');
     const rows = list.map(code => ({
-      branch_code, code, kind: k, floor: floor ? String(floor).slice(0, 10) : (k === 'room' && /^\d{3,4}$/.test(code) ? code.slice(0, code.length - 2) : null),
+      branch_code, code, kind: k, floor: floor ? String(floor).slice(0, 10) : (k === 'room' && /^\d{3,5}$/.test(code) ? code.slice(0, code.length - 2) : null),
       name: (prefix ? `${prefix} ${code}` : code).slice(0, 80),
     }));
     const inserted = await sql`

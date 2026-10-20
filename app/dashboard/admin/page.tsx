@@ -6,6 +6,7 @@ import { useAuth } from '../../../components/authprovider';
 import { useI18n } from '../../../lib/i18n/i18n';
 import { BRANCHES } from '../../../types';
 import { DEPARTMENTS, deptTh } from '../../../lib/departments';
+import GoLiveReset from '../../../components/goliveReset';
 import {
   UserPlus, Pencil, Trash2, X, Loader2, Shield, RefreshCw, Key,
 } from 'lucide-react';
@@ -252,6 +253,8 @@ export default function AdminPage() {
           {t.admin.addUser}
         </button>
       </div>
+
+      {user?.role === 'admin' && <GoLiveReset token={token} />}
 
       {/* Messages */}
       {successMsg && (
