@@ -4,7 +4,7 @@ import { uploadImageFile } from '../lib/image-client';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './authprovider';
 import { useI18n } from '../lib/i18n/i18n';
-import { useX } from '../lib/i18n/extra';
+import { useX, catName } from '../lib/i18n/extra';
 import { BRANCHES, Category, DEPARTMENTS } from '../types';
 import { assetTypeOf } from '../lib/asset-types';
 import { AlertCircle, Send, Loader2, Camera, X, ImagePlus, Clock } from 'lucide-react';
@@ -290,7 +290,7 @@ export default function TicketForm() {
           <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="select-field" required>
             {categories.map(c => (
               <option key={c.category_id} value={c.category_id}>
-                {lang === 'th' ? c.main_th : c.main_en} {lang === 'th' ? (c.sub_th ? `- ${c.sub_th}` : '') : (c.sub_en ? `- ${c.sub_en}` : '')}
+                {(() => { const [m, sb] = catName(lang, c as any); return sb ? `${m} - ${sb}` : m; })()}
               </option>
             ))}
           </select>

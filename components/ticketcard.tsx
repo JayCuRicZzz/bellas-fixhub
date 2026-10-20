@@ -3,6 +3,7 @@
 import { Ticket, BRANCHES, DEPARTMENTS, getDepartmentByCode, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '../types';
 import { StatusBadge } from './statusbadge';
 import { useI18n } from '../lib/i18n/i18n';
+import { catName } from '../lib/i18n/extra';
 import { Calendar, MapPin, Wrench, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
@@ -40,7 +41,7 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
             <StatusBadge status={ticket.status} />
           </div>
           <h3 className="text-ink font-medium group-hover:text-gold-400 transition-colors line-clamp-1">
-            {ticket.sub_th || ticket.main_th || ticket.location_detail}
+            {(() => { const [m, sb] = catName(lang, ticket as any); return sb || m || ticket.location_detail; })()}
           </h3>
         </div>
       </div>

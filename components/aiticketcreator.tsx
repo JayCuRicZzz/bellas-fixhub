@@ -1,4 +1,5 @@
 'use client';
+import { useX } from '../lib/i18n/extra';
 
 import { useState } from 'react';
 import { useAuth } from './authprovider';
@@ -7,6 +8,7 @@ import { Sparkles, Send, Loader2, CheckCircle2, AlertCircle, Ticket } from 'luci
 
 export default function AITicketCreator() {
   const { user, token } = useAuth();
+  const x = useX();
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -36,7 +38,7 @@ export default function AITicketCreator() {
         setError(data.error || 'Classification failed');
       }
     } catch {
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setError(x('connError'));
     } finally {
       setLoading(false);
     }
@@ -76,10 +78,10 @@ export default function AITicketCreator() {
         setResult(null);
         setDescription('');
       } else {
-        setError(ticketData.error || 'สร้างใบงานไม่สำเร็จ');
+        setError(ticketData.error || x('ai_createFail'));
       }
     } catch {
-      setError('เกิดข้อผิดพลาดในการสร้างใบงาน');
+      setError(x('ai_createFail'));
     } finally {
       setCreating(false);
     }
@@ -89,41 +91,41 @@ export default function AITicketCreator() {
     <div className="card">
       <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-gold-500" />
-        AI วิเคราะห์และสร้างใบแจ้งซ่อม
+        {x('ai_title')}
       </h3>
 
       {ticketNumber ? (
         <div className="bg-green-900/30 border border-green-700 text-green-300 px-4 py-4 rounded-lg">
           <p className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5" />
-            แจ้งซ่อมสำเร็จ!
+            {x('ai_done')}
           </p>
-          <p className="mt-1 text-sm">เลขที่ใบงาน: <strong>{ticketNumber}</strong></p>
+          <p className="mt-1 text-sm">{x('ai_ticketNo')}: <strong>{ticketNumber}</strong></p>
           <button
             onClick={() => setTicketNumber('')}
             className="mt-3 text-sm text-green-400 hover:text-green-300 underline"
           >
-            แจ้งซ่อมใหม่
+            {x('newTicket')}
           </button>
         </div>
       ) : result ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="bg-navy-700 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">แผนก</p>
+              <p className="text-gray-500 text-xs">{x('d_dept')}</p>
               <p className="text-ink font-medium">{result.department}</p>
             </div>
             <div className="bg-navy-700 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">หมวดหมู่</p>
+              <p className="text-gray-500 text-xs">{x('d_category')}</p>
               <p className="text-ink font-medium">{result.category}</p>
             </div>
             <div className="bg-navy-700 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">ระดับความสำคัญ</p>
+              <p className="text-gray-500 text-xs">{x('d_priority')}</p>
               <p className="text-ink font-medium">{result.priority?.toUpperCase()}</p>
             </div>
             <div className="bg-navy-700 rounded-lg p-3">
-              <p className="text-gray-500 text-xs">ห้อง</p>
-              <p className="text-ink font-medium">{result.room_number || 'ไม่ระบุ'}</p>
+              <p className="text-gray-500 text-xs">{x('ai_room')}</p>
+              <p className="text-ink font-medium">{result.room_number || x('d_unknown')}</p>
             </div>
           </div>
           <p className="text-sm text-gray-400">📝 {result.summary}</p>
@@ -135,13 +137,13 @@ export default function AITicketCreator() {
               className="btn-primary text-sm flex items-center gap-2"
             >
               {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ticket className="w-4 h-4" />}
-              สร้างใบแจ้งซ่อม
+              {x('ai_create')}
             </button>
             <button
               onClick={() => setResult(null)}
               className="btn-secondary text-sm"
             >
-              วิเคราะห์ใหม่
+              {x('ai_reanalyse')}
             </button>
           </div>
         </div>
@@ -150,7 +152,7 @@ export default function AITicketCreator() {
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder="อธิบายอาการเสีย เช่น: ห้อง 305 แอร์ไม่เย็น มีเสียงดัง"
+            placeholder={x('ai_inputPh')}
             className="input-field min-h-[100px] resize-y"
           />
           {error && (
@@ -167,12 +169,12 @@ export default function AITicketCreator() {
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                กำลังวิเคราะห์...
+                {x('ai_analysing')}
               </>
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                วิเคราะห์ด้วย AI
+                {x('ai_analyse')}
               </>
             )}
           </button>

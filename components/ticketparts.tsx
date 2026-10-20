@@ -1,4 +1,5 @@
 'use client';
+import { useX } from '../lib/i18n/extra';
 // อะไหล่ที่ใช้ในใบงาน — ช่าง/ไอทีบันทึกระหว่างทำงาน (ตัดสต็อกสาขาของใบงาน) · คืนได้ก่อนอนุมัติ
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Package, Plus, Undo2, Loader2 } from 'lucide-react';
@@ -9,6 +10,7 @@ interface Part { part_id: number; name: string; unit: string; part_code: string;
 export default function TicketParts({ ticketId, status, branch, deptType, user, token }: {
   ticketId: number; status: string; branch: string; deptType?: string; user: any; token: string | null;
 }) {
+  const x = useX();
   const auth = useMemo<Record<string, string>>(() => (token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>)), [token]);
   const [moves, setMoves] = useState<Move[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -42,14 +44,14 @@ export default function TicketParts({ ticketId, status, branch, deptType, user, 
       const r = await fetch(`/api/tickets/${ticketId}/parts`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...auth }, body: JSON.stringify({ part_id: Number(partId), qty: Number(qty) }) });
       const d = await r.json();
       if (!r.ok) setMsg(`❌ ${d.error}`);
-      else { setMsg(d.warning ? `⚠️ ${d.warning}` : '✅ บันทึกแล้ว'); setPartId(''); setQty('1'); setAdding(false); setParts([]); load(); }
+      else { setMsg(d.warning ? `⚠️ ${d.warning}` : x('pa_saved')); setPartId(''); setQty('1'); setAdding(false); setParts([]); load(); }
     } finally { setBusy(false); }
   };
   const undo = async (m: Move) => {
-    if (!confirm(`คืน ${m.name} ${Math.abs(Number(m.qty))} ${m.unit} เข้าสต็อก?`)) return;
+    if (!confirm(`${x('pa_return')}: ${m.name} ${Math.abs(Number(m.qty))} ${m.unit} — ${x('pa_returnQ')}`)) return;
     const r = await fetch(`/api/tickets/${ticketId}/parts?move_id=${m.move_id}`, { method: 'DELETE', headers: auth });
     const d = await r.json().catch(() => ({}));
-    setMsg(r.ok ? '✅ คืนเข้าสต็อกแล้ว' : `❌ ${d.error || 'ไม่สำเร็จ'}`); load();
+    setMsg(r.ok ? x('pa_returned') : `❌ ${d.error || x('e_failed')}`); load();
   };
 
   if (!used.length && !editable) return null;
@@ -57,16 +59,16 @@ export default function TicketParts({ ticketId, status, branch, deptType, user, 
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-ink flex items-center gap-2"><Package className="w-5 h-5 text-gold-500" /> อะไหล่ที่ใช้</h3>
-        {total > 0 && <span className="text-sm text-gray-400">รวม ฿{total.toLocaleString('th-TH', { maximumFractionDigits: 0 })}</span>}
+        <h3 className="text-lg font-semibold text-ink flex items-center gap-2"><Package className="w-5 h-5 text-gold-500" /> {x('pa_title')}</h3>
+        {total > 0 && <span className="text-sm text-gray-400">{x('pa_total')} ฿{total.toLocaleString('th-TH', { maximumFractionDigits: 0 })}</span>}
       </div>
-      {used.length === 0 ? <p className="text-sm text-gray-500">ยังไม่ได้บันทึกอะไหล่</p> : (
+      {used.length === 0 ? <p className="text-sm text-gray-500">{x('pa_none')}</p> : (
         <div className="space-y-1.5">
           {used.map(m => (
             <div key={m.move_id} className={`flex items-center justify-between gap-2 text-sm ${returned.has(m.move_id) ? 'opacity-50 line-through' : ''}`}>
               <span className="text-gray-300">{m.name} × {Math.abs(Number(m.qty))} {m.unit} <span className="text-xs text-gray-500">· {m.moved_by_name}</span></span>
               {editable && !returned.has(m.move_id) && (m.moved_by === user?.id || ['sup', 'supit', 'admin'].includes(user?.role)) && (
-                <button onClick={() => undo(m)} className="text-xs text-gray-400 hover:text-orange-400 inline-flex items-center gap-1"><Undo2 className="w-3.5 h-3.5" /> คืน</button>
+                <button onClick={() => undo(m)} className="text-xs text-gray-400 hover:text-orange-400 inline-flex items-center gap-1"><Undo2 className="w-3.5 h-3.5" /> {x('pa_return')}</button>
               )}
             </div>
           ))}
@@ -75,16 +77,16 @@ export default function TicketParts({ ticketId, status, branch, deptType, user, 
       {editable && (adding ? (
         <div className="mt-3 flex flex-wrap gap-2 items-center">
           <select value={partId} onChange={e => setPartId(e.target.value)} className="select-field flex-1 min-w-[180px]">
-            <option value="">— เลือกอะไหล่ —</option>
-            {parts.map(p => <option key={p.part_id} value={p.part_id}>{p.name} (เหลือ {p.stock} {p.unit})</option>)}
+            <option value="">{x('pa_pick')}</option>
+            {parts.map(p => <option key={p.part_id} value={p.part_id}>{p.name} ({x('pa_left')} {p.stock} {p.unit})</option>)}
           </select>
           <input type="number" min={0.01} step="any" value={qty} onChange={e => setQty(e.target.value)} className="input-field !w-24" />
-          <button onClick={add} disabled={busy || !partId || !(Number(qty) > 0)} className="btn-primary text-sm">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'บันทึก'}</button>
-          <button onClick={() => setAdding(false)} className="btn-secondary text-sm">ยกเลิก</button>
-          {parts.length === 0 && <p className="text-xs text-gray-500 w-full">ยังไม่มีรายการอะไหล่ — ให้หัวหน้าเพิ่มที่เมนู "อะไหล่ & สต็อก"</p>}
+          <button onClick={add} disabled={busy || !partId || !(Number(qty) > 0)} className="btn-primary text-sm">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : x('pa_save')}</button>
+          <button onClick={() => setAdding(false)} className="btn-secondary text-sm">{x('b_cancel')}</button>
+          {parts.length === 0 && <p className="text-xs text-gray-500 w-full">{x('pa_empty')}</p>}
         </div>
       ) : (
-        <button onClick={() => setAdding(true)} className="mt-3 btn-secondary text-sm inline-flex items-center gap-1.5"><Plus className="w-4 h-4" /> บันทึกอะไหล่ที่ใช้</button>
+        <button onClick={() => setAdding(true)} className="mt-3 btn-secondary text-sm inline-flex items-center gap-1.5"><Plus className="w-4 h-4" /> {x('pa_add')}</button>
       ))}
       {msg && <p className="text-sm mt-2 text-gray-300">{msg}</p>}
     </div>

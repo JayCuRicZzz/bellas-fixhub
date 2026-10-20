@@ -1,4 +1,5 @@
 'use client';
+import { useX } from '../lib/i18n/extra';
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from './authprovider';
@@ -13,18 +14,19 @@ const QUICK_SUGGESTIONS = [
   'ห้อง 1202 ไฟกระพริบ',
 ];
 
-function welcomeText(user: any) {
+function welcomeText(user: any, tr: (k: string) => string) {
   const branch = user?.branch_code ? (BRANCHES.find(b => b.branch_code === user.branch_code)?.branch_name || user.branch_code) : '';
-  return `สวัสดี${user?.full_name ? ` คุณ${user.full_name}` : ''}! 👋\n\nผมคือที่ปรึกษางานซ่อม 🦞 — ถามวิธีแก้ไขเบื้องต้น หรือบอกปัญหาให้ผมช่วยสร้างใบงานให้${branch ? `\n\nสาขาปัจจุบัน: ${branch}` : ''}`;
+  return `${tr('ai_hello')}${user?.full_name ? ` ${user.full_name}` : ''}! 👋\n\n${tr('ai_intro')}${branch ? `\n\n${tr('ai_branchNow')}: ${branch}` : ''}`;
 }
 
 export default function AIChat() {
   const { user, token } = useAuth();
+  const tr = useX();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: welcomeText(user),
+      content: welcomeText(user, tr),
     },
   ]);
   const [input, setInput] = useState('');
@@ -34,7 +36,7 @@ export default function AIChat() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   // ข้อมูลผู้ใช้โหลดทีหลัง → อัปเดตข้อความต้อนรับเมื่อได้ user (เดิมขึ้น "สาขาปัจจุบัน: undefined")
   useEffect(() => {
-    setMessages(m => m.map(x => x.id === 'welcome' ? { ...x, content: welcomeText(user) } : x));
+    setMessages(m => m.map(x => x.id === 'welcome' ? { ...x, content: welcomeText(user, tr) } : x));
   }, [user]);
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export default function AIChat() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: 'ขออภัยครับ เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง',
+          content: tr('ai_connErr'),
         },
       ]);
     } finally {
@@ -162,7 +164,7 @@ export default function AIChat() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `✅ แจ้งซ่อมสำเร็จ!\nเลขที่ใบงาน: ${data.ticket_number}\nทีมช่างจะดำเนินการตรวจสอบและซ่อมแซมโดยเร็วที่สุด`,
+          content: `${tr('ai_done')}\n${tr('ai_ticketNo')}: ${data.ticket_number}\n${tr('ai_doneTail')}`,
         },
       ]);
     } catch (e: any) {
@@ -171,7 +173,7 @@ export default function AIChat() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `❌ สร้างใบแจ้งซ่อมไม่สำเร็จ${e?.message && e.message !== 'create failed' ? ` (${e.message})` : ''} กรุณาลองใหม่ หรือแจ้งผ่านเมนู "แจ้งซ่อมใหม่"`,
+          content: `${tr('ai_fail')}${e?.message && e.message !== 'create failed' ? ` (${e.message})` : ''}`,
         },
       ]);
     } finally {
@@ -186,7 +188,7 @@ export default function AIChat() {
       {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'ยกเลิกการสร้างใบแจ้งซ่อมแล้วครับ หากต้องการแจ้งปัญหาใหม่ สามารถบอกผมได้เลย',
+        content: tr('ai_cancelled'),
       },
     ]);
   };
@@ -235,14 +237,14 @@ export default function AIChat() {
             <div className="max-w-[80%] bg-navy-700 border border-gold-500/30 rounded-2xl rounded-bl-md p-4 space-y-3">
               <h4 className="text-sm font-semibold text-gold-500 flex items-center gap-2">
                 <Ticket className="w-4 h-4" />
-                ยืนยันการสร้างใบแจ้งซ่อม
+                {tr('ai_confirmTitle')}
               </h4>
               <div className="space-y-1.5 text-sm text-gray-300">
-                <p>🏨 สาขา: {BRANCHES.find(b => b.branch_code === (pendingTicket.branch_code || user?.branch_code))?.branch_name}</p>
-                <p>🚪 ห้อง: {pendingTicket.room_number}</p>
-                <p>🔧 แผนก: {pendingTicket.department}</p>
-                <p>📋 หมวดหมู่: {pendingTicket.category}</p>
-                <p>⚡ ความสำคัญ: {pendingTicket.priority?.toUpperCase()}</p>
+                <p>🏨 {tr('branch')}: {BRANCHES.find(b => b.branch_code === (pendingTicket.branch_code || user?.branch_code))?.branch_name}</p>
+                <p>🚪 {tr('ai_room')}: {pendingTicket.room_number}</p>
+                <p>🔧 {tr('d_dept')}: {pendingTicket.department}</p>
+                <p>📋 {tr('d_category')}: {pendingTicket.category}</p>
+                <p>⚡ {tr('d_priority')}: {pendingTicket.priority?.toUpperCase()}</p>
               </div>
               <div className="flex gap-2 pt-2">
                 <button
@@ -255,14 +257,14 @@ export default function AIChat() {
                   ) : (
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   )}
-                  ยืนยัน
+                  {tr('ai_confirm')}
                 </button>
                 <button
                   onClick={handleCancelTicket}
                   disabled={creatingTicket}
                   className="btn-secondary text-sm py-1.5 px-4"
                 >
-                  ยกเลิก
+                  {tr('b_cancel')}
                 </button>
               </div>
             </div>
@@ -291,7 +293,7 @@ export default function AIChat() {
       {/* Quick suggestions */}
       {messages.length <= 1 && !loading && (
         <div className="px-4 pb-2">
-          <p className="text-xs text-gray-500 mb-2">💡 ลองถาม:</p>
+          <p className="text-xs text-gray-500 mb-2">{tr('ai_try')}</p>
           <div className="flex flex-wrap gap-2">
             {QUICK_SUGGESTIONS.map(s => (
               <button
@@ -316,7 +318,7 @@ export default function AIChat() {
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="บอกปัญหาให้ผมฟัง..."
+            placeholder={tr('ai_ph')}
             className="input-field flex-1"
             disabled={loading}
           />
@@ -329,7 +331,7 @@ export default function AIChat() {
           </button>
         </form>
         <p className="text-xs text-gray-600 mt-2 text-center">
-          🔧 ถามวิธีซ่อมง่ายๆ — หรือบอกปัญหาเพื่อสร้างใบงาน
+          {tr('ai_foot')}
         </p>
       </div>
     </div>
