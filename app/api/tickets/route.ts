@@ -5,6 +5,7 @@ import { SUPABASE_URL } from '../../../lib/supabase';
 import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
+import { getLineConfig } from '../../../lib/line-config';
 import { formatNewTicketLine, assetLineOf, PRIORITY_LINE } from '../../../lib/line-format';
 import { sendPushToUsers, workersFor, gmsFor } from '../../../lib/webpush';
 import { toLineImageUrls } from '../../../lib/line-images';
@@ -205,8 +206,10 @@ export async function POST(req: NextRequest) {
     });
     // แนบรูปที่ผู้แจ้งถ่าย (สูงสุด 4) ไปในครั้งเดียวกับข้อความ — ไม่เพิ่มโควตา LINE
     const reportImages = Array.isArray(images) ? images : [];
-    const lineImages = reportImages.length ? await toLineImageUrls(reportImages, ticketId) : [];
-    const lineResult = await sendLineMessage(lineText, deptType, lineImages);
+    const lineCfg = await getLineConfig();
+    const autoLine = deptType === 'IT' ? lineCfg.autoIT : lineCfg.autoMaint;   // โหมดส่งต่อเอง → ไม่ต้องแปลงรูป
+    const lineImages = autoLine && reportImages.length ? await toLineImageUrls(reportImages, ticketId) : [];
+    const lineResult = await sendLineMessage(lineText, deptType, lineImages, { ticketEvent: true });
     console.log('[Tickets] LINE result:', JSON.stringify({ deptType, result: lineResult }));
 
     // แจ้งเตือนบนมือถือ (Web Push) ถึงช่าง/ไอทีของสาขานั้นที่เปิดรับไว้ — ฟรี ใช้คู่กับ LINE

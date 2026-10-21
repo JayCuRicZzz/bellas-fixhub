@@ -169,7 +169,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         where ticket_id = ${ticketId} and status in ('RESOLVED','APPROVED')`;
       await logActivity(ticketId, 'FLAGGED', st, 'PENDING', user, reason);
       slaInfo = { flagged_by: userId, reason };
-      sendLineMessage(`🚩 งานไม่เรียบร้อย — แจ้งโดย${isOwnReport ? 'ผู้แจ้ง' : 'หัวหน้า'}\n🔢 ${current.ticket_number}\n📍 ${current.location_detail}\n📝 ${reason}`, current.dept_type).catch(() => {});
+      sendLineMessage(`🚩 งานไม่เรียบร้อย — แจ้งโดย${isOwnReport ? 'ผู้แจ้ง' : 'หัวหน้า'}\n🔢 ${current.ticket_number}\n📍 ${current.location_detail}\n📝 ${reason}`, current.dept_type, [], { ticketEvent: true }).catch(() => {});
 
     } else if (status === 'CANCELLED') {
       // หัวหน้ายกเลิกได้ทุกงานที่ยังไม่ปิด · ผู้แจ้งยกเลิกใบของตัวเองได้ก่อนช่างรับงาน

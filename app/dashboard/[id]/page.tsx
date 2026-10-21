@@ -486,7 +486,7 @@ export default function TicketDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           {x('d_back')}
         </Link>
-        <div className="flex gap-2 no-print">
+        <div className="flex flex-wrap gap-2 no-print">
           <button
             onClick={() => setShowPrintView(true)}
             className="btn-secondary text-sm flex items-center gap-2"
@@ -501,6 +501,13 @@ export default function TicketDetailPage() {
             {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
             {copied ? x('d_copied') : x('d_copy')}
           </button>
+          <a
+            href={lineText ? `https://line.me/R/share?text=${encodeURIComponent(lineText)}` : undefined}
+            target="_blank" rel="noopener" data-t="share-line"
+            className={`btn-primary text-sm flex items-center gap-2 bg-green-600 hover:bg-green-500 border-green-600 ${lineText ? '' : 'opacity-50 pointer-events-none'}`}
+          >
+            📤 {x('d_shareLine')}
+          </a>
         </div>
       </div>
 

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const cfg = await getLineConfig();
-  return NextResponse.json({ accessToken: mask(cfg.accessToken), targetIdMaint: cfg.targetIdMaint, targetIdIT: cfg.targetIdIT, configured: !!cfg.accessToken });
+  return NextResponse.json({ accessToken: mask(cfg.accessToken), targetIdMaint: cfg.targetIdMaint, targetIdIT: cfg.targetIdIT, autoMaint: cfg.autoMaint, autoIT: cfg.autoIT, configured: !!cfg.accessToken });
 }
 
 export async function POST(req: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: r.sent, ...r });
     }
     const cfg = await setLineConfig(body, user.id);
-    return NextResponse.json({ success: true, targetIdMaint: cfg.targetIdMaint, targetIdIT: cfg.targetIdIT, configured: !!cfg.accessToken });
+    return NextResponse.json({ success: true, targetIdMaint: cfg.targetIdMaint, targetIdIT: cfg.targetIdIT, autoMaint: cfg.autoMaint, autoIT: cfg.autoIT, configured: !!cfg.accessToken });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

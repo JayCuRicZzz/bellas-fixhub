@@ -26,9 +26,13 @@ export async function pushLineText(to: string, text: string, accessToken: string
 }
 
 /** Send a text message (+ up to 4 JPEG/PNG image URLs, same push) to the Maintenance or IT LINE group. Never throws. */
-export async function sendLineMessage(messageText: string, department?: LineDept, imageUrls: string[] = []) {
-  const { accessToken, targetIdMaint, targetIdIT } = await getLineConfig();
+export async function sendLineMessage(messageText: string, department?: LineDept, imageUrls: string[] = [], opts: { ticketEvent?: boolean } = {}) {
+  const { accessToken, targetIdMaint, targetIdIT, autoMaint, autoIT } = await getLineConfig();
   const it = isIT(department);
+  // โหมดส่งต่อเอง: ปิดแจ้งงานเข้ากลุ่มอัตโนมัติ (สรุป 22:00 / เตือนเร่งงาน ยังส่งตามปกติ)
+  if (opts.ticketEvent && !(it ? autoIT : autoMaint)) {
+    return { success: false, skipped: 'manual-mode', group: it ? 'ไอที' : 'ช่าง' };
+  }
   const targetId = it ? targetIdIT : targetIdMaint;
   const groupLabel = it ? 'ไอที' : 'ช่าง';
 

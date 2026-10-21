@@ -248,6 +248,7 @@ export const X = {
   pushOffGm: { th: 'รับแจ้งเตือนงานใหม่ของสาขาที่ดูแล และงานที่เกิน SLA (ฟรี)', en: 'Get alerts for new jobs in your branches and SLA-overdue jobs (free)', km: 'ទទួលការជូនដំណឹងការងារថ្មីក្នុងសាខា និងការងារហួស SLA (ឥតគិតថ្លៃ)', my: 'ဌာနခွဲ၏ အလုပ်အသစ်နှင့် SLA ကျော်လွန်သည့်အလုပ် အသိပေးချက် ရယူမည် (အခမဲ့)' },
   pushOnReporter: { th: 'เครื่องนี้จะได้แจ้งเตือนเมื่อมีช่างรับงาน/ซ่อมเสร็จ', en: 'This device is alerted when your job is accepted or repaired', km: 'ឧបករណ៍នេះនឹងទទួលដំណឹងពេលការងាររបស់អ្នកត្រូវបានទទួល ឬជួសជុលរួច', my: 'သင့်အလုပ်ကို လက်ခံ/ပြင်ပြီးချိန် ဤစက်သို့ အသိပေးမည်' },
   pushOffReporter: { th: 'รับแจ้งเตือนเมื่อมีช่างรับงาน และเมื่อซ่อมเสร็จ (ใบที่คุณแจ้ง · ฟรี)', en: 'Get an alert when your request is accepted and when it’s repaired (free)', km: 'ទទួលដំណឹងពេលសំណើរបស់អ្នកត្រូវបានទទួល និងជួសជុលរួច (ឥតគិតថ្លៃ)', my: 'သင့်တင်ပြချက်ကို လက်ခံချိန်နှင့် ပြင်ပြီးချိန် အသိပေးချက် ရယူမည် (အခမဲ့)' },
+  d_shareLine: { th: 'ส่งต่อ LINE', en: 'Share to LINE', km: 'ចែករំលែក LINE', my: 'LINE သို့ မျှဝေ' },
 } satisfies Record<string, L4>;
 
 export type XKey = keyof typeof X;

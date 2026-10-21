@@ -6,6 +6,7 @@ import { useI18n } from '../../../../lib/i18n/i18n';
 import { Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import EscalationSettings from '../../../../components/escalationsettings';
+import LineAutoMode from '../../../../components/lineautomode';
 
 export default function LineSettingsPage() {
   const { user, token } = useAuth();
@@ -117,6 +118,8 @@ export default function LineSettingsPage() {
           ? 'ตั้งค่า Token และกลุ่มเป้าหมายสำหรับส่งแจ้งเตือน LINE'
           : 'Configure LINE tokens and target groups for notifications'}
       </p>
+
+      <LineAutoMode token={token} />
 
       <form onSubmit={handleSave} className="space-y-5">
         <div className="card space-y-4">

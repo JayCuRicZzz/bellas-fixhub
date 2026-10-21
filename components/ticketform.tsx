@@ -44,6 +44,7 @@ export default function TicketForm() {
   const [slaConfig, setSlaConfig] = useState<SlaConfig>({});
   const [createdTicket, setCreatedTicket] = useState<{ticket_number:string; branch_code:string; location_detail:string; description:string; priority:string; department:string} | null>(null);
   const [copied, setCopied] = useState(false);
+  const [createdLineText, setCreatedLineText] = useState('');   // ข้อความเดียวกับ LINE อัตโนมัติ (จากเซิร์ฟเวอร์)
   const fileInputRef = useRef<HTMLInputElement>(null);
   // ── สแกน QR ห้อง/อุปกรณ์ (/r/<token> → ?qr=<token>) ──
   const [qr, setQr] = useState<any>(null);
@@ -187,6 +188,11 @@ export default function TicketForm() {
       if (res.ok) {
         setSuccess(true);
         setCreatedTicket({ ticket_number: data.ticket_number, branch_code: branchCode, location_detail: locationDetail, description, priority, department });
+        setCreatedLineText('');
+        if (data.ticket_id) {
+          fetch(`/api/tickets/${data.ticket_id}/line-text`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+            .then(r => r.json()).then(d => d.text && setCreatedLineText(d.text)).catch(() => {});
+        }
         if (!qr?.location) { setRoomNo(''); setAreaName(''); }  // สแกน QR มา → แจ้งเรื่องอื่นของห้องเดิมต่อได้
         setLocNote('');
         if (!qr?.location) setLocationId(null);
@@ -414,15 +420,23 @@ export default function TicketForm() {
             <button
               onClick={async (e) => {
                 e.stopPropagation();
-                const lineText = `📢 แจ้งซ่อมใหม่\n🔢 ${createdTicket.ticket_number}\n🏨 ${BRANCHES.find(b=>b.branch_code===createdTicket.branch_code)?.branch_name || createdTicket.branch_code}\n📍 ${createdTicket.location_detail}\n📝 ${createdTicket.description}\n⏱️ ความเร่งด่วน: ${createdTicket.priority}\n━━━━━━━━━━━━\n🏨 Hotel Fix Desk`;
-                await navigator.clipboard.writeText(lineText);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
+                try {
+                  await navigator.clipboard.writeText(createdLineText || `${createdTicket.ticket_number} · ${createdTicket.location_detail} · ${createdTicket.description}`);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                } catch { alert(x('e_copy')); }
               }}
-              className="flex-1 bg-green-600 hover:bg-green-500 text-white rounded-lg py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-navy-700 hover:bg-navy-600 text-white rounded-lg py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-2"
             >
-              {copied ? '✅ ' + x('copied') : '📋 ' + x('copyLine')}
+              {copied ? '✅ ' + x('copied') : '📋 ' + x('d_copy')}
             </button>
+            <a
+              href={createdLineText ? `https://line.me/R/share?text=${encodeURIComponent(createdLineText)}` : undefined}
+              target="_blank" rel="noopener" onClick={e => e.stopPropagation()} data-t="share-line"
+              className={`flex-1 bg-green-600 hover:bg-green-500 text-white rounded-lg py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-2 ${createdLineText ? '' : 'opacity-50 pointer-events-none'}`}
+            >
+              📤 {x('d_shareLine')}
+            </a>
             <button
               onClick={() => { setSuccess(false); setCreatedTicket(null); }}
               className="px-4 py-2.5 bg-navy-700 hover:bg-navy-600 text-gray-300 rounded-lg text-sm font-medium transition-all"

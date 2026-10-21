@@ -81,7 +81,7 @@ export async function processDuePmTickets(): Promise<number> {
       created++;
       sendLineMessage(
         `📢 [PM อัตโนมัติ] มีงานบำรุงรักษาตามรอบ!\n🔢 ${result.ticket_number}\n🏨 ${pm.branch_code}\n📝 ${pm.title}\n📅 ครั้งต่อไป: ${nextRun.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}`,
-        deptType
+        deptType, [], { ticketEvent: true }
       ).catch(() => {});
       console.log(`[PM] Auto-created ticket ${result.ticket_number} for PM #${pm.id}`);
     } catch (err: any) {
