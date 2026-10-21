@@ -13,7 +13,9 @@ function b64ToUint8(b64: string) {
   return Uint8Array.from(raw, c => c.charCodeAt(0));
 }
 
-export default function PushToggle({ token }: { token?: string | null }) {
+export default function PushToggle({ token, role }: { token?: string | null; role?: string }) {
+  // ข้อความตามตำแหน่ง: คนรับงาน = งานใหม่ · GM = งานใหม่ + เกิน SLA · ผู้แจ้ง = ใบที่ตัวเองแจ้ง
+  const kind = ['tech', 'sup', 'it', 'supit', 'admin'].includes(role || '') ? '' : role === 'gm' ? 'Gm' : 'Reporter';
   const x = useX();
   const [state, setState] = useState<State>('loading');
   const [busy, setBusy] = useState(false);
@@ -88,8 +90,8 @@ export default function PushToggle({ token }: { token?: string | null }) {
       <div className="flex items-start gap-3 flex-1">
         {state === 'on' ? <BellRing className="w-5 h-5 text-green-400 shrink-0 mt-0.5" /> : <BellOff className="w-5 h-5 text-gold-500 shrink-0 mt-0.5" />}
         <div className="text-sm">
-          {state === 'on' && <p className="text-ink font-medium">{x('pushOn')}</p>}
-          {state === 'off' && <p className="text-ink font-medium">{x('pushOff')}</p>}
+          {state === 'on' && <p className="text-ink font-medium">{x('pushOn' + kind)}</p>}
+          {state === 'off' && <p className="text-ink font-medium">{x('pushOff' + kind)}</p>}
           {state === 'denied' && <p className="text-ink font-medium">{x('pushDenied')}</p>}
           {state === 'ios-install' && <p className="text-ink font-medium">{x('pushIos')}</p>}
           {state === 'unsupported' && <p className="text-ink font-medium">{x('pushUnsupported')}</p>}

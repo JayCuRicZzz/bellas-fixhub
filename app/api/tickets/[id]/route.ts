@@ -3,6 +3,7 @@ import sql from '../../../../lib/db';
 import { getUserFromRequest, canApproveTicket, canManageTicket } from '../../../../lib/auth';
 import { canSeeTicket } from '../../../../lib/ticket-access';
 import { sendLineMessage } from '../../../../lib/line';
+import { notifyReporter } from '../../../../lib/webpush';
 import { User } from '../../../../types';
 
 export const dynamic = 'force-dynamic';
@@ -99,6 +100,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       const slaMinutes = await accept();
       if (slaMinutes == null) return conflict('ใบงานนี้ถูกรับไปแล้ว');
       await logActivity(ticketId, 'ACCEPTED', st, 'IN_PROGRESS', user);
+      await notifyReporter(current as any, 'accepted', userId, user.full_name || user.username);
       slaInfo = { accepted_by: userId, sla_minutes_target: slaMinutes };
 
     } else if (status === 'IN_PROGRESS') {
@@ -125,6 +127,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         returning sla_minutes`;
       if (!row) return conflict();
       await logActivity(ticketId, 'RESOLVED', st, 'RESOLVED', user, reasonIn);
+      await notifyReporter(current as any, 'resolved', userId, user.full_name || user.username);
       slaInfo = { resolved_by: userId, sla_minutes: row?.sla_minutes ?? null };
       // (no LINE push on resolve — counted in the daily summary image)
 

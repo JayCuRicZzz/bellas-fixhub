@@ -51,6 +51,8 @@ function inQuiet(cfg: EscalationConfig, h = bkkHour()) {
   return cfg.quietStart < cfg.quietEnd ? h >= cfg.quietStart && h < cfg.quietEnd : h >= cfg.quietStart || h < cfg.quietEnd;
 }
 
+export function isQuietNow(cfg: EscalationConfig) { return inQuiet(cfg); }
+
 const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} ชม. ${m % 60 ? `${m % 60} นาที` : ''}`.trim() : `${m} นาที`);
 
 export async function runEscalation(): Promise<{ sent: number; tickets: number; skipped?: string }> {

@@ -244,6 +244,10 @@ export const X = {
   pa_save: { th: 'บันทึก', en: 'Save', km: 'រក្សាទុក', my: 'သိမ်း' },
   pa_empty: { th: 'ยังไม่มีรายการอะไหล่ — ให้หัวหน้าเพิ่มที่เมนู “อะไหล่ & สต็อก”', en: 'No parts yet — ask a supervisor to add them under “Spare parts & stock”', km: 'មិនទាន់មានគ្រឿងបន្លាស់ — សុំអ្នកគ្រប់គ្រងបន្ថែម', my: 'အပိုပစ္စည်း မရှိသေးပါ — ကြီးကြပ်သူကို ထည့်ခိုင်းပါ' },
   pa_add: { th: 'บันทึกอะไหล่ที่ใช้', en: 'Record parts used', km: 'កត់គ្រឿងបន្លាស់ដែលបានប្រើ', my: 'သုံးခဲ့သည့်ပစ္စည်း မှတ်မည်' },
+  pushOnGm: { th: 'เครื่องนี้รับแจ้งเตือนงานใหม่และงานเกิน SLA แล้ว', en: 'This device gets new-job and SLA-overdue alerts', km: 'ឧបករណ៍នេះទទួលការជូនដំណឹងការងារថ្មី និងហួស SLA', my: 'ဤစက်သည် အလုပ်အသစ်နှင့် SLA ကျော်လွန် အသိပေးချက် ရနေပြီ' },
+  pushOffGm: { th: 'รับแจ้งเตือนงานใหม่ของสาขาที่ดูแล และงานที่เกิน SLA (ฟรี)', en: 'Get alerts for new jobs in your branches and SLA-overdue jobs (free)', km: 'ទទួលការជូនដំណឹងការងារថ្មីក្នុងសាខា និងការងារហួស SLA (ឥតគិតថ្លៃ)', my: 'ဌာနခွဲ၏ အလုပ်အသစ်နှင့် SLA ကျော်လွန်သည့်အလုပ် အသိပေးချက် ရယူမည် (အခမဲ့)' },
+  pushOnReporter: { th: 'เครื่องนี้จะได้แจ้งเตือนเมื่อมีช่างรับงาน/ซ่อมเสร็จ', en: 'This device is alerted when your job is accepted or repaired', km: 'ឧបករណ៍នេះនឹងទទួលដំណឹងពេលការងាររបស់អ្នកត្រូវបានទទួល ឬជួសជុលរួច', my: 'သင့်အလုပ်ကို လက်ခံ/ပြင်ပြီးချိန် ဤစက်သို့ အသိပေးမည်' },
+  pushOffReporter: { th: 'รับแจ้งเตือนเมื่อมีช่างรับงาน และเมื่อซ่อมเสร็จ (ใบที่คุณแจ้ง · ฟรี)', en: 'Get an alert when your request is accepted and when it’s repaired (free)', km: 'ទទួលដំណឹងពេលសំណើរបស់អ្នកត្រូវបានទទួល និងជួសជុលរួច (ឥតគិតថ្លៃ)', my: 'သင့်တင်ပြချက်ကို လက်ခံချိန်နှင့် ပြင်ပြီးချိန် အသိပေးချက် ရယူမည် (အခမဲ့)' },
 } satisfies Record<string, L4>;
 
 export type XKey = keyof typeof X;

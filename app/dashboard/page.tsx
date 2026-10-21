@@ -149,8 +149,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* แจ้งเตือนงานใหม่บนมือถือ — เฉพาะคนที่รับงาน */}
-      {['tech', 'sup', 'it', 'supit', 'admin'].includes(user?.role || '') && <PushToggle token={token} />}
+      {/* แจ้งเตือนบนมือถือ — ทุกตำแหน่ง (ข้อความต่างกันตามหน้าที่) */}
+      {user && <PushToggle token={token} role={user.role} />}
 
       {/* Stats Cards - Clickable */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">

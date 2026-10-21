@@ -6,7 +6,7 @@ import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
 import { formatNewTicketLine, assetLineOf, PRIORITY_LINE } from '../../../lib/line-format';
-import { sendPushToUsers, workersFor } from '../../../lib/webpush';
+import { sendPushToUsers, workersFor, gmsFor } from '../../../lib/webpush';
 import { toLineImageUrls } from '../../../lib/line-images';
 
 export const dynamic = 'force-dynamic';
@@ -210,7 +210,10 @@ export async function POST(req: NextRequest) {
     console.log('[Tickets] LINE result:', JSON.stringify({ deptType, result: lineResult }));
 
     // แจ้งเตือนบนมือถือ (Web Push) ถึงช่าง/ไอทีของสาขานั้นที่เปิดรับไว้ — ฟรี ใช้คู่กับ LINE
-    const pushTo = await workersFor(branch_code, deptType === 'IT' ? 'IT' : 'MAINT', user.id).catch(() => [] as string[]);
+    const pushTo = [
+      ...await workersFor(branch_code, deptType === 'IT' ? 'IT' : 'MAINT', user.id).catch(() => [] as string[]),
+      ...await gmsFor(branch_code, user.id).catch(() => [] as string[]),   // GM ได้ทุกใบของสาขาที่ดูแล
+    ];
     const pushResult = await sendPushToUsers(pushTo, {
       title: `🔧 งานใหม่ ${branch_code} · ${location_detail}`.slice(0, 80),
       body: `${PRIORITY_LINE[priority] || ''} ${descriptionThai}`.trim().slice(0, 160),
