@@ -963,12 +963,20 @@ export default function TicketDetailPage() {
         </div>
       )}
 
-      {/* PAUSED Banner */}
+      {/* PAUSED Banner — รอบที่พักตัวใหญ่ */}
       {ticket?.status === 'PAUSED' && (
-        <div className="card border-2 border-orange-500 bg-orange-500/10 no-print">
-          <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2">
-            {x('d_pausedTitle')}
-          </h3>
+        <div className="card border-2 border-orange-500 bg-orange-500/10" data-t="paused-banner">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2">
+              {x('d_pausedTitle')}
+            </h3>
+            {(ticket as any).pause_count > 0 && (
+              <div className="text-center rounded-xl bg-orange-500 text-white px-4 py-2 shadow-lg" data-t="pause-round">
+                <p className="text-xs font-semibold leading-tight">{x('ps_round')}</p>
+                <p className="text-4xl font-black leading-none">{(ticket as any).pause_count}</p>
+              </div>
+            )}
+          </div>
           {ticket.paused_reason && (
             <p className="text-orange-300 text-sm mt-1">{x('d_reason')}: {PAUSE_REASONS.find(r => r.value === ticket.paused_reason)?.label || ticket.paused_reason}</p>
           )}
@@ -978,6 +986,13 @@ export default function TicketDetailPage() {
           {ticket.paused_expected_end && (
             <p className="text-gray-400 text-xs">{x('d_expected')}: {new Date(ticket.paused_expected_end).toLocaleDateString(dl, { dateStyle: 'long' })}</p>
           )}
+        </div>
+      )}
+
+      {ticket?.status !== 'PAUSED' && (ticket as any).pause_count > 0 && (
+        <div className="card border border-orange-500/50 bg-orange-500/5 flex items-center justify-between gap-3" data-t="pause-history">
+          <p className="text-orange-400 font-semibold">⏸️ {x('ps_everPaused')}</p>
+          <p className="text-3xl font-black text-orange-500">{(ticket as any).pause_count} <span className="text-base font-semibold">{x('ps_times')}</span></p>
         </div>
       )}
 
@@ -1000,6 +1015,7 @@ export default function TicketDetailPage() {
                   log.action === 'RESUME' ? 'bg-blue-500' :
                   log.action === 'CANCELLED' ? 'bg-gray-500' :
                   log.action === 'CANCEL_REQUESTED' ? 'bg-amber-500' :
+                  log.action === 'PAUSE_EXPIRED' ? 'bg-yellow-500' :
                   log.action === 'CANCEL_REJECTED' ? 'bg-blue-500' :
                   log.action === 'CREATED' ? 'bg-yellow-500' :
                   'bg-navy-500'

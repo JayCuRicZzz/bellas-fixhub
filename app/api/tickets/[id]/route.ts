@@ -5,6 +5,7 @@ import { canSeeTicket } from '../../../../lib/ticket-access';
 import { sendLineMessage } from '../../../../lib/line';
 import { notifyReporter, sendPushToUsers, gmsFor, workersFor } from '../../../../lib/webpush';
 import { User } from '../../../../types';
+import { pauseCounts } from '../../../../lib/pause';
 import { getCancelRequest, cancelApprovers, WORKER_ROLES, CANCEL_APPROVER_ROLES } from '../../../../lib/cancel-request';
 
 export const dynamic = 'force-dynamic';
@@ -96,6 +97,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     ticket.images = images.map((i: any) => i.image_url);
     ticket.image_url = ticket.images[0] || null;
     ticket.cancel_request = await getCancelRequest(ticketId).catch(() => null);
+    ticket.pause_count = (await pauseCounts([ticketId]).catch(() => ({} as Record<number, number>)))[ticketId] || 0;
     return NextResponse.json(ticket);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

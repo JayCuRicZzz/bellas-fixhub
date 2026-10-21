@@ -23,6 +23,7 @@ import {
   Wind,
   QrCode,
   Package,
+  PauseCircle,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -61,6 +62,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { href: '/ai', label: t.nav.aiAssistant, icon: Bot },
     { href: '/ai/report', label: t.nav.aiReport, icon: FileText },
   ];
+
+  // งานที่พัก — ทุกคน (เห็นตามสาขา/แผนกที่มีสิทธิ์)
+  navItems.push({ href: '/dashboard/paused', label: x('menuPaused'), icon: PauseCircle });
 
   // PM link for all users
   navItems.push({ href: '/dashboard/pm', label: x('menuPm'), icon: ClipboardList });
