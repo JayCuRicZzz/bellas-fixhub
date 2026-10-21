@@ -177,8 +177,12 @@ export default function AIReportPage() {
                 <Sparkles className="w-5 h-5 text-gold-500" />
                 AI รายงานสรุป
               </h3>
-              <div className="text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {summary}
+              <div className="text-gray-300 whitespace-pre-wrap leading-relaxed" data-t="ai-summary">
+                {/* แสดง **ตัวหนา** ของ AI เป็นตัวหนาจริง (ไม่โชว์ดอกจัน) */}
+                {summary.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+                  part.startsWith('**') && part.endsWith('**')
+                    ? <strong key={i} className="text-ink">{part.slice(2, -2)}</strong>
+                    : <span key={i}>{part}</span>)}
               </div>
             </div>
           )}
