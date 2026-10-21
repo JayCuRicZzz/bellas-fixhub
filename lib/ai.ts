@@ -221,10 +221,10 @@ function classifyRequest(text: string): AIClassificationResult {
 
 interface ReportData { total:number; completed:number; pending:number; inProgress:number; byDepartment:{name:string;count:number}[]; byBranch:{name:string;count:number}[]; byCategory:{name:string;count:number}[]; }
 
-function generateReportSummary(data: ReportData): string {
-  const d = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',weekday:'long',timeZone:'Asia/Bangkok'});
+function generateReportSummary(data: ReportData, period?: string): string {
+  const d = period || new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric',weekday:'long',timeZone:'Asia/Bangkok'});
   const rate = data.total>0?Math.round((data.completed/data.total)*100):0;
-  let s = `📊 **รายงานประจำวันที่ ${d}**\n\n**สรุปภาพรวม**\n• งานทั้งหมด: ${data.total} รายการ\n• เสร็จแล้ว: ${data.completed} (${rate}%)\n• กำลังทำ: ${data.inProgress}\n• รอ: ${data.pending}\n`;
+  let s = `📊 **รายงาน${period ? '' : 'ประจำวันที่ '}${d}**\n\n**สรุปภาพรวม**\n• งานทั้งหมด: ${data.total} รายการ\n• เสร็จแล้ว: ${data.completed} (${rate}%)\n• กำลังทำ: ${data.inProgress}\n• รอ: ${data.pending}\n`;
   if (data.byDepartment.length>0) { s+=`\n**แยกตามแผนก:**\n`; data.byDepartment.forEach(x=>{s+=`• ${x.name}: ${x.count}\n`;}); }
   if (rate>=80) s+=`\n✅ อยู่ในเกณฑ์ดีมาก`;
   else if (rate>=50) s+=`\n⚠️ อยู่ในเกณฑ์ปานกลาง`;
@@ -340,7 +340,20 @@ export async function classifyRequestAI(text: string): Promise<AIClassificationR
   return classifyRequest(text);
 }
 
-export async function generateAIReport(data: ReportData): Promise<string> {
-  const r = await callAIAPI([{role:'system',content:'Generate a daily maintenance report in Thai. Professional and concise.'},{role:'user',content:`Report: Total=${data.total}, Done=${data.completed}`}]);
-  return r || generateReportSummary(data);
+export async function generateAIReport(data: ReportData & { periodLabel?: string; resolved?: number; cancelled?: number; overdueOpen?: number; slaCompliance?: any }): Promise<string> {
+  const period = (data.periodLabel || 'วันนี้').slice(0, 60);
+  const top = (arr: any[] | undefined, n: number) => (arr || []).slice(0, n).map(x => `${x.name}=${x.count}`).join(', ') || '-';
+  const sla = data.slaCompliance || {};
+  const facts = [
+    `ช่วงเวลา: ${period}`,
+    `งานทั้งหมด=${data.total} · รอรับ=${data.pending} · กำลังทำ=${data.inProgress} · ซ่อมเสร็จรออนุมัติ=${data.resolved ?? 0} · ปิดงาน=${data.completed} · ยกเลิก=${data.cancelled ?? 0}`,
+    `ค้างเกิน SLA ตอนนี้=${data.overdueOpen ?? 0} · ปิดทัน SLA=${sla.on_time ?? 0}/${sla.total ?? 0}`,
+    `แยกสาขา: ${top(data.byBranch, 7)}`,
+    `หมวดที่แจ้งมากสุด: ${top(data.byCategory, 6)}`,
+  ].join('\n');
+  const r = await callAIAPI([
+    { role: 'system', content: 'You write maintenance reports for a hotel group in Thai. Use only the numbers given; do not invent figures. Be concise: overview, notable points (backlog, SLA, busiest branch/category), 2-3 practical recommendations.' },
+    { role: 'user', content: `สรุปรายงานงานซ่อม${period}\n${facts}` },
+  ]);
+  return r || generateReportSummary(data, period);
 }
