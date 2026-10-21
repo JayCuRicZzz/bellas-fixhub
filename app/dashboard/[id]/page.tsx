@@ -63,6 +63,9 @@ export default function TicketDetailPage() {
   const [showResolve, setShowResolve] = useState(false);
   const [resolveNote, setResolveNote] = useState('');
   const [refilled, setRefilled] = useState(false);
+  // ยกเลิก: 'request' = ผู้แจ้งขอ (รอ GM/Admin อนุมัติ) · 'now' = GM/Admin ยกเลิกเอง · 'reject' = ไม่อนุมัติคำขอ
+  const [cancelMode, setCancelMode] = useState<'' | 'request' | 'now' | 'reject'>('');
+  const [cancelReason, setCancelReason] = useState('');
   const [refillType, setRefillType] = useState('');
   const [pauseReason, setPauseReason] = useState('อะไหล่ไม่มี/รอสั่งซื้อ');
   const [pauseEndDate, setPauseEndDate] = useState('');
@@ -581,6 +584,21 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
+        {(ticket as any).cancel_request && (
+          <div className="mb-4 rounded-xl border-2 border-amber-500 bg-amber-500/10 px-4 py-3" data-t="cancel-pending">
+            <p className="text-amber-500 font-bold">{x('c_pending')}</p>
+            <p className="text-sm text-ink mt-1">“{(ticket as any).cancel_request.reason}”</p>
+            <p className="text-xs text-gray-400 mt-0.5">{x('c_pendingBy')} {(ticket as any).cancel_request.by_name} · {new Date((ticket as any).cancel_request.at).toLocaleString(dl)}</p>
+            {['admin', 'gm'].includes(user?.role || '') && (
+              <div className="flex flex-wrap gap-2 mt-3 no-print">
+                <button onClick={() => { if (window.confirm(x('c_approve') + ' ?')) handleStatusUpdate('CANCELLED'); }} disabled={!!actionLoading} data-t="cancel-approve"
+                  className="btn-danger text-sm">{x('c_approve')}</button>
+                <button onClick={() => { setCancelReason(''); setCancelMode('reject'); }} disabled={!!actionLoading} data-t="cancel-reject"
+                  className="btn-secondary text-sm">{x('c_reject')}</button>
+              </div>
+            )}
+          </div>
+        )}
         {(ticket as any).refrigerant_repeat_of ? (
           <div className="mb-4 rounded-xl border-2 border-red-500 bg-red-600/15 px-4 py-3" data-t="refill-repeat">
             <p className="text-red-500 font-bold text-base">{x('d_refillRepeat')}</p>
@@ -946,6 +964,8 @@ export default function TicketDetailPage() {
                   log.action === 'PAUSED' ? 'bg-orange-500' :
                   log.action === 'RESUME' ? 'bg-blue-500' :
                   log.action === 'CANCELLED' ? 'bg-gray-500' :
+                  log.action === 'CANCEL_REQUESTED' ? 'bg-amber-500' :
+                  log.action === 'CANCEL_REJECTED' ? 'bg-blue-500' :
                   log.action === 'CREATED' ? 'bg-yellow-500' :
                   'bg-navy-500'
                 }`} />
@@ -1063,20 +1083,52 @@ export default function TicketDetailPage() {
               {x('b_flag')}
             </button>
           )}
-          {ticket.status !== 'CANCELLED' && ticket.status !== 'APPROVED' &&
-           (['sup', 'supit', 'admin', 'gm'].includes(user?.role || '') ||
-            (ticket.reporter_id === user?.id && ticket.status === 'PENDING')) && (
-            <button
-              onClick={() => handleStatusUpdate('CANCELLED')}
-              disabled={actionLoading === 'CANCELLED'}
-              className="btn-danger text-sm flex items-center gap-2"
-            >
+          {/* ยกเลิก: GM/Admin ยกเลิกเอง (ใส่เหตุผล) · ผู้แจ้งส่งคำขอให้ GM อนุมัติ · ช่าง/ไอที (รวมหัวหน้า) ไม่มีปุ่ม */}
+          {ticket.status !== 'CANCELLED' && ticket.status !== 'APPROVED' && ['admin', 'gm'].includes(user?.role || '') && !(ticket as any).cancel_request && (
+            <button onClick={() => { setCancelReason(''); setCancelMode('now'); }} disabled={actionLoading === 'CANCELLED'} data-t="cancel-now"
+              className="btn-danger text-sm flex items-center gap-2">
               {actionLoading === 'CANCELLED' ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-              {x('b_cancel')}
+              {x('c_cancelNow')}
+            </button>
+          )}
+          {ticket.status !== 'CANCELLED' && ticket.status !== 'APPROVED' && ticket.reporter_id === user?.id &&
+           !['admin', 'gm', 'tech', 'it', 'sup', 'supit'].includes(user?.role || '') && !(ticket as any).cancel_request && (
+            <button onClick={() => { setCancelReason(''); setCancelMode('request'); }} disabled={!!actionLoading} data-t="cancel-request"
+              className="btn-danger text-sm flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              {x('c_request')}
             </button>
           )}
         </div>
       </div>
+
+      {cancelMode && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" data-t="cancel-modal">
+          <div className="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-ink mb-1">{cancelMode === 'request' ? x('c_titleReq') : cancelMode === 'reject' ? x('c_reject') : x('c_titleNow')}</h3>
+            <p className="text-gray-400 text-sm mb-4">{cancelMode === 'request' ? x('c_subReq') : x('c_subNow')}</p>
+            <label htmlFor="cancel-reason" className="block text-sm text-gray-300 mb-2">{x('c_reason')}</label>
+            <textarea id="cancel-reason" value={cancelReason} onChange={e => setCancelReason(e.target.value)} rows={3} maxLength={500}
+              placeholder={x('c_reasonPh')} data-t="cancel-reason"
+              className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-ink placeholder-gray-500 focus:border-gold-500 focus:outline-none mb-4" />
+            <div className="flex gap-3">
+              <button
+                disabled={cancelReason.trim().length < 3 || !!actionLoading} data-t="cancel-submit"
+                onClick={async () => {
+                  const mode = cancelMode; setCancelMode('');
+                  await handleStatusUpdate(mode === 'request' ? 'CANCEL_REQUEST' : mode === 'reject' ? 'CANCEL_REJECT' : 'CANCELLED',
+                    { pending_reason: cancelReason.trim() });
+                }}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-lg font-semibold text-sm">
+                {cancelMode === 'request' ? x('c_send') : cancelMode === 'reject' ? x('c_reject') : x('c_confirm')}
+              </button>
+              <button onClick={() => setCancelMode('')} className="flex-1 py-2.5 bg-navy-700 hover:bg-navy-600 text-gray-300 rounded-lg text-sm">
+                {x('c_close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pause Work Modal */}
       {/* ซ่อมเสร็จ — บันทึกสิ่งที่ทำ (แสดงในใบงานเป็นหมายเหตุ · ช่องติ๊ก "เติมน้ำยาแอร์" → รายงานน้ำยาแอร์ + เตือนเติมซ้ำ 15 วัน) */}

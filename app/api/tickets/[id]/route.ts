@@ -5,6 +5,7 @@ import { canSeeTicket } from '../../../../lib/ticket-access';
 import { sendLineMessage } from '../../../../lib/line';
 import { notifyReporter, sendPushToUsers, gmsFor, workersFor } from '../../../../lib/webpush';
 import { User } from '../../../../types';
+import { getCancelRequest, cancelApprovers, WORKER_ROLES, CANCEL_APPROVER_ROLES } from '../../../../lib/cancel-request';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +95,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const images = await sql`select image_url, image_type from fixhub.ticket_images where ticket_id = ${ticketId} order by uploaded_at`;
     ticket.images = images.map((i: any) => i.image_url);
     ticket.image_url = ticket.images[0] || null;
+    ticket.cancel_request = await getCancelRequest(ticketId).catch(() => null);
     return NextResponse.json(ticket);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -228,14 +230,54 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       slaInfo = { flagged_by: userId, reason };
       sendLineMessage(`🚩 งานไม่เรียบร้อย — แจ้งโดย${isOwnReport ? 'ผู้แจ้ง' : 'หัวหน้า'}\n🔢 ${current.ticket_number}\n📍 ${current.location_detail}\n📝 ${reason}`, current.dept_type, [], { ticketEvent: true }).catch(() => {});
 
-    } else if (status === 'CANCELLED') {
-      // หัวหน้ายกเลิกได้ทุกงานที่ยังไม่ปิด · ผู้แจ้งยกเลิกใบของตัวเองได้ก่อนช่างรับงาน
-      const allowed = isSupervisor || (isOwnReport && st === 'PENDING');
-      if (!allowed) return NextResponse.json({ error: 'ไม่มีสิทธิ์ยกเลิกใบงานนี้' }, { status: 403 });
+    } else if (status === 'CANCEL_REQUEST') {
+      // ผู้แจ้งขอยกเลิก (ต้องมีเหตุผล) → GM สาขา / Admin เป็นคนอนุมัติ · ช่างและไอที (รวมหัวหน้า) ขอไม่ได้
+      if (WORKER_ROLES.includes(user.role)) return NextResponse.json({ error: 'ช่างและไอทีไม่สามารถยกเลิกใบงานได้' }, { status: 403 });
+      if (!isOwnReport) return NextResponse.json({ error: 'ขอยกเลิกได้เฉพาะใบงานที่ตัวเองแจ้ง' }, { status: 403 });
       if (['APPROVED', 'CANCELLED'].includes(st)) return conflict('ใบงานนี้ปิดแล้ว');
-      await sql`update fixhub.tickets set status = 'CANCELLED', pending_reason = ${reasonIn}
+      if (!reasonIn || reasonIn.trim().length < 3) return NextResponse.json({ error: 'กรุณาระบุเหตุผลที่ขอยกเลิก' }, { status: 400 });
+      if (await getCancelRequest(ticketId)) return conflict('ส่งคำขอยกเลิกไปแล้ว รอผู้จัดการอนุมัติ');
+      await logActivity(ticketId, 'CANCEL_REQUESTED', st, st, user, reasonIn.trim());
+      const to = await cancelApprovers(current.branch_code).catch(() => [] as string[]);
+      await sendPushToUsers(to.filter(u => u !== userId), {
+        title: `⏳ ขอยกเลิกใบงาน · ${current.branch_code} · ${current.location_detail || ''}`.slice(0, 80),
+        body: `${current.ticket_number} · ${user.full_name || user.username}: ${reasonIn.trim()}`.slice(0, 160),
+        url: `/dashboard/${ticketId}`, tag: `ticket-${ticketId}-cancelreq`,
+      });
+      slaInfo = { cancel_requested: true };
+
+    } else if (status === 'CANCEL_REJECT') {
+      if (!CANCEL_APPROVER_ROLES.includes(user.role)) return NextResponse.json({ error: 'เฉพาะ GM / Admin เท่านั้นที่อนุมัติคำขอยกเลิกได้' }, { status: 403 });
+      const req = await getCancelRequest(ticketId);
+      if (!req) return conflict('ไม่มีคำขอยกเลิกที่รออยู่');
+      await logActivity(ticketId, 'CANCEL_REJECTED', st, st, user, reasonIn);
+      if (req.by_id && req.by_id !== userId) {
+        await sendPushToUsers([req.by_id], {
+          title: '❌ ไม่อนุมัติยกเลิก · Cancel request declined',
+          body: `${current.ticket_number} · ${user.full_name || user.username}${reasonIn ? ': ' + reasonIn : ''}`.slice(0, 160),
+          url: `/dashboard/${ticketId}`, tag: `ticket-${ticketId}-cancelreq`,
+        });
+      }
+
+    } else if (status === 'CANCELLED') {
+      // ยกเลิกจริงได้เฉพาะ GM / Admin (ยกเลิกเอง หรืออนุมัติคำขอของผู้แจ้ง) — ต้องมีเหตุผลเสมอ
+      if (!CANCEL_APPROVER_ROLES.includes(user.role)) {
+        return NextResponse.json({ error: WORKER_ROLES.includes(user.role) ? 'ช่างและไอทีไม่สามารถยกเลิกใบงานได้' : 'ส่งคำขอยกเลิกให้ผู้จัดการอนุมัติ' }, { status: 403 });
+      }
+      if (['APPROVED', 'CANCELLED'].includes(st)) return conflict('ใบงานนี้ปิดแล้ว');
+      const req = await getCancelRequest(ticketId);
+      const reason = (reasonIn && reasonIn.trim()) || (req ? `อนุมัติคำขอของ ${req.by_name || 'ผู้แจ้ง'}: ${req.reason || ''}` : '');
+      if (!reason) return NextResponse.json({ error: 'กรุณาระบุเหตุผลที่ยกเลิก' }, { status: 400 });
+      await sql`update fixhub.tickets set status = 'CANCELLED', pending_reason = ${clip(reason)}
                 where ticket_id = ${ticketId} and status not in ('APPROVED','CANCELLED')`;
-      await logActivity(ticketId, 'CANCELLED', st, 'CANCELLED', user, reasonIn);
+      await logActivity(ticketId, 'CANCELLED', st, 'CANCELLED', user, clip(reason));
+      if (req?.by_id && req.by_id !== userId) {
+        await sendPushToUsers([req.by_id], {
+          title: '✅ อนุมัติยกเลิกแล้ว · Cancel approved',
+          body: `${current.ticket_number} · ${user.full_name || user.username}`.slice(0, 160),
+          url: `/dashboard/${ticketId}`, tag: `ticket-${ticketId}-cancelreq`,
+        });
+      }
 
     } else if (status === 'PAUSED') {
       if (!isWorker) return NextResponse.json({ error: 'ไม่มีสิทธิ์' }, { status: 403 });

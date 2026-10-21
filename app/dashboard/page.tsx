@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0 });
   const [todayStats, setTodayStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0 });
+  const [cancelReqs, setCancelReqs] = useState<any[]>([]);
   const [deptStats, setDeptStats] = useState<{ name: string; count: number }[]>([]);
 
   // Filters
@@ -105,6 +106,13 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, branchFilter, deptFilter, startDate, endDate]);
 
+  // GM / Admin: คำขอยกเลิกที่รออนุมัติ
+  useEffect(() => {
+    if (!user || !['admin', 'gm'].includes(user.role)) return;
+    fetch('/api/tickets/cancel-requests', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json()).then(d => setCancelReqs(Array.isArray(d.items) ? d.items : [])).catch(() => {});
+  }, [user, token]);
+
   useEffect(() => {
     fetchTickets();
     fetchStats();
@@ -176,6 +184,21 @@ export default function DashboardPage() {
 
       {/* แจ้งเตือนบนมือถือ — ทุกตำแหน่ง (ข้อความต่างกันตามหน้าที่) */}
       {user && <PushToggle token={token} role={user.role} />}
+
+      {cancelReqs.length > 0 && (
+        <div className="card border-2 border-amber-500/60 bg-amber-500/10" data-t="cancel-requests">
+          <h3 className="text-amber-500 font-bold mb-2">{x('c_dashTitle')} ({cancelReqs.length})</h3>
+          <div className="space-y-2">
+            {cancelReqs.map((r: any) => (
+              <Link key={r.ticket_id} href={`/dashboard/${r.ticket_id}`}
+                className="block rounded-lg bg-navy-800/80 border border-navy-600 px-3 py-2 hover:border-amber-500">
+                <p className="text-sm text-ink font-medium">{r.ticket_number} · {r.branch_code} · {r.location_detail}</p>
+                <p className="text-xs text-gray-400 truncate">{r.by_name}: “{r.reason}”</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards - Clickable */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
