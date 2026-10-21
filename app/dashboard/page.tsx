@@ -6,14 +6,25 @@ import { useAuth } from '../../components/authprovider';
 import { useI18n } from '../../lib/i18n/i18n';
 import FilterBar from '../../components/filterbar';
 import TicketCard from '../../components/ticketcard';
-import { Ticket, DEPARTMENTS } from '../../types';
+import { Ticket } from '../../types';
 import { LayoutDashboard, Clock, Wrench, CheckCircle2, AlertTriangle, PlusCircle, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import PushToggle from '../../components/pushtoggle';
 
+// แผนกงานที่ผู้ใช้ดูแล (ตรงกับ getWorkDeptScope ฝั่งเซิร์ฟเวอร์) — ช่างเห็นแค่งานช่าง ไอทีเห็นแค่งานไอที
+function workScope(u: any): 'MAINTENANCE' | 'IT' | '' {
+  if (!u || ['admin', 'gm'].includes(u.role)) return '';
+  if (u.department === 'MAINT' || u.department === 'MAINTENANCE') return 'MAINTENANCE';
+  if (u.department === 'IT') return 'IT';
+  if (['it', 'supit'].includes(u.role)) return 'IT';
+  if (['tech', 'sup', 'front', 'house'].includes(u.role)) return 'MAINTENANCE';
+  return '';
+}
+const todayBkk = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+
 export default function DashboardPage() {
   const { user, token } = useAuth();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const x = useX();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +36,20 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
-  const [deptFilter, setDeptFilter] = useState('');
+  const scope = workScope(user);
+  const [deptFilter, setDeptFilter] = useState<string>(scope);
+  useEffect(() => { setDeptFilter(scope); }, [scope]);
+  // ช่วงวันที่ ('' = ทุกวัน)
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const today = todayBkk();
+  const isToday = startDate === today && endDate === today;
+  const dateParams = (p: URLSearchParams) => {
+    if (startDate || endDate) {
+      p.set('start_date', startDate || endDate);
+      p.set('end_date', endDate || startDate);
+    }
+  };
 
   // Active stat card
   const [activeCard, setActiveCard] = useState<'total' | 'pending' | 'inProgress' | 'completed' | null>(null);
@@ -36,6 +60,7 @@ export default function DashboardPage() {
       if (statusFilter) params.set('status', statusFilter);
       if (branchFilter) params.set('branch', branchFilter);
       if (deptFilter) params.set('department', deptFilter);
+      dateParams(params);
 
       const res = await fetch(`/api/tickets?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -47,38 +72,38 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, statusFilter, branchFilter, deptFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, statusFilter, branchFilter, deptFilter, startDate, endDate]);
 
   const fetchStats = useCallback(async () => {
     try {
-      // All-time stats
-      const resAll = await fetch('/api/reports/daily?period=all', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const all = await resAll.json();
-      setStats({
-        total: all.total || 0,
-        pending: all.pending || 0,
-        inProgress: all.inProgress || 0,
-        completed: all.completed || 0,
-      });
-      if (all.byDepartment) setDeptStats(all.byDepartment);
+      const headers = { Authorization: `Bearer ${token}` };
+      const base = () => {
+        const p = new URLSearchParams();
+        if (branchFilter) p.set('branch', branchFilter);
+        return p;
+      };
+      // การ์ดตัวเลข: ตามแผนก + ช่วงวันที่ที่เลือก (ไม่เลือก = ทั้งหมด)
+      const pMain = base();
+      if (deptFilter) pMain.set('department', deptFilter);
+      if (startDate || endDate) dateParams(pMain); else pMain.set('period', 'all');
+      // ตัวเลขบนแท็บ ช่าง/ไอที: ช่วงวันที่เดียวกันแต่ไม่กรองแผนก
+      const pTabs = base();
+      if (startDate || endDate) dateParams(pTabs); else pTabs.set('period', 'all');
+      const pToday = base();
+      if (deptFilter) pToday.set('department', deptFilter);
+      pToday.set('period', 'today');
 
-      // Today stats
-      const resToday = await fetch('/api/reports/daily?period=today', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const today = await resToday.json();
-      setTodayStats({
-        total: today.total || 0,
-        pending: today.pending || 0,
-        inProgress: today.inProgress || 0,
-        completed: today.completed || 0,
-      });
+      const [all, tabs, td] = await Promise.all([pMain, pTabs, pToday].map(p =>
+        fetch(`/api/reports/daily?${p.toString()}`, { headers }).then(r => r.json()).catch(() => ({}))));
+      setStats({ total: all.total || 0, pending: all.pending || 0, inProgress: all.inProgress || 0, completed: all.completed || 0 });
+      setDeptStats(Array.isArray(tabs.byDepartment) ? tabs.byDepartment : []);
+      setTodayStats({ total: td.total || 0, pending: td.pending || 0, inProgress: td.inProgress || 0, completed: td.completed || 0 });
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
-  }, [token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, branchFilter, deptFilter, startDate, endDate]);
 
   useEffect(() => {
     fetchTickets();
@@ -92,7 +117,7 @@ export default function DashboardPage() {
       case 'total':
         setStatusFilter('');
         setBranchFilter('');
-        setDeptFilter('');
+        setDeptFilter(scope);
         break;
       case 'pending':
         setStatusFilter('PENDING');
@@ -195,32 +220,58 @@ export default function DashboardPage() {
       </div>
 
 
-      {/* Department Tabs — กรองตามแผนกผู้แจ้ง */}
-      <div className="flex gap-2 flex-wrap">
-        {[
-          { value: '', label: 'ทั้งหมด', labelEn: 'All', icon: '🏢', count: stats.total, color: 'border-gray-500 text-gray-300', activeColor: 'bg-gray-500/20 border-gray-400 text-ink' },
-          ...DEPARTMENTS.map(dept => ({
-            value: dept.code,
-            label: (lang === 'th' ? dept.name_th : dept.name_en),
-            labelEn: dept.name_en,
-            icon: dept.icon,
-            count: deptStats.find(d => d.name === dept.code)?.count || 0,
-            color: 'border-navy-600 text-gray-400',
-            activeColor: 'bg-gold-500/20 border-gold-500 text-gold-400',
-          })),
-        ].map(tab => (
-          <button
-            key={tab.value}
-            onClick={() => setDeptFilter(tab.value)}
-            className={`px-3 sm:px-4 py-2 rounded-xl border text-sm font-medium transition-all flex items-center gap-1.5 ${
-              deptFilter === tab.value ? tab.activeColor + ' shadow-lg' : tab.color + ' hover:border-gray-400 hover:text-ink'
-            }`}
-          >
-            <span className="text-lg">{tab.icon}</span>
-            {tab.value === '' ? x('all') : (lang === 'th' ? tab.label : tab.labelEn)}
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-navy-900/80 text-xs font-bold text-gold-500">{tab.count}</span>
-          </button>
-        ))}
+      {/* แผนกงาน — มีแค่ ช่าง / ไอที (แผนกอื่นไม่ได้รับงานซ่อม) · ช่างเห็นแค่งานช่าง ไอทีเห็นแค่งานไอที */}
+      <div className="flex gap-2 flex-wrap" data-t="dept-tabs">
+        {(scope
+          ? [{ value: scope, label: scope === 'IT' ? x('dashIT') : x('dashMaint') }]
+          : [
+              { value: '', label: '🏢 ' + x('all') },
+              { value: 'MAINTENANCE', label: x('dashMaint') },
+              { value: 'IT', label: x('dashIT') },
+            ]
+        ).map(tab => {
+          const count = tab.value
+            ? (deptStats.find(d => d.name === tab.value)?.count || 0)
+            : deptStats.reduce((n, d) => n + (d.name === 'MAINTENANCE' || d.name === 'IT' ? d.count : 0), 0);
+          const active = deptFilter === tab.value;
+          return (
+            <button
+              key={tab.value || 'all'}
+              onClick={() => !scope && setDeptFilter(tab.value)}
+              data-t={`dept-tab-${tab.value || 'ALL'}`}
+              className={`px-3 sm:px-4 py-2 rounded-xl border text-sm font-medium transition-all flex items-center gap-1.5 ${
+                active ? 'bg-gold-500/20 border-gold-500 text-gold-400 shadow-lg' : 'border-navy-600 text-gray-400 hover:border-gray-400 hover:text-ink'
+              } ${scope ? 'cursor-default' : ''}`}
+            >
+              {tab.label}
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-navy-900/80 text-xs font-bold text-gold-500">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* วันที่: ใบงานวันนี้ / ทุกวัน / เลือกช่วง ตั้งแต่–ถึง */}
+      <div className="card p-3 flex flex-wrap items-end gap-2" data-t="date-filter">
+        <button onClick={() => { setStartDate(today); setEndDate(today); }} data-t="date-today"
+          className={`px-3 py-2 rounded-lg border text-sm font-medium min-h-[40px] ${isToday ? 'bg-gold-500/20 border-gold-500 text-gold-400' : 'border-navy-600 text-gray-300 hover:text-ink'}`}>
+          {x('dashToday')}
+        </button>
+        <button onClick={() => { setStartDate(''); setEndDate(''); }} data-t="date-all"
+          className={`px-3 py-2 rounded-lg border text-sm font-medium min-h-[40px] ${!startDate && !endDate ? 'bg-gold-500/20 border-gold-500 text-gold-400' : 'border-navy-600 text-gray-300 hover:text-ink'}`}>
+          {x('dashAllDates')}
+        </button>
+        <label className="flex flex-col text-xs text-gray-400">
+          {x('dashFrom')}
+          <input type="date" value={startDate} max={endDate || undefined} data-t="date-from"
+            onChange={e => { setStartDate(e.target.value); if (!endDate) setEndDate(e.target.value); }}
+            className="input-field mt-1 py-1.5 text-sm" />
+        </label>
+        <label className="flex flex-col text-xs text-gray-400">
+          {x('dashTo')}
+          <input type="date" value={endDate} min={startDate || undefined} data-t="date-to"
+            onChange={e => { setEndDate(e.target.value); if (!startDate) setStartDate(e.target.value); }}
+            className="input-field mt-1 py-1.5 text-sm" />
+        </label>
       </div>
 
       {/* Filters */}

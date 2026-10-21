@@ -32,6 +32,10 @@ export async function GET(req: NextRequest) {
     const room = (searchParams.get('room') || '').trim().slice(0, 60);
     const roomRe = /^\d+$/.test(room) ? `(^|[^0-9])${room}([^0-9]|$)` : '';
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '100', 10) || 100, 1), 500);
+    // ช่วงวันที่ (เวลาไทย) ?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD — ไม่ส่ง = ทุกวัน
+    const isoD = /^\d{4}-\d{2}-\d{2}$/;
+    const startDate = isoD.test(searchParams.get('start_date') || '') ? searchParams.get('start_date')! : '';
+    const endDate = isoD.test(searchParams.get('end_date') || '') ? searchParams.get('end_date')! : '';
 
     const statuses = status.split(',').map(s => s.trim()).filter(s => VALID_STATUS.includes(s));
     const scope = getWorkDeptScope(user);
@@ -45,6 +49,8 @@ export async function GET(req: NextRequest) {
         ${statuses.length > 0 ? sql`and t.status = any(${statuses})` : sql``}
         ${branch ? sql`and t.branch_code = ${branch}` : sql``}
         ${department ? sql`and t.reporter_department = ${department === 'MAINTENANCE' ? 'MAINT' : department}` : sql``}
+        ${startDate ? sql`and (t.created_at at time zone 'Asia/Bangkok')::date >= ${startDate}::date` : sql``}
+        ${endDate ? sql`and (t.created_at at time zone 'Asia/Bangkok')::date <= ${endDate}::date` : sql``}
         ${deptType ? sql`and t.dept_type = ${deptType === 'ช่าง' ? 'MAINTENANCE' : deptType === 'ไอที' ? 'IT' : deptType}` : sql``}
         ${room ? (roomRe ? sql`and (t.room_no = ${room.toUpperCase()} or (t.room_no is null and t.location_detail ~ ${roomRe}))` : (ROOM_RE.test(room.toUpperCase()) ? sql`and t.room_no = ${room.toUpperCase()}` : sql`and t.location_detail ilike ${'%' + room + '%'}`)) : sql``}
         ${q ? sql`and (t.ticket_number ilike ${'%' + q + '%'} or t.location_detail ilike ${'%' + q + '%'} or t.description ilike ${'%' + q + '%'})` : sql``}
