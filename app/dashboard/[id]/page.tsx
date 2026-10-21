@@ -64,6 +64,14 @@ export default function TicketDetailPage() {
   const [resolveNote, setResolveNote] = useState('');
   const [refilled, setRefilled] = useState(false);
   // ยกเลิก: 'request' = ผู้แจ้งขอ (รอ GM/Admin อนุมัติ) · 'now' = GM/Admin ยกเลิกเอง · 'reject' = ไม่อนุมัติคำขอ
+  // เพิ่งแจ้งซ่อมเสร็จ (?new=1) → แถบสำเร็จ + ปุ่มคัดลอก/ส่งต่อ LINE/แจ้งใหม่/แดชบอร์ด
+  const [isNew, setIsNew] = useState(false);
+  const [againHref, setAgainHref] = useState('/dashboard/create');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsNew(new URLSearchParams(window.location.search).get('new') === '1');
+    try { const a = sessionStorage.getItem('fh_report_again'); if (a && a.startsWith('/')) setAgainHref(a); } catch {}
+  }, [id]);
   const [cancelMode, setCancelMode] = useState<'' | 'request' | 'now' | 'reject'>('');
   const [cancelReason, setCancelReason] = useState('');
   const [refillType, setRefillType] = useState('');
@@ -483,6 +491,33 @@ export default function TicketDetailPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 fade-in">
       {/* Back button + Print/Copy */}
+      {isNew && (
+        <div className="card border-2 border-green-500/60 bg-green-500/10 no-print" data-t="new-ticket-banner">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-green-500 font-bold text-lg">✅ {x('submitted')} · <span className="font-mono">{ticket.ticket_number}</span></p>
+          </div>
+          <p className="text-sm text-gray-300 mt-1">{x('n_hint')}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+            <button onClick={handleCopyLine} data-t="new-copy"
+              className="btn-secondary text-sm flex items-center justify-center gap-2 min-h-[44px]">
+              {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? x('d_copied') : x('d_copy')}
+            </button>
+            <a href={lineText ? `https://line.me/R/share?text=${encodeURIComponent(lineText)}` : undefined}
+              target="_blank" rel="noopener" data-t="new-share"
+              className={`btn-primary text-sm flex items-center justify-center gap-2 min-h-[44px] bg-green-600 hover:bg-green-500 border-green-600 ${lineText ? '' : 'opacity-50 pointer-events-none'}`}>
+              📤 {x('d_shareLine')}
+            </a>
+            <Link href={againHref} data-t="new-again" className="btn-secondary text-sm flex items-center justify-center min-h-[44px]">
+              {x('n_newReport')}
+            </Link>
+            <Link href="/dashboard" data-t="new-dashboard" className="btn-secondary text-sm flex items-center justify-center min-h-[44px]">
+              {x('n_dashboard')}
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           href="/dashboard"

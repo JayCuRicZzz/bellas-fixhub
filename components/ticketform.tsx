@@ -2,6 +2,7 @@
 import { uploadImageFile } from '../lib/image-client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from './authprovider';
 import { useI18n } from '../lib/i18n/i18n';
 import { useX, catName } from '../lib/i18n/extra';
@@ -19,6 +20,7 @@ const AREAS = ['ล็อบบี้', 'ฟร้อนท์', 'ทางเ�
 
 export default function TicketForm() {
   const { user, token } = useAuth();
+  const router = useRouter();
   const { t, lang } = useI18n();
   const x = useX();
   const [branchCode, setBranchCode] = useState(user?.branches?.length === 1 ? user.branches[0] : (user?.branch_code || ''));
@@ -185,6 +187,14 @@ export default function TicketForm() {
       });
 
       const data = await res.json();
+      if (res.ok && data.ticket_id) {
+        // ส่งสำเร็จ → เปิดหน้าใบงานเลย (แคปหน้าจอ/คัดลอก/ส่งต่อ LINE ได้ในหน้าเดียว)
+        // จำหน้าแจ้งซ่อมเดิมไว้ (รวม QR ของห้อง) ให้ปุ่ม "แจ้งซ่อมใหม่" กลับมาที่เดิม
+        try { sessionStorage.setItem('fh_report_again', window.location.pathname + window.location.search); } catch {}
+        setSuccess(true);   // ปิดปุ่มส่ง กันกดซ้ำระหว่างเปลี่ยนหน้า (createdTicket ว่าง → ไม่โชว์กล่องเดิม)
+        router.push(`/dashboard/${data.ticket_id}?new=1`);
+        return;
+      }
       if (res.ok) {
         setSuccess(true);
         setCreatedTicket({ ticket_number: data.ticket_number, branch_code: branchCode, location_detail: locationDetail, description, priority, department });
