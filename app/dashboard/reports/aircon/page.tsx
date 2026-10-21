@@ -20,16 +20,17 @@ export default function AirconReportPage() {
     try {
       const params = new URLSearchParams({ period, branch });
       const res = await fetch(`/api/reports/aircon?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (res.ok) setData(await res.json());
+      if (res.ok) setData(await res.json()); else setData(null);
     } catch (e) {
       console.error('Failed to fetch aircon report:', e);
     }
     setLoading(false);
   };
 
-  useEffect(() => { if (token) fetchData(); }, [token, period, branch]);
+  // ล็อกอินด้วยคุกกี้ token เป็น null ได้ — เดิมรอ token แล้วหน้าหมุนค้างตลอด
+  useEffect(() => { if (user) fetchData(); }, [user, token, period, branch]);
 
   return (
     <div className="space-y-6 fade-in">
