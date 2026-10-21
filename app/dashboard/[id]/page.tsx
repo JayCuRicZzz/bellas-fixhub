@@ -62,6 +62,8 @@ export default function TicketDetailPage() {
   const [showPause, setShowPause] = useState(false);
   const [showResolve, setShowResolve] = useState(false);
   const [resolveNote, setResolveNote] = useState('');
+  const [refilled, setRefilled] = useState(false);
+  const [refillType, setRefillType] = useState('');
   const [pauseReason, setPauseReason] = useState('อะไหล่ไม่มี/รอสั่งซื้อ');
   const [pauseEndDate, setPauseEndDate] = useState('');
   const [pauseCustomReason, setPauseCustomReason] = useState('');
@@ -579,6 +581,16 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
+        {(ticket as any).refrigerant_repeat_of ? (
+          <div className="mb-4 rounded-xl border-2 border-red-500 bg-red-600/15 px-4 py-3" data-t="refill-repeat">
+            <p className="text-red-500 font-bold text-base">{x('d_refillRepeat')}</p>
+            <p className="text-red-400 text-sm mt-0.5">{x('d_refillRepeatSub').replace('{n}', String((ticket as any).refrigerant_repeat_days ?? '-'))}</p>
+          </div>
+        ) : (ticket as any).refrigerant_refilled ? (
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-sm text-sky-400" data-t="refill-flag">
+            {x('d_refill')}{(ticket as any).refrigerant_type && (ticket as any).refrigerant_type !== 'OTHER' ? ` · ${(ticket as any).refrigerant_type}` : ''}
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div className="flex items-center gap-2 text-gray-400">
             <MapPin className="w-4 h-4 text-gray-500" />
@@ -1067,7 +1079,7 @@ export default function TicketDetailPage() {
       </div>
 
       {/* Pause Work Modal */}
-      {/* ซ่อมเสร็จ — บันทึกสิ่งที่ทำ (แสดงในใบงานเป็นหมายเหตุ · ใส่คำว่า "น้ำยา" ระบบนับในรายงานน้ำยาแอร์) */}
+      {/* ซ่อมเสร็จ — บันทึกสิ่งที่ทำ (แสดงในใบงานเป็นหมายเหตุ · ช่องติ๊ก "เติมน้ำยาแอร์" → รายงานน้ำยาแอร์ + เตือนเติมซ้ำ 15 วัน) */}
       {showResolve && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl">
@@ -1077,10 +1089,33 @@ export default function TicketDetailPage() {
             <textarea id="resolve-note" value={resolveNote} onChange={e => setResolveNote(e.target.value)} rows={3} maxLength={1000}
               placeholder={x('r_ph')}
               className="w-full px-4 py-2.5 bg-navy-700 border border-navy-500 rounded-lg text-ink placeholder-gray-500 focus:border-gold-500 focus:outline-none mb-2" />
+            {(ticket.dept_type || '').toUpperCase() !== 'IT' && (
+              <div className={`mb-3 rounded-lg border p-3 ${refilled ? 'border-sky-500 bg-sky-500/10' : 'border-navy-500 bg-navy-700/50'}`}>
+                <label className="flex items-center gap-3 cursor-pointer min-h-[32px]">
+                  <input type="checkbox" checked={refilled} onChange={e => setRefilled(e.target.checked)} className="w-5 h-5 accent-sky-500" data-t="resolve-refill" />
+                  <span className="text-ink text-sm font-medium">{x('r_refill')}</span>
+                </label>
+                {refilled && (
+                  <div className="flex flex-wrap gap-2 mt-2" role="radiogroup" aria-label={x('r_refillType')}>
+                    {['R32', 'R410A', 'R22', 'OTHER'].map(v => (
+                      <button key={v} type="button" onClick={() => setRefillType(v)} data-t={`refill-type-${v}`}
+                        className={`px-3 py-1.5 rounded-lg text-sm border ${refillType === v ? 'border-sky-500 bg-sky-500/20 text-sky-300 font-semibold' : 'border-navy-500 text-gray-300'}`}>
+                        {v === 'OTHER' ? x('r_refillOther') : v}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <p className="text-xs text-gray-500 mb-5">{x('r_hint')}</p>
             <div className="flex gap-3">
               <button
-                onClick={async () => { setShowResolve(false); await handleStatusUpdate('RESOLVED', resolveNote.trim() ? { pending_reason: resolveNote.trim() } : {}); }}
+                onClick={async () => {
+                  setShowResolve(false);
+                  const extra: Record<string, any> = resolveNote.trim() ? { pending_reason: resolveNote.trim() } : {};
+                  if (refilled) { extra.refrigerant_refilled = true; extra.refrigerant_type = refillType || 'OTHER'; }
+                  await handleStatusUpdate('RESOLVED', extra);
+                }}
                 disabled={actionLoading === 'RESOLVED'}
                 className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-semibold text-sm"
               >

@@ -40,7 +40,7 @@ export default function AirconReportPage() {
             <Wind className="w-6 h-6 text-cyan-400" />
             รายงานการเติมน้ำยาแอร์
           </h2>
-          <p className="text-gray-400 mt-1">ติดตามการเติมน้ำยาแอร์ซ้ำ — ตรวจจับห้องที่เติมซ้ำภายใน 14 วัน</p>
+          <p className="text-gray-400 mt-1">นับจากช่อง “เติมน้ำยาแอร์” ที่ช่างติ๊กตอนกดซ่อมเสร็จ — ห้องเดิมเติมซ้ำภายใน 15 วัน = ป้ายแดง</p>
         </div>
         <button onClick={fetchData} className="btn-secondary text-sm flex items-center gap-2">
           <RefreshCw className="w-4 h-4" />
@@ -101,17 +101,17 @@ export default function AirconReportPage() {
               <div className="flex items-center gap-3">
                 <AlertTriangle className="w-8 h-8 text-red-400" />
                 <div>
-                  <p className="text-gray-400 text-xs">⚠️ เติมซ้ำใน 14 วัน</p>
+                  <p className="text-gray-400 text-xs">🚨 เติมซ้ำใน 15 วัน</p>
                   <p className="text-2xl font-bold text-ink">{data.refill_alert_count}</p>
                 </div>
               </div>
             </div>
-            <div className="card bg-gold-500/10 border-gold-500/30">
+            <div className="card bg-sky-500/10 border-sky-500/30" data-t="refill-count">
               <div className="flex items-center gap-3">
-                <Wind className="w-8 h-8 text-gold-400" />
+                <span className="text-2xl">🧊</span>
                 <div>
-                  <p className="text-gray-400 text-xs">ระยะเวลาดู</p>
-                  <p className="text-2xl font-bold text-ink">{period} วัน</p>
+                  <p className="text-gray-400 text-xs">เติมน้ำยาแอร์ ({period} วัน)</p>
+                  <p className="text-2xl font-bold text-ink">{data.refill_count ?? 0}</p>
                 </div>
               </div>
             </div>
@@ -119,27 +119,27 @@ export default function AirconReportPage() {
 
           {/* Refill Alerts */}
           {data.refill_alerts.length > 0 && (
-            <div className="card border-2 border-red-500/30 bg-red-500/5">
+            <div className="card border-2 border-red-500/50 bg-red-500/10" data-t="refill-repeats">
               <h3 className="text-lg font-bold text-red-400 mb-4 flex items-center gap-2">
-                🚨 ห้องที่เติมน้ำยาแอร์ซ้ำภายใน 14 วัน
+                🚨 ห้องที่เติมน้ำยาแอร์ซ้ำภายใน 15 วัน
               </h3>
               <div className="space-y-3">
                 {data.refill_alerts.map((alert: any, i: number) => (
                   <div key={i} className="bg-navy-800 rounded-lg p-4 border border-red-500/20">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-ink font-semibold">{alert.room}</p>
+                        <Link href={`/dashboard/${alert.ticket_id}`} className="text-ink font-semibold hover:underline">{alert.room}</Link>
                         <p className="text-red-400 text-sm mt-0.5">
-                          ห่างกันเพียง {alert.days_between} วัน — อาจมีแอร์รั่ว!
+                          ห่างกันเพียง {alert.days_between} วัน — อาจมีจุดรั่ว ควรตรวจหาจุดรั่ว
                         </p>
                       </div>
                       <div className="text-right text-sm">
-                        <p className="text-gray-400">ครั้งที่ 1: <span className="text-ink">{alert.refill2}</span></p>
-                        <p className="text-gray-400">ครั้งที่ 2: <span className="text-ink">{alert.refill1}</span></p>
+                        <p className="text-gray-400">ครั้งก่อน: <span className="text-ink">{alert.refill1}</span></p>
+                        <p className="text-gray-400">ครั้งนี้: <span className="text-red-400 font-semibold">{alert.refill2}</span></p>
                       </div>
                     </div>
                     <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                      <span>📅 {new Date(alert.date1).toLocaleDateString('th-TH')}</span>
+                      <span>📅 {alert.date1 ? new Date(alert.date1).toLocaleDateString('th-TH') : '-'}</span>
                       <span>📅 {new Date(alert.date2).toLocaleDateString('th-TH')}</span>
                     </div>
                   </div>
@@ -162,6 +162,7 @@ export default function AirconReportPage() {
                       <th className="pb-2">สาขา</th>
                       <th className="pb-2">ห้อง</th>
                       <th className="pb-2">ปัญหา</th>
+                      <th className="pb-2">น้ำยา</th>
                       <th className="pb-2">สถานะ</th>
                       <th className="pb-2">วันที่</th>
                     </tr>
@@ -177,6 +178,13 @@ export default function AirconReportPage() {
                         <td className="py-2 text-ink">{t.branch_code}</td>
                         <td className="py-2 text-ink">{t.location_detail}</td>
                         <td className="py-2 text-gray-300 truncate max-w-[200px]">{t.description}</td>
+                        <td className="py-2 whitespace-nowrap">
+                          {t.refrigerant_repeat_of ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white">🚨 ซ้ำ {t.refrigerant_repeat_days} วัน</span>
+                          ) : t.refrigerant_refilled ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400">🧊 เติม{t.refrigerant_type && t.refrigerant_type !== 'OTHER' ? ' ' + t.refrigerant_type : ''}</span>
+                          ) : <span className="text-gray-600">—</span>}
+                        </td>
                         <td className="py-2">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             t.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400' :
