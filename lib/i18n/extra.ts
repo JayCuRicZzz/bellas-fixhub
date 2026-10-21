@@ -86,6 +86,8 @@ export const X = {
   dashFrom: { th: 'ตั้งแต่', en: 'From', km: 'ពី', my: 'မှ' },
   dashTo: { th: 'ถึง', en: 'To', km: 'ដល់', my: 'အထိ' },
   dashRange: { th: 'ช่วงที่เลือก', en: 'Selected range', km: 'ចន្លោះដែលបានជ្រើស', my: 'ရွေးထားသောကာလ' },
+  u_hrs: { th: 'ชม.', en: 'hrs', km: 'ម៉ោង', my: 'နာရီ' },
+  u_days: { th: 'วัน', en: 'day(s)', km: 'ថ្ងៃ', my: 'ရက်' },
   today: { th: 'วันนี้', en: 'Today', km: 'ថ្ងៃនេះ', my: 'ယနေ့' },
   all: { th: 'ทั้งหมด', en: 'All', km: 'ទាំងអស់', my: 'အားလုံး' },
   noTickets: { th: 'ยังไม่มีรายการแจ้งซ่อมที่ตรงกับเงื่อนไข', en: 'No repair requests match your filters', km: 'មិនមានការស្នើសុំត្រូវនឹងលក្ខខណ្ឌ', my: 'စစ်ထုတ်ချက်နှင့် ကိုက်ညီသည့် တင်ပြချက် မရှိပါ' },

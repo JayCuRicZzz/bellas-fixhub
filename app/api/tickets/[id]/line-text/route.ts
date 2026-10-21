@@ -20,7 +20,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     select t.ticket_number, t.priority, t.branch_code, t.location_detail, t.description, t.status,
            p.full_name as reporter_name, p.username as reporter_username,
            p.branch_code as reporter_branch, p.department as reporter_dept, p.role as reporter_role,
-           a.asset_code, a.name as asset_name, a.warranty_until
+           a.asset_code, a.name as asset_name, a.warranty_until,
+           (select s.sla_minutes from fixhub.sla_config s where s.priority = t.priority) as sla_minutes
     from fixhub.tickets t
     left join fixhub.profiles p on p.user_id = t.reporter_id
     left join fixhub.assets a on a.asset_id = t.asset_id
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const text = formatNewTicketLine({
     priority: t.priority,
+    slaMinutes: t.sla_minutes,
     ticketNumber: t.ticket_number,
     branchCode: t.branch_code,
     locationDetail: t.location_detail,

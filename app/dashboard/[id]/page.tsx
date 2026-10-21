@@ -65,6 +65,17 @@ export default function TicketDetailPage() {
   const [refilled, setRefilled] = useState(false);
   // ยกเลิก: 'request' = ผู้แจ้งขอ (รอ GM/Admin อนุมัติ) · 'now' = GM/Admin ยกเลิกเอง · 'reject' = ไม่อนุมัติคำขอ
   // เพิ่งแจ้งซ่อมเสร็จ (?new=1) → แถบสำเร็จ + ปุ่มคัดลอก/ส่งต่อ LINE/แจ้งใหม่/แดชบอร์ด
+  // เวลา SLA ของแต่ละระดับ (ตั้งในหลังบ้าน) → "ปานกลาง - 8 ชม."
+  const [slaMap, setSlaMap] = useState<Record<string, { sla_minutes: number }>>({});
+  useEffect(() => { fetch('/api/sla').then(r => r.json()).then(d => d && !d.error && setSlaMap(d)).catch(() => {}); }, []);
+  const slaLabel = (m?: number) => !m ? '' : (m >= 1440 && m % 1440 === 0) ? `${m / 1440} ${x('u_days')}` : (m % 60 === 0 ? `${m / 60} ${x('u_hrs')}` : `${Math.floor(m / 60)} ${x('u_hrs')} ${m % 60} ${x('d_minutes')}`);
+  const prioText = (p?: string | null) => {
+    const k = p || 'medium';
+    const label = x('p_' + k) !== 'p_' + k ? x('p_' + k) : k;
+    const t = slaLabel(slaMap[k]?.sla_minutes);
+    return t ? `${label} - ${t}` : label;
+  };
+  const deptText = (d?: string | null) => d === 'IT' ? x('dashIT') : d === 'MAINTENANCE' ? x('dashMaint') : (d || x('d_general'));
   const [isNew, setIsNew] = useState(false);
   const [againHref, setAgainHref] = useState('/dashboard/create');
   useEffect(() => {
@@ -392,7 +403,7 @@ export default function TicketDetailPage() {
         </div>
         <div>
           <span className="text-gray-500">{x('d_dept')}:</span>{' '}
-          <span className="font-medium">{ticket.dept_type || x('d_general')}</span>
+          <span className="font-medium">{deptText(ticket.dept_type)}</span>
         </div>
         <div>
           <span className="text-gray-500">{x('d_category')}:</span>{' '}
@@ -408,7 +419,7 @@ export default function TicketDetailPage() {
         </div>
         <div>
           <span className="text-gray-500">{x('d_priority')}:</span>{' '}
-          <span className="font-medium">{ticket.priority || 'medium'}</span>
+          <span className="font-medium" data-t="print-priority">{prioText(ticket.priority)}</span>
         </div>
         {ticket.difficulty && (
           <div>
@@ -609,7 +620,7 @@ export default function TicketDetailPage() {
               ticket.priority === 'low' ? 'bg-gray-500/10 text-gray-400 border-gray-500/30' :
               'bg-blue-500/10 text-blue-400 border-blue-500/30'
             }`}>
-              {ticket.priority || 'medium'}
+              {prioText(ticket.priority)}
             </span>
             {ticket.difficulty && (
               <span className={`px-2 py-1 rounded-full text-xs font-medium border ${DIFFICULTY_COLORS[ticket.difficulty] || DIFFICULTY_COLORS.medium}`}>
@@ -653,7 +664,7 @@ export default function TicketDetailPage() {
           <div className="flex items-center gap-2 text-gray-400">
             <Wrench className="w-4 h-4 text-gray-500" />
             <span className="text-gray-500">{x('d_dept')}:</span>
-            <span className="text-ink">{ticket.dept_type || x('d_general')}</span>
+            <span className="text-ink">{deptText(ticket.dept_type)}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-400">
             <User className="w-4 h-4 text-gray-500" />

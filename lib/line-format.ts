@@ -7,6 +7,21 @@ export const PRIORITY_LINE: Record<string, string> = {
   urgent: '🔴 ด่วนมาก', high: '🟠 สูง', medium: '🔵 ปานกลาง', low: '⚪ น้อย', non_urgent: '⚫ ไม่เร่งด่วน',
 };
 
+/** ระยะเวลา SLA อ่านง่าย: 120 → "2 ชม." · 1440 → "1 วัน" */
+export function slaText(minutes?: number | null) {
+  if (!minutes || minutes <= 0) return '';
+  if (minutes >= 1440 && minutes % 1440 === 0) return `${minutes / 1440} วัน`;
+  if (minutes % 60 === 0) return `${minutes / 60} ชม.`;
+  return `${Math.floor(minutes / 60)} ชม. ${minutes % 60} นาที`;
+}
+
+/** "🔵 ปานกลาง - 8 ชม." — ระดับความเร่งด่วน + เวลาที่ต้องเสร็จ (ช่างเห็นปุ๊บรู้เลย) */
+export function priorityWithSla(priority: string, minutes?: number | null) {
+  const label = PRIORITY_LINE[priority] || '';
+  const t = slaText(minutes);
+  return t ? `${label} - ${t}` : label;
+}
+
 /** "BV - ต้อนรับ" — สาขาและแผนกของผู้แจ้ง */
 export function reporterOrigin(r: { branch_code?: string | null; department?: string | null; role?: string | null }) {
   const d = r.department ? deptTh(r.department) : (r.role === 'gm' ? 'ฝ่ายบริหาร' : '');
@@ -24,11 +39,12 @@ export interface NewTicketLine {
   reporter: { branch_code?: string | null; department?: string | null; role?: string | null };
   alerts?: string[];
   statusLine?: string | null;
+  slaMinutes?: number | null;
 }
 
 export function formatNewTicketLine(t: NewTicketLine): string {
   return [
-    `📢 งานแจ้งซ่อมใหม่ ${PRIORITY_LINE[t.priority] || ''}`,
+    `📢 งานแจ้งซ่อมใหม่ ${priorityWithSla(t.priority, t.slaMinutes)}`,
     `🔢 ${t.ticketNumber}`,
     `🏨 ${t.branchCode} 📍 ${t.locationDetail}`,
     ...(t.assetLine ? [t.assetLine] : []),

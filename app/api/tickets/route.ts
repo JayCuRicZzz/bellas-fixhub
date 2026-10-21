@@ -6,7 +6,7 @@ import { IMAGE_BUCKET } from '../../../lib/upload';
 import { translateToThai } from '../../../lib/translate';
 import { sendLineMessage } from '../../../lib/line';
 import { getLineConfig } from '../../../lib/line-config';
-import { formatNewTicketLine, assetLineOf, PRIORITY_LINE } from '../../../lib/line-format';
+import { formatNewTicketLine, assetLineOf, priorityWithSla } from '../../../lib/line-format';
 import { sendPushToUsers, workersFor, gmsFor } from '../../../lib/webpush';
 import { toLineImageUrls } from '../../../lib/line-images';
 
@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
     // LINE: ONE push per new ticket (duplicate / refrigerant alerts included in the same message)
     const lineText = formatNewTicketLine({
       priority, ticketNumber, branchCode: branch_code, locationDetail: location_detail, assetLine,
-      description: descriptionThai, reporterName: user.full_name || user.username, reporter: user, alerts,
+      description: descriptionThai, reporterName: user.full_name || user.username, reporter: user, alerts, slaMinutes,
     });
     // แนบรูปที่ผู้แจ้งถ่าย (สูงสุด 4) ไปในครั้งเดียวกับข้อความ — ไม่เพิ่มโควตา LINE
     const reportImages = Array.isArray(images) ? images : [];
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
     ];
     const pushResult = await sendPushToUsers(pushTo, {
       title: `🔧 งานใหม่ ${branch_code} · ${location_detail}`.slice(0, 80),
-      body: `${PRIORITY_LINE[priority] || ''} ${descriptionThai}`.trim().slice(0, 160),
+      body: `${priorityWithSla(priority, slaMinutes)} · ${descriptionThai}`.trim().slice(0, 160),
       url: `/dashboard/${ticketId}`,
       tag: `ticket-${ticketId}`,
     });
