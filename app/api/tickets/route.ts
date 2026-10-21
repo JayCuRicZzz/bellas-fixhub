@@ -164,17 +164,19 @@ export async function POST(req: NextRequest) {
 
     // ---- duplicate & aircon-refill detection ----
     const alerts: string[] = [];
-    const isRefrigerant = descriptionThai.includes('น้ำยา');
-    if (isRefrigerant) {
+    // ห้องนี้ (หรือแอร์เครื่องนี้) เพิ่งถูกเติมน้ำยาแอร์ภายใน 15 วัน → บอกช่างตั้งแต่ตอนแจ้ง (นับจากธงที่ช่างติ๊ก ไม่เดาจากข้อความ)
+    const isAircon = Number(category_id) === 1 || /แอร์|air ?con/i.test(descriptionThai);
+    if (isAircon) {
       const refills = await sql`
-        select ticket_number, created_at from fixhub.tickets
-        where branch_code = ${branch_code} and ${roomNo ? sql`room_no = ${roomNo}` : sql`location_detail = ${location_detail}`}
-          and ticket_id <> ${ticketId} and created_at >= now() - interval '14 days'
-          and description like '%น้ำยา%'
-        order by created_at desc limit 1`;
+        select ticket_number, resolved_at from fixhub.tickets
+        where branch_code = ${branch_code}
+          and ${assetId ? sql`asset_id = ${assetId}` : roomNo ? sql`room_no = ${roomNo}` : sql`location_detail = ${location_detail}`}
+          and ticket_id <> ${ticketId} and refrigerant_refilled and status <> 'CANCELLED'
+          and resolved_at >= now() - interval '15 days'
+        order by resolved_at desc limit 1`;
       if (refills.length > 0) {
-        const daysAgo = Math.round((Date.now() - new Date(refills[0].created_at).getTime()) / 86400000);
-        alerts.push(`⚠️ น้ำยาแอร์ซ้ำ: ห้อง ${location_detail} เคยเติมน้ำยาแอร์เมื่อ ${daysAgo} วันที่แล้ว (${refills[0].ticket_number}) — ภายใน 14 วัน อาจมีแอร์รั่ว!`);
+        const daysAgo = Math.max(0, Math.round((Date.now() - new Date(refills[0].resolved_at).getTime()) / 86400000));
+        alerts.push(`⚠️ ห้อง ${location_detail} เพิ่งเติมน้ำยาแอร์เมื่อ ${daysAgo} วันที่แล้ว (${refills[0].ticket_number}) — ถ้าต้องเติมอีก อาจมีจุดรั่ว`);
       }
     }
     const dupes = await sql`

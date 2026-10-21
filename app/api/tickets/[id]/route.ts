@@ -3,12 +3,59 @@ import sql from '../../../../lib/db';
 import { getUserFromRequest, canApproveTicket, canManageTicket } from '../../../../lib/auth';
 import { canSeeTicket } from '../../../../lib/ticket-access';
 import { sendLineMessage } from '../../../../lib/line';
-import { notifyReporter } from '../../../../lib/webpush';
+import { notifyReporter, sendPushToUsers, gmsFor, workersFor } from '../../../../lib/webpush';
 import { User } from '../../../../types';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_DIFFICULTY = ['easy', 'medium', 'hard', 'very_hard'];
+const REFRIGERANT_TYPES = ['R32', 'R410A', 'R22', 'OTHER'];
+const REFILL_REPEAT_DAYS = 15;
+
+/** ช่างติ๊ก "เติมน้ำยาแอร์" → หาการเติมครั้งก่อนในห้องเดียวกัน (หรือแอร์เครื่องเดียวกันถ้าผูก QR) ภายใน 15 วัน
+ *  เจอ = บันทึกลงใบ (ป้ายแดง) + แจ้งมือถือหัวหน้าช่าง/GM สาขา + LINE กลุ่มช่าง · ไม่ throw */
+async function checkRefrigerantRepeat(t: any, user: User) {
+  try {
+    const sameUnit = t.asset_id ? sql`asset_id = ${t.asset_id}`
+      : t.room_no ? sql`room_no = ${t.room_no}` : sql`location_detail = ${t.location_detail}`;
+    const [prev] = await sql`
+      select ticket_id, ticket_number, resolved_at, refrigerant_type,
+             greatest(0, (fixhub.today_bkk() - (resolved_at at time zone 'Asia/Bangkok')::date))::int as days
+      from fixhub.tickets
+      where branch_code = ${t.branch_code} and ${sameUnit}
+        and ticket_id <> ${t.ticket_id} and refrigerant_refilled and status <> 'CANCELLED'
+        and resolved_at >= now() - make_interval(days => ${REFILL_REPEAT_DAYS})
+      order by resolved_at desc limit 1`;
+    if (!prev) {
+      await sql`update fixhub.tickets set refrigerant_repeat_of = null, refrigerant_repeat_days = null where ticket_id = ${t.ticket_id}`;
+      return null;
+    }
+    await sql`update fixhub.tickets set refrigerant_repeat_of = ${prev.ticket_id}, refrigerant_repeat_days = ${prev.days}
+              where ticket_id = ${t.ticket_id}`;
+    const where = `${t.branch_code} · ${t.location_detail || t.room_no || ''}`;
+    const text = `🚨 เติมน้ำยาแอร์ซ้ำภายใน ${REFILL_REPEAT_DAYS} วัน · Refrigerant refilled twice\n`
+      + `📍 ${where}\n`
+      + `ครั้งก่อน: ${prev.ticket_number} (${prev.days === 0 ? 'วันนี้' : prev.days + ' วันที่แล้ว'})\n`
+      + `ครั้งนี้: ${t.ticket_number} · ${user.full_name || user.username}\n`
+      + `⚠️ อาจมีจุดรั่ว ควรตรวจหาจุดรั่วก่อนเติมอีก`;
+    // ไม่ใช่ ticketEvent → ส่งเข้ากลุ่มช่างแม้เปิดโหมด "ส่งต่อเอง" (เป็นสัญญาณเตือน แบบเดียวกับสรุป 22:00)
+    await sendLineMessage(text, 'MAINT').catch(() => null);
+    const sups = (await workersFor(t.branch_code, 'MAINT').catch(() => [] as string[]));
+    const supIds = sups.length
+      ? (await sql`select user_id from fixhub.profiles where user_id = any(${sups}) and role = 'sup'`).map((r: any) => r.user_id as string)
+      : [];
+    const gms = await gmsFor(t.branch_code).catch(() => [] as string[]);
+    await sendPushToUsers([...supIds, ...gms], {
+      title: `🚨 เติมน้ำยาแอร์ซ้ำ · ${where}`.slice(0, 80),
+      body: `${t.ticket_number} · ครั้งก่อน ${prev.ticket_number} (${prev.days} วัน) — ตรวจจุดรั่ว`.slice(0, 160),
+      url: `/dashboard/${t.ticket_id}`, tag: `ticket-${t.ticket_id}-refill`,
+    });
+    return { repeat_of: prev.ticket_number, days: prev.days };
+  } catch (e: any) {
+    console.error('[Refrigerant] check failed:', e?.message);
+    return null;
+  }
+}
 
 async function logActivity(ticketId: number, action: string, oldStatus: string | null, newStatus: string | null, user: User, reason?: string | null) {
   try {
@@ -126,9 +173,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         where ticket_id = ${ticketId} and status in ('PENDING','IN_PROGRESS')
         returning sla_minutes`;
       if (!row) return conflict();
-      await logActivity(ticketId, 'RESOLVED', st, 'RESOLVED', user, reasonIn);
+      // ธงเติมน้ำยาแอร์ — ช่างติ๊กเอง (ทับค่าทุกครั้งที่กดซ่อมเสร็จ เผื่อใบถูกตีกลับแล้วซ่อมใหม่)
+      const refilled = body.refrigerant_refilled === true;
+      const rType = refilled && REFRIGERANT_TYPES.includes(body.refrigerant_type) ? body.refrigerant_type : null;
+      await sql`update fixhub.tickets set refrigerant_refilled = ${refilled}, refrigerant_type = ${rType},
+                  refrigerant_repeat_of = null, refrigerant_repeat_days = null
+                where ticket_id = ${ticketId}`;
+      if (refilled) {
+        const rep = await checkRefrigerantRepeat(current, user);
+        if (rep) slaInfo = { ...(slaInfo || {}), refrigerant_repeat: rep };
+      }
+      await logActivity(ticketId, 'RESOLVED', st, 'RESOLVED', user, refilled ? `[เติมน้ำยาแอร์${rType ? ' ' + rType : ''}] ${reasonIn || ''}`.trim() : reasonIn);
       await notifyReporter(current as any, 'resolved', userId, user.full_name || user.username);
-      slaInfo = { resolved_by: userId, sla_minutes: row?.sla_minutes ?? null };
+      slaInfo = { ...(slaInfo || {}), resolved_by: userId, sla_minutes: row?.sla_minutes ?? null };
       // (no LINE push on resolve — counted in the daily summary image)
 
     } else if (status === 'APPROVED') {
