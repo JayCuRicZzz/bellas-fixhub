@@ -19,7 +19,8 @@ function getSeenIds(): Set<number> {
 
 function saveSeenIds(ids: Set<number>) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('notif_seen_ids', JSON.stringify(Array.from(ids)));
+  // เก็บแค่ 500 ใบล่าสุด กันไฟล์โตไม่หยุด
+  try { localStorage.setItem('notif_seen_ids', JSON.stringify(Array.from(ids).slice(-500))); } catch {}
 }
 
 export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -30,6 +31,9 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [seenIds, setSeenIds] = useState<Set<number>>(getSeenIds);
   const notifRef = useRef<HTMLDivElement>(null);
+  // ทุกใบที่ใช้นับตัวเลขบนกระดิ่ง (dropdown โชว์แค่ 10 แต่ตัวเลขนับถึง 20 —
+  // เดิมกดดูแล้วจำว่าเห็นแค่ 10 ใบ → รีเฟรชแล้วตัวเลขเด้งกลับมา)
+  const allNotifRef = useRef<any[]>([]);
 
   const userDept = user?.department ? getDepartmentByCode(user.department) : null;
 
@@ -42,6 +46,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       });
       const data = await res.json();
       const arr = Array.isArray(data) ? data : [];
+      allNotifRef.current = arr;
       setNotifications(arr.slice(0, 10));
       // Count unseen: tickets NOT in seenIds
       const currentSeen = getSeenIds();
@@ -63,7 +68,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
     if (!notifOpen) {
       // Opening — mark all current as seen
       const newSeen = getSeenIds();
-      notifications.forEach((n: any) => newSeen.add(n.ticket_id));
+      allNotifRef.current.forEach((n: any) => newSeen.add(n.ticket_id));
       saveSeenIds(newSeen);
       setSeenIds(newSeen);
       setNotifCount(0);
