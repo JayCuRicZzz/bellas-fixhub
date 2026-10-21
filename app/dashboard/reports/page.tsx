@@ -36,10 +36,20 @@ export default function ReportsPage() {
   const [showAll, setShowAll] = useState(false);
   // รูปรายงานรายสาขา
   const todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
-  const [imgBranch, setImgBranch] = useState('');
-  const [imgDept, setImgDept] = useState<'MAINT' | 'IT' | 'ALL'>(user?.role === 'supit' ? 'IT' : 'MAINT');
+  const isManager = ['admin', 'gm', 'sup', 'supit'].includes(user?.role || '');
+  const myBranches = BRANCHES.filter(b => !user?.branches?.length || user.branches.includes(b.branch_code));
+  const [imgBranch, setImgBranch] = useState(isManager ? '' : (user?.branch_code || myBranches[0]?.branch_code || ''));
+  const [imgDept, setImgDept] = useState<'MAINT' | 'IT' | 'ALL'>(isManager ? (user?.role === 'supit' ? 'IT' : 'MAINT') : 'ALL');
   const [imgDate, setImgDate] = useState(todayKey);
   const [imgUrl, setImgUrl] = useState('');
+  // ผู้ใช้โหลดทีหลัง → พนักงานทั่วไปตั้งสาขาเริ่มต้นเป็นสาขาของตัวเอง (ไม่มีตัวเลือก "ทุกสาขา")
+  useEffect(() => {
+    if (user && !isManager) {
+      if (!imgBranch) setImgBranch(user.branch_code || myBranches[0]?.branch_code || '');
+      setImgDept(d => d === 'MAINT' ? 'ALL' : d);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
   const [imgLoading, setImgLoading] = useState(false);
   useEffect(() => { const h = setTimeout(() => setQ(search.trim()), 400); return () => clearTimeout(h); }, [search]);
 
@@ -295,7 +305,7 @@ export default function ReportsPage() {
       </div>
 
       {/* รูปรายงานประจำวัน — เลือกสาขา/วัน (แบบเดียวกับที่ส่ง LINE 22:00) */}
-      {['admin', 'gm', 'sup', 'supit'].includes(user?.role || '') && (
+      {user && (
         <div className="card space-y-3 no-print" data-t="report-image">
           <h3 className="text-lg font-semibold text-ink">🖼️ {lang === 'th' ? 'รูปรายงานประจำวัน' : 'Daily report image'}</h3>
           <p className="text-sm text-gray-400">{lang === 'th'
@@ -303,12 +313,12 @@ export default function ReportsPage() {
             : 'Pick a branch to get every ticket of that day, totals and open jobs · “All branches” gives the 22:00 summary'}</p>
           <div className="flex flex-col sm:flex-row gap-2">
             <select value={imgBranch} onChange={e => setImgBranch(e.target.value)} className="select-field sm:w-64" data-t="img-branch">
-              <option value="">🏨 {lang === 'th' ? 'ทุกสาขา (สรุป 24 ชม.)' : 'All branches (24h summary)'}</option>
-              {BRANCHES.filter(b => !user?.branches?.length || user.branches.includes(b.branch_code)).map(b => (
+              {isManager && <option value="">🏨 {lang === 'th' ? 'ทุกสาขา (สรุป 24 ชม.)' : 'All branches (24h summary)'}</option>}
+              {myBranches.map(b => (
                 <option key={b.branch_code} value={b.branch_code}>{b.branch_code} · {lang === 'th' ? b.branch_name : b.branch_name_en}</option>
               ))}
             </select>
-            {['admin', 'gm'].includes(user?.role || '') && (
+            {(!['sup', 'supit'].includes(user?.role || '') || imgBranch) && (
               <select value={imgDept} onChange={e => setImgDept(e.target.value as any)} className="select-field sm:w-44" data-t="img-dept">
                 <option value="MAINT">🔧 {lang === 'th' ? 'งานช่าง' : 'Maintenance'}</option>
                 <option value="IT">💻 {lang === 'th' ? 'งานไอที' : 'IT'}</option>

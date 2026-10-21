@@ -9,16 +9,20 @@ export const maxDuration = 30;
 // GET /api/reports/daily-image?dept=MAINT|IT|ALL&branch=BV&date=YYYY-MM-DD → รูปรายสาขา: ทุกใบของวันนั้น + ค้างรวม
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
-  if (!user || !['admin', 'gm', 'sup', 'supit'].includes(user.role)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // รูปรายสาขา: ทุกคนสร้างได้ เฉพาะสาขาที่ตัวเองมีสิทธิ์ (ให้พนักงานแคปลงกลุ่มได้เอง)
+  // รูปสรุปทุกสาขา (แบบ 22:00): เฉพาะแอดมิน · GM · หัวหน้า
+  const manager = ['admin', 'gm', 'sup', 'supit'].includes(user.role);
   const sp = new URL(req.url).searchParams;
   const raw = sp.get('dept');
   let dept: DayDept = raw === 'IT' ? 'IT' : raw === 'ALL' ? 'ALL' : 'MAINT';
-  // หัวหน้าช่างดูได้เฉพาะงานช่าง · หัวหน้าไอทีเฉพาะงานไอที (admin/gm ดูได้ทั้งหมด)
-  if (user.role === 'sup') dept = 'MAINT';
-  if (user.role === 'supit') dept = 'IT';
   const branch = (sp.get('branch') || '').toUpperCase();
+  if (!branch) {
+    if (!manager) return NextResponse.json({ error: 'กรุณาเลือกสาขา' }, { status: 403 });
+    // สรุปทุกสาขา: หัวหน้าช่างเฉพาะงานช่าง · หัวหน้าไอทีเฉพาะงานไอที
+    if (user.role === 'sup') dept = 'MAINT';
+    if (user.role === 'supit') dept = 'IT';
+  }
   try {
     let png: Buffer;
     if (branch) {
