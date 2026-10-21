@@ -55,7 +55,16 @@ export async function GET(req: NextRequest) {
       where ${scope.whereFrag} and t.status in ('PENDING','ACCEPTED','IN_PROGRESS','PAUSED')
       order by t.sla_deadline asc nulls last limit 50`;
 
+    // รายการใบงานในขอบเขตรายงาน (สำหรับค้นหา) — ใหม่สุดก่อน
+    const tickets = await sql`
+      select t.ticket_id, t.ticket_number, t.branch_code, t.location_detail, t.description, t.priority, t.status,
+             t.created_at, t.resolved_at, t.sla_overdue, t.technician_name, t.reporter_name, t.dept_type,
+             t.category_id, t.main_th, t.main_en, t.sub_th, t.sub_en
+      from fixhub.tickets_full t where ${scope.whereFrag}
+      order by t.created_at desc limit 200`;
+
     return NextResponse.json({
+      tickets,
       total: summary.total,
       pending: summary.pending,
       inProgress: summary.in_progress,

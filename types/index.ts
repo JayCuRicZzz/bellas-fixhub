@@ -84,6 +84,7 @@ export interface LoginFormData {
 }
 
 export interface DailyReport {
+  tickets?: any[];
   total: number;
   success: number;
   pending: number;

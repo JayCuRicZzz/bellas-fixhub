@@ -63,7 +63,14 @@ export async function buildReportScope(user: User, params: URLSearchParams): Pro
     ? (userScope ? sql`and (t.reporter_department = ${dept} or t.reporter_id = ${user.id})` : sql`and t.reporter_department = ${dept}`)
     : sql``;
   const workFrag = workType ? sql`and t.dept_type = ${workType}` : sql``;
-  const whereFrag = sql`${dateFrag} ${branchFrag} ${deptFrag} ${workFrag}`;
+  // ค้นหา: เลขใบงาน · ห้อง/จุด · อาการ · ช่าง · ผู้แจ้ง
+  const q = (params.get('q') || '').trim().slice(0, 60);
+  const like = '%' + q.replace(/[%_\\]/g, m => '\\' + m) + '%';
+  const searchFrag = q
+    ? sql`and (t.ticket_number ilike ${like} or t.location_detail ilike ${like} or t.description ilike ${like}
+              or coalesce(t.room_no,'') ilike ${like} or coalesce(t.technician_name,'') ilike ${like} or coalesce(t.reporter_name,'') ilike ${like})`
+    : sql``;
+  const whereFrag = sql`${dateFrag} ${branchFrag} ${deptFrag} ${workFrag} ${searchFrag}`;
 
   return { branches: effectiveBranches, dept, workType, dateFrag, branchFrag, deptFrag, workFrag, whereFrag };
 }

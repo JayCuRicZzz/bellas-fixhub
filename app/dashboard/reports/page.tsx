@@ -30,11 +30,23 @@ export default function ReportsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [techData, setTechData] = useState<any[]>([]);
+  const [branchFilter, setBranchFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [q, setQ] = useState('');                       // ค่าที่ส่งค้นหาจริง (หน่วง 400ms)
+  const [showAll, setShowAll] = useState(false);
+  // รูปรายงานรายสาขา
+  const todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+  const [imgBranch, setImgBranch] = useState('');
+  const [imgDept, setImgDept] = useState<'MAINT' | 'IT' | 'ALL'>(user?.role === 'supit' ? 'IT' : 'MAINT');
+  const [imgDate, setImgDate] = useState(todayKey);
+  const [imgUrl, setImgUrl] = useState('');
+  const [imgLoading, setImgLoading] = useState(false);
+  useEffect(() => { const h = setTimeout(() => setQ(search.trim()), 400); return () => clearTimeout(h); }, [search]);
 
   useEffect(() => {
     fetchData();
     fetchTechPerformance();
-  }, [period, startDate, endDate, deptFilter, workTypeFilter]);
+  }, [period, startDate, endDate, deptFilter, workTypeFilter, branchFilter, q]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -48,6 +60,8 @@ export default function ReportsPage() {
       }
       if (deptFilter) params.set('department', deptFilter);
       if (workTypeFilter) params.set('work_type', workTypeFilter);
+      if (branchFilter) params.set('branch', branchFilter);
+      if (q) params.set('q', q);
 
       const res = await fetch(`/api/reports/daily?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -72,6 +86,8 @@ export default function ReportsPage() {
       }
       if (deptFilter) params.set('department', deptFilter);
       if (workTypeFilter) params.set('work_type', workTypeFilter);
+      if (branchFilter) params.set('branch', branchFilter);
+      if (q) params.set('q', q);
 
       const res = await fetch(`/api/reports/tech-performance?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -137,7 +153,7 @@ export default function ReportsPage() {
     { value: 'custom' as const, label: lang === 'th' ? 'กำหนดเอง' : 'Custom' },
   ];
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="space-y-6 fade-in">
         <div className="skeleton h-8 w-48" />
@@ -196,68 +212,42 @@ export default function ReportsPage() {
             <Printer className="w-4 h-4" />
             {lang === 'th' ? 'พิมพ์รายงาน' : 'Print Report'}
           </button>
-          {['admin', 'gm', 'sup', 'supit'].includes(user?.role || '') && (
-            <>
-              <a href="/api/reports/daily-image?dept=MAINT" target="_blank" rel="noopener" className="btn-secondary text-sm flex items-center gap-2">
-                🖼️ {lang === 'th' ? 'รูปสรุปวันนี้ (ช่าง)' : "Today's summary (Maint)"}
-              </a>
-              <a href="/api/reports/daily-image?dept=IT" target="_blank" rel="noopener" className="btn-secondary text-sm flex items-center gap-2">
-                🖼️ {lang === 'th' ? 'รูปสรุปวันนี้ (ไอที)' : "Today's summary (IT)"}
-              </a>
-            </>
-          )}
         </div>
       </div>
 
-      {/* Department Tabs — กรองตามแผนกผู้แจ้ง */}
-      <div className="flex gap-2 flex-wrap no-print">
-        {[
-          { value: '', label: 'ทั้งหมด', labelEn: 'All', icon: '🏢' },
-          ...DEPARTMENTS.map(dept => ({
-            value: dept.code,
-            label: (lang === 'th' ? dept.name_th : dept.name_en),
-            labelEn: dept.name_en,
-            icon: dept.icon,
-          })),
-        ].map(tab => (
-          <button
-            key={tab.value}
-            onClick={() => setDeptFilter(tab.value)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 ${
-              deptFilter === tab.value
-                ? 'bg-gold-500/20 border-gold-500 text-gold-400 shadow-lg'
-                : 'border-navy-600 text-gray-400 hover:border-gray-400 hover:text-ink'
-            }`}
-          >
-            <span className="text-base">{tab.icon}</span>
-            {lang === 'th' ? tab.label : tab.labelEn}
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-navy-900/80 text-xs font-bold text-gold-500">
-              {data ? (tab.value === '' ? data.total : data.byDepartment?.find((d: any) => d.name === tab.value)?.count || 0) : 0}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Work Type Tabs — ช่าง / ไอที */}
-      <div className="flex gap-2 no-print">
-        {[
-          { value: '', label: 'ทุกประเภท', labelEn: 'All Types', icon: '🏗️' },
-          { value: 'MAINTENANCE', label: 'งานช่าง', labelEn: 'Maintenance', icon: '🔧' },
-          { value: 'IT', label: 'งานไอที', labelEn: 'IT', icon: '💻' },
-        ].map(tab => (
-          <button
-            key={tab.value}
-            onClick={() => setWorkTypeFilter(tab.value)}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1.5 ${
-              workTypeFilter === tab.value
-                ? 'bg-blue-500/20 border-blue-500 text-blue-400 shadow-lg'
-                : 'border-navy-600 text-gray-500 hover:border-gray-500 hover:text-gray-400'
-            }`}
-          >
-            <span className="text-sm">{tab.icon}</span>
-            {lang === 'th' ? tab.label : tab.labelEn}
-          </button>
-        ))}
+      {/* ตัวกรอง: งานช่าง/ไอที · สาขา · ค้นหา */}
+      <div className="card p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center gap-3 no-print" data-t="report-filters">
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { value: '', label: 'ทั้งหมด', labelEn: 'All', icon: '🏢' },
+            { value: 'MAINTENANCE', label: 'งานช่าง', labelEn: 'Maintenance', icon: '🔧' },
+            { value: 'IT', label: 'งานไอที', labelEn: 'IT', icon: '💻' },
+          ].map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setWorkTypeFilter(tab.value)}
+              className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-all flex items-center gap-1.5 ${
+                workTypeFilter === tab.value
+                  ? 'bg-gold-500/20 border-gold-500 text-gold-400 shadow-lg'
+                  : 'border-navy-600 text-gray-400 hover:border-gray-400 hover:text-ink'
+              }`}
+            >
+              <span>{tab.icon}</span>
+              {lang === 'th' ? tab.label : tab.labelEn}
+              {tab.value === workTypeFilter && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-navy-900/80 text-xs font-bold text-gold-500">{data?.total ?? 0}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="select-field lg:w-64" aria-label="สาขา" data-t="report-branch">
+          <option value="">🏨 {lang === 'th' ? 'ทุกสาขา' : 'All branches'}</option>
+          {BRANCHES.filter(b => !user?.branches?.length || user.branches.includes(b.branch_code)).map(b => (
+            <option key={b.branch_code} value={b.branch_code}>{b.branch_code} · {lang === 'th' ? b.branch_name : b.branch_name_en}</option>
+          ))}
+        </select>
+        <input value={search} onChange={e => setSearch(e.target.value)} className="input-field lg:flex-1" data-t="report-search"
+          placeholder={lang === 'th' ? '🔍 ค้นหา เลขใบงาน · ห้อง · อาการ · ช่าง · ผู้แจ้ง' : '🔍 Search ticket no. · room · problem · technician · reporter'} />
       </div>
 
       {/* Custom date range */}
@@ -273,6 +263,80 @@ export default function ReportsPage() {
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
               className="input-field py-2 text-sm" />
           </div>
+        </div>
+      )}
+
+      {/* รายการใบงาน (ผลค้นหา) */}
+      <div className="card" data-t="report-tickets">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-ink">📋 {lang === 'th' ? 'รายการใบงาน' : 'Tickets'} <span className="text-gold-500">({data.tickets?.length ?? 0}{(data.tickets?.length ?? 0) >= 200 ? '+' : ''})</span></h3>
+          {q && <span className="text-xs text-gray-400">{lang === 'th' ? 'ค้นหา' : 'Search'}: “{q}”</span>}
+        </div>
+        {!data.tickets?.length ? (
+          <p className="text-sm text-gray-500">{lang === 'th' ? 'ไม่พบใบงานตามเงื่อนไข' : 'No tickets match'}</p>
+        ) : (
+          <div className="divide-y divide-navy-700">
+            {(showAll ? data.tickets! : data.tickets!.slice(0, 10)).map((tk: any) => (
+              <a key={tk.ticket_id} href={`/dashboard/${tk.ticket_id}`} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 py-2.5 hover:bg-navy-800/50 rounded px-2">
+                <span className="font-mono text-xs text-gold-400 sm:w-44 shrink-0">{tk.ticket_number}</span>
+                <span className="text-sm text-ink flex-1 min-w-0 truncate">{tk.location_detail} · {tk.description}</span>
+                <span className="text-xs text-gray-400 shrink-0">{tk.technician_name || '—'}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${tk.sla_overdue ? 'bg-red-500/15 text-red-400' : 'bg-navy-700 text-gray-300'}`}>{statusLabels[tk.status] || tk.status}</span>
+                <span className="text-xs text-gray-500 shrink-0 sm:w-28 sm:text-right">{new Date(tk.created_at).toLocaleString(lang === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {(data.tickets?.length ?? 0) > 10 && (
+          <button onClick={() => setShowAll(v => !v)} className="btn-secondary text-sm mt-3">
+            {showAll ? (lang === 'th' ? 'ย่อ' : 'Show less') : (lang === 'th' ? `แสดงทั้งหมด ${(data.tickets?.length ?? 0)} ใบ` : `Show all ${(data.tickets?.length ?? 0)}`)}
+          </button>
+        )}
+      </div>
+
+      {/* รูปรายงานประจำวัน — เลือกสาขา/วัน (แบบเดียวกับที่ส่ง LINE 22:00) */}
+      {['admin', 'gm', 'sup', 'supit'].includes(user?.role || '') && (
+        <div className="card space-y-3 no-print" data-t="report-image">
+          <h3 className="text-lg font-semibold text-ink">🖼️ {lang === 'th' ? 'รูปรายงานประจำวัน' : 'Daily report image'}</h3>
+          <p className="text-sm text-gray-400">{lang === 'th'
+            ? 'เลือกสาขา → ได้งานทุกใบของวันนั้นพร้อมรายละเอียด ยอดแจ้ง/เสร็จ และค้างรวม · ถ้าเลือก “ทุกสาขา” จะได้รูปสรุปแบบที่ส่ง 22:00'
+            : 'Pick a branch to get every ticket of that day, totals and open jobs · “All branches” gives the 22:00 summary'}</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select value={imgBranch} onChange={e => setImgBranch(e.target.value)} className="select-field sm:w-64" data-t="img-branch">
+              <option value="">🏨 {lang === 'th' ? 'ทุกสาขา (สรุป 24 ชม.)' : 'All branches (24h summary)'}</option>
+              {BRANCHES.filter(b => !user?.branches?.length || user.branches.includes(b.branch_code)).map(b => (
+                <option key={b.branch_code} value={b.branch_code}>{b.branch_code} · {lang === 'th' ? b.branch_name : b.branch_name_en}</option>
+              ))}
+            </select>
+            {['admin', 'gm'].includes(user?.role || '') && (
+              <select value={imgDept} onChange={e => setImgDept(e.target.value as any)} className="select-field sm:w-44" data-t="img-dept">
+                <option value="MAINT">🔧 {lang === 'th' ? 'งานช่าง' : 'Maintenance'}</option>
+                <option value="IT">💻 {lang === 'th' ? 'งานไอที' : 'IT'}</option>
+                {imgBranch && <option value="ALL">🏢 {lang === 'th' ? 'ช่าง + ไอที' : 'Both'}</option>}
+              </select>
+            )}
+            {imgBranch && (
+              <input type="date" value={imgDate} max={todayKey} onChange={e => setImgDate(e.target.value || todayKey)} className="input-field sm:w-44" data-t="img-date" />
+            )}
+            <button className="btn-primary text-sm" data-t="img-make" onClick={() => {
+              const dept = imgDept === 'ALL' && !imgBranch ? 'MAINT' : imgDept;
+              const p = new URLSearchParams({ dept });
+              if (imgBranch) { p.set('branch', imgBranch); p.set('date', imgDate); }
+              p.set('t', String(Date.now()));
+              setImgLoading(true); setImgUrl(`/api/reports/daily-image?${p.toString()}`);
+            }}>{imgLoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : '🖼️'} {lang === 'th' ? 'สร้างรูป' : 'Make image'}</button>
+          </div>
+          {imgUrl && (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <a href={imgUrl} target="_blank" rel="noopener" className="btn-secondary text-sm">{lang === 'th' ? 'เปิดรูปเต็ม' : 'Open full size'}</a>
+                <a href={imgUrl} download={`fixhub-${imgBranch || 'all'}-${imgBranch ? imgDate : todayKey}.png`} className="btn-secondary text-sm">{lang === 'th' ? 'ดาวน์โหลด' : 'Download'}</a>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imgUrl} alt="daily report" className="w-full max-w-2xl rounded-lg border border-navy-600"
+                onLoad={() => setImgLoading(false)} onError={() => { setImgLoading(false); alert(lang === 'th' ? 'สร้างรูปไม่สำเร็จ' : 'Could not create the image'); }} />
+            </div>
+          )}
         </div>
       )}
 

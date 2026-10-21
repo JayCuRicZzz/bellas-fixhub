@@ -283,6 +283,147 @@ export function renderSummaryPng(s: DailySummary, now = new Date()): Buffer {
   return r.render().asPng();
 }
 
+// ---------------------------------------------------------------- รูปรายงานรายสาขา (เลือกสาขา + วัน)
+// แบบเดียวกับรูป 22:00 แต่เจาะสาขาเดียว: ตัวเลขใหญ่ + ทุกใบงานของวันนั้นพร้อมรายละเอียด + งานค้างยกมา
+export type DayDept = SummaryDept | 'ALL';
+export interface DayTicket {
+  ticket_number: string; created_at: string; location_detail: string; description: string; status: string;
+  technician_name: string | null; resolved_at: string | null; sla_deadline: string | null; dept_type: string | null; overdue: boolean;
+}
+export interface BranchDay {
+  dept: DayDept; branch_code: string; branch_name: string; dateKey: string; dateLabel: string; timeLabel: string;
+  kpi: { reported: number; done: number; open_total: number; overdue: number; cancelled: number };
+  day: DayTicket[]; carried: DayTicket[];
+}
+
+export async function buildBranchDay(dept: DayDept, branch: string, dateKey: string, now = new Date()): Promise<BranchDay> {
+  const deptFrag = dept === 'ALL' ? sql`` : sql`and t.reporter_department = ${dept}`;
+  const [b] = await sql`select branch_code, branch_name_en as branch_name from fixhub.branches where branch_code = ${branch}`;
+  const day = await sql`
+    select t.ticket_number, t.created_at, t.location_detail, t.description, t.status, t.technician_name, t.resolved_at,
+           t.sla_deadline, t.dept_type, (t.status = any(${OPEN}) and t.sla_deadline is not null and t.sla_deadline < now()) as overdue
+    from fixhub.tickets_full t
+    where t.branch_code = ${branch} ${deptFrag} and (t.created_at at time zone ${BKK})::date = ${dateKey}::date
+    order by t.created_at`;
+  const carried = await sql`
+    select t.ticket_number, t.created_at, t.location_detail, t.description, t.status, t.technician_name, t.resolved_at,
+           t.sla_deadline, t.dept_type, (t.sla_deadline is not null and t.sla_deadline < now()) as overdue
+    from fixhub.tickets_full t
+    where t.branch_code = ${branch} ${deptFrag} and t.status = any(${OPEN}) and (t.created_at at time zone ${BKK})::date < ${dateKey}::date
+    order by t.created_at limit 12`;
+  const [k] = await sql`
+    select
+      count(*) filter (where (t.created_at at time zone ${BKK})::date = ${dateKey}::date and t.status <> 'CANCELLED')::int as reported,
+      count(*) filter (where (t.created_at at time zone ${BKK})::date = ${dateKey}::date and t.status = 'CANCELLED')::int as cancelled,
+      count(*) filter (where t.status in ('RESOLVED','APPROVED') and (t.resolved_at at time zone ${BKK})::date = ${dateKey}::date)::int as done,
+      count(*) filter (where t.status = any(${OPEN}))::int as open_total,
+      count(*) filter (where t.status = any(${OPEN}) and t.sla_deadline < now())::int as overdue
+    from fixhub.tickets t where t.branch_code = ${branch} ${deptFrag}`;
+  const d = new Date(`${dateKey}T12:00:00+07:00`);
+  return {
+    dept, branch_code: branch, branch_name: b?.branch_name || branch, dateKey,
+    dateLabel: d.toLocaleDateString('th-TH', { timeZone: BKK, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+    timeLabel: now.toLocaleTimeString('th-TH', { timeZone: BKK, hour: '2-digit', minute: '2-digit' }),
+    kpi: k as any, day: day as unknown as DayTicket[], carried: carried as unknown as DayTicket[],
+  };
+}
+
+const ST_ALL: Record<string, { th: string; color: string }> = {
+  PENDING: { th: 'ยังไม่มีคนรับ', color: C.amber }, ACCEPTED: { th: 'รับงานแล้ว', color: C.blue },
+  IN_PROGRESS: { th: 'กำลังทำ', color: C.blue }, PAUSED: { th: 'พักงาน', color: C.amber },
+  RESOLVED: { th: 'ซ่อมเสร็จ · รอตรวจ', color: C.green }, APPROVED: { th: 'อนุมัติแล้ว', color: C.green },
+  CANCELLED: { th: 'ยกเลิก', color: '#6b7896' },
+};
+const dm = (iso: string) => new Date(iso).toLocaleDateString('th-TH', { timeZone: BKK, day: 'numeric', month: 'short' });
+const hm = (iso: string) => new Date(iso).toLocaleTimeString('th-TH', { timeZone: BKK, hour: '2-digit', minute: '2-digit' });
+
+export function renderBranchDaySvg(s: BranchDay, now = new Date()) {
+  const W = 1200, P = 40, tableW = W - P * 2;
+  const deptTh = s.dept === 'IT' ? 'งานไอที' : s.dept === 'MAINT' ? 'งานช่าง' : 'งานช่างและไอที';
+  const accent = s.dept === 'IT' ? C.blue : C.gold;
+  const parts: string[] = [];
+  let y = 0;
+
+  parts.push(`<rect x="0" y="0" width="${W}" height="150" fill="${C.panel}"/>`);
+  parts.push(`<rect x="0" y="146" width="${W}" height="4" fill="${accent}"/>`);
+  parts.push(txt(P, 62, `สรุป${deptTh} · สาขา ${s.branch_code}`, 42, C.text, 700));
+  parts.push(txt(P, 100, clip(s.branch_name, 40), 26, accent, 700));
+  parts.push(txt(P, 134, `${s.dateLabel} · ข้อมูล ณ ${s.timeLabel} น.`, 22, C.sub));
+  parts.push(txt(W - P, 62, 'Bellas FixHub', 30, accent, 700, 'end'));
+  parts.push(txt(W - P, 100, 'Bella Villa Pattaya Group', 22, C.sub, 400, 'end'));
+  y = 180;
+
+  // ตัวเลขใหญ่
+  const tiles = [
+    { label: 'แจ้งซ่อมวันนี้', v: s.kpi.reported, color: C.text },
+    { label: 'ซ่อมเสร็จวันนี้', v: s.kpi.done, color: C.green },
+    { label: 'ค้างรวมทั้งหมด', v: s.kpi.open_total, color: s.kpi.open_total ? C.amber : C.green },
+    { label: 'เกิน SLA', v: s.kpi.overdue, color: s.kpi.overdue ? C.red : C.green },
+  ];
+  const tw = (W - P * 2 - 3 * 20) / 4;
+  tiles.forEach((t, i) => {
+    const x = P + i * (tw + 20);
+    parts.push(`<rect x="${x}" y="${y}" width="${tw}" height="190" rx="20" fill="${C.panel}" stroke="${i === 2 && t.v ? C.amber : C.line}" stroke-width="${i === 2 && t.v ? 3 : 1}"/>`);
+    parts.push(txt(x + tw / 2, y + 48, t.label, 28, C.sub, 700, 'middle'));
+    parts.push(txt(x + tw / 2, y + 150, String(t.v), 96, t.color, 700, 'middle'));
+  });
+  y += 220;
+  if (s.kpi.cancelled) { parts.push(txt(P, y, `ยกเลิก ${s.kpi.cancelled} ใบ (ไม่นับในยอดแจ้ง)`, 20, C.sub)); y += 30; }
+  y += 30;
+
+  const ticketList = (title: string, list: DayTicket[], empty: string, showAge: boolean) => {
+    parts.push(txt(P, y, title, 30, C.text, 700));
+    y += 22;
+    if (!list.length) {
+      parts.push(`<rect x="${P}" y="${y}" width="${tableW}" height="76" rx="14" fill="${C.panel}" stroke="${C.line}"/>`);
+      parts.push(txt(P + 24, y + 48, empty, 26, C.green, 700));
+      y += 76 + 60;
+      return;
+    }
+    const ih = 112;
+    parts.push(`<rect x="${P}" y="${y}" width="${tableW}" height="${ih * list.length + 8}" rx="14" fill="${C.panel}" stroke="${C.line}"/>`);
+    list.forEach((t, i) => {
+      const ty = y + i * ih;
+      const st = ST_ALL[t.status] || { th: t.status, color: C.sub };
+      const bar = t.overdue ? C.red : st.color;
+      if (i > 0) parts.push(`<line x1="${P + 16}" x2="${P + tableW - 16}" y1="${ty + 4}" y2="${ty + 4}" stroke="${C.line}"/>`);
+      parts.push(`<rect x="${P + 18}" y="${ty + 22}" width="8" height="74" rx="4" fill="${bar}"/>`);
+      parts.push(txt(P + 42, ty + 46, `${t.ticket_number}  ·  ${showAge ? dm(t.created_at) + ' ' : ''}${hm(t.created_at)} น.`, 22, accent, 700));
+      parts.push(txt(P + 42, ty + 86, clip(`${t.location_detail} · ${t.description}`, 46), 24, C.text));
+      // ป้ายสถานะขวาบน
+      const label = t.overdue ? `${st.th} · เกิน SLA` : st.th;
+      const pw = 24 + graphemes(label) * 13;
+      parts.push(`<rect x="${P + tableW - 24 - pw}" y="${ty + 20}" width="${pw}" height="36" rx="18" fill="${bar}" fill-opacity="0.18"/>`);
+      parts.push(txt(P + tableW - 24 - pw / 2, ty + 45, label, 20, bar, 700, 'middle'));
+      const who = t.technician_name ? `ช่าง ${clip(shortName(t.technician_name), 18)}` : '';
+      const tail = showAge ? `ค้าง ${age(t.created_at, now)}` : (t.resolved_at && ['RESOLVED', 'APPROVED'].includes(t.status) ? `เสร็จ ${hm(t.resolved_at)} น.` : '');
+      parts.push(txt(P + tableW - 24, ty + 88, [who, tail].filter(Boolean).join('  ·  '), 20, C.sub, 400, 'end'));
+    });
+    y += ih * list.length + 70;
+  };
+
+  const MAX = 60;
+  const shown = s.day.slice(0, MAX);
+  ticketList(`งานทุกใบของวันนี้ (${s.day.length} ใบ)`, shown, 'ไม่มีการแจ้งซ่อมในวันนี้', false);
+  if (s.day.length > MAX) { parts.push(txt(P, y - 40, `… และอีก ${s.day.length - MAX} ใบ ดูทั้งหมดในหน้ารายงาน`, 22, C.sub)); }
+  ticketList(`งานค้างยกมาจากวันก่อน (${s.carried.length}${s.carried.length >= 12 ? '+' : ''} ใบ)`, s.carried, 'ไม่มีงานค้างจากวันก่อน', true);
+
+  parts.push(txt(P, y, 'รับงานและอัปเดตสถานะในระบบทุกครั้ง · bellafixhub.bellavillapattaya.com', 20, C.sub));
+  const H = y + 36;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`
+    + `<rect width="${W}" height="${H}" fill="${C.bg}"/>${parts.join('')}</svg>`;
+  return { svg, width: W, height: H };
+}
+
+export function renderBranchDayPng(s: BranchDay, now = new Date()): Buffer {
+  const { svg } = renderBranchDaySvg(s, now);
+  const r = new Resvg(svg, {
+    font: { fontFiles: [path.join(FONT_DIR, 'Sarabun-Regular.ttf'), path.join(FONT_DIR, 'Sarabun-Bold.ttf')], loadSystemFonts: false, defaultFontFamily: 'Sarabun' },
+    fitTo: { mode: 'width', value: 1200 },
+  });
+  return r.render().asPng();
+}
+
 // ---------------------------------------------------------------- text + delivery
 export function summaryText(s: DailySummary, link: string): string {
   const deptTh = s.dept === 'IT' ? 'ไอที' : 'ช่าง';
