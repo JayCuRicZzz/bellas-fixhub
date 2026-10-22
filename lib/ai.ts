@@ -233,7 +233,7 @@ function generateReportSummary(data: ReportData, period?: string): string {
   return s;
 }
 
-async function callAIAPI(messages: any[]): Promise<string|null> {
+async function callAIAPI(messages: any[], maxTokens = 1000): Promise<string|null> {
   var provider = process.env.AI_PROVIDER || 'openai';
   var apiKey = process.env.AI_API_KEY;
   var model = process.env.AI_MODEL || 'openai/gpt-oss-120b';
@@ -251,7 +251,7 @@ async function callAIAPI(messages: any[]): Promise<string|null> {
             parts: [{ text: m.content }],
           };
         });
-      var body: any = { contents: contents, generationConfig: { maxOutputTokens: 1000, temperature: 0.7 } };
+      var body: any = { contents: contents, generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 } };
       if (systemMsg) body.systemInstruction = { parts: [{ text: systemMsg.content }] };
 
       var gRes = await fetch(apiUrl, {
@@ -269,7 +269,7 @@ async function callAIAPI(messages: any[]): Promise<string|null> {
     var res = await fetch(oaiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: model, messages: messages, max_tokens: 1000, temperature: 0.7 })
+      body: JSON.stringify({ model: model, messages: messages, max_tokens: maxTokens, temperature: 0.7 })
     });
     if (!res.ok) return null;
     var data = await res.json();
@@ -356,4 +356,55 @@ export async function generateAIReport(data: ReportData & { periodLabel?: string
     { role: 'user', content: `สรุปรายงานงานซ่อม${period}\n${facts}` },
   ]);
   return r || generateReportSummary(data, period);
+}
+
+// ── AI รายงานสรุปแบบแยกก้อน (งานในช่วงนี้ / งานค้างยกมา / พักงาน / ยกเลิก / รายสาขา) ──
+const BK_LABEL: Record<string, string> = {
+  total: 'ทั้งหมด', pending: 'รอรับ', in_progress: 'กำลังทำ', paused: 'พักงาน',
+  resolved: 'ซ่อมเสร็จรออนุมัติ', approved: 'ปิดงาน', cancelled: 'ยกเลิก',
+};
+function bkLine(row: any, keys: string[]) {
+  return keys.map(k => `${BK_LABEL[k] || k} ${row?.[k] || 0}`).join(' · ');
+}
+
+/** ข้อเท็จจริงทั้งหมดเป็นข้อความ — ใช้ทั้งส่งให้ AI และเป็นรายงานสำรองเมื่อ AI ใช้ไม่ได้ */
+export function breakdownFacts(b: any, periodLabel: string, allBranches: boolean, startLabel: string): string {
+  const P = ['total', 'pending', 'in_progress', 'paused', 'resolved', 'approved', 'cancelled'];
+  const C = ['total', 'pending', 'in_progress', 'paused', 'resolved'];
+  const out: string[] = [];
+  out.push(`**1) งานที่แจ้งเข้ามา ${periodLabel}**`);
+  out.push(`รวม: ${bkLine(b.period.total, P)}`);
+  if (allBranches) for (const br of b.branches) if (b.period.byBranch[br]) out.push(`• ${br}: ${bkLine(b.period.byBranch[br], P)}`);
+  out.push('');
+  out.push(`**2) งานค้างยกมา (แจ้งก่อน ${startLabel} ยังไม่ปิด)**`);
+  out.push(`รวม: ${bkLine(b.carried.total, C)} · ค้างนานสุด ${b.carried.total.oldest_days || 0} วัน · ปิดงานเก่าได้ในช่วงนี้ ${b.carried.total.closed_in_period || 0}`);
+  if (allBranches) for (const br of b.branches) {
+    const r = b.carried.byBranch[br];
+    if (r) out.push(`• ${br}: ${bkLine(r, C)} · นานสุด ${r.oldest_days || 0} วัน · ปิดงานเก่าได้ ${r.closed_in_period || 0}`);
+  }
+  out.push(`เกิน SLA (ยังไม่ปิด): ${b.overdue.total}${allBranches && b.overdue.total ? ' — ' + Object.entries(b.overdue.byBranch).map(([k, v]) => `${k} ${v}`).join(', ') : ''}`);
+  out.push('');
+  out.push(`**3) งานที่พักอยู่ (${b.paused.length})**`);
+  for (const t of b.paused.slice(0, 30)) out.push(`• ${t.ticket_number} ${t.branch_code} ${t.location_detail} — รอบที่ ${t.rounds || 1} · ${t.paused_reason || '-'} · ครบ ${t.due || '-'}`);
+  if (!b.paused.length) out.push('• ไม่มี');
+  out.push('');
+  out.push(`**4) ใบงานที่ถูกยกเลิกในช่วงนี้ (${b.cancelled.length})**`);
+  for (const t of b.cancelled.slice(0, 30)) out.push(`• ${t.ticket_number} ${t.branch_code} ${t.location_detail} — ${t.reason || 'ไม่ระบุเหตุผล'}`);
+  if (!b.cancelled.length) out.push('• ไม่มี');
+  return out.join('\n');
+}
+
+export async function generateBreakdownReport(body: { breakdown: any; periodLabel?: string; allBranches?: boolean; startLabel?: string }): Promise<string> {
+  const periodLabel = String(body.periodLabel || 'วันนี้').slice(0, 80);
+  const startLabel = String(body.startLabel || '').slice(0, 40);
+  const facts = breakdownFacts(body.breakdown, periodLabel, !!body.allBranches, startLabel);
+  const r = await callAIAPI([
+    { role: 'system', content:
+      'You write maintenance reports for a hotel group, in Thai. Use ONLY the numbers and items given; never invent or recompute figures. '
+      + 'Keep these numbered sections with clear headings, in this order: 1) งานที่แจ้งเข้ามาในช่วงนี้ 2) งานค้างยกมาจากวันก่อน 3) งานที่พักอยู่ 4) ใบงานที่ถูกยกเลิก'
+      + (body.allBranches ? ' 5) สรุปแยกรายสาขา (one short line per branch: new jobs, open backlog, paused, cancelled, SLA overdue)' : '')
+      + ' then a final section ข้อเสนอแนะ with 2-3 practical actions. Use **bold** for headings. Be concise.' },
+    { role: 'user', content: `เขียนรายงานสรุปงานซ่อม ${periodLabel}\n\nข้อมูล:\n${facts}` },
+  ], 4000);   // รายงานแยกรายสาขายาวกว่ารายงานเดิม — 1000 โทเค็นตัดกลางทาง
+  return r || `📊 **รายงานงานซ่อม ${periodLabel}**\n\n${facts}`;
 }

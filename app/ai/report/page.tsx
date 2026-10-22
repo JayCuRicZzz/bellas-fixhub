@@ -1,9 +1,59 @@
 'use client';
 
+// AI รายงานสรุป — แยก 2 ก้อนชัดเจน: งานที่แจ้งในช่วงที่เลือก / งานค้างยกมาจากวันก่อน
+// ครบทุกสถานะ (รอรับ · กำลังทำ · พักงาน · รออนุมัติ · ปิดงาน · ยกเลิก) · เลือก "ทุกสาขา" = แยกแถวรายสาขา
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '../../../components/authprovider';
-import { DailyReport, BRANCHES } from '../../../types';
+import { BRANCHES } from '../../../types';
 import { FileText, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+
+const COLS_PERIOD: [string, string][] = [
+  ['total', 'ทั้งหมด'], ['pending', 'รอรับ'], ['in_progress', 'กำลังทำ'], ['paused', 'พักงาน'],
+  ['resolved', 'ซ่อมเสร็จรออนุมัติ'], ['approved', 'ปิดงาน'], ['cancelled', 'ยกเลิก'],
+];
+const COLS_CARRIED: [string, string][] = [
+  ['total', 'ค้างทั้งหมด'], ['pending', 'รอรับ'], ['in_progress', 'กำลังทำ'], ['paused', 'พักงาน'],
+  ['resolved', 'รออนุมัติ'], ['oldest_days', 'ค้างนานสุด (วัน)'], ['closed_in_period', 'ปิดงานเก่าได้ช่วงนี้'],
+];
+
+function Table({ cols, data, branches, showBranches, overdue }: {
+  cols: [string, string][]; data: any; branches: string[]; showBranches: boolean; overdue?: Record<string, number> & { _total?: number };
+}) {
+  const rows = showBranches ? branches.filter(b => data.byBranch[b]) : [];
+  const cell = (row: any, k: string) => {
+    const v = row?.[k] || 0;
+    const hot = (k === 'pending' || k === 'paused' || k === 'cancelled') && v > 0;
+    return <td key={k} className={`py-1.5 px-2 text-center tabular-nums ${k === 'total' ? 'font-bold text-ink' : hot ? 'text-amber-400 font-semibold' : v ? 'text-gray-200' : 'text-gray-600'}`}>{v}</td>;
+  };
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-gray-400 border-b border-navy-600">
+            <th className="text-left py-1.5 px-2">สาขา</th>
+            {cols.map(([k, l]) => <th key={k} className="py-1.5 px-2 font-medium whitespace-nowrap">{l}</th>)}
+            {overdue && <th className="py-1.5 px-2 font-medium whitespace-nowrap text-red-400">เกิน SLA</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(b => (
+            <tr key={b} className="border-b border-navy-700/50">
+              <td className="py-1.5 px-2 font-semibold text-ink">{b}</td>
+              {cols.map(([k]) => cell(data.byBranch[b], k))}
+              {overdue && <td className={`py-1.5 px-2 text-center ${overdue[b] ? 'text-red-400 font-bold' : 'text-gray-600'}`}>{overdue[b] || 0}</td>}
+            </tr>
+          ))}
+          <tr className="bg-gold-500/10">
+            <td className="py-2 px-2 font-bold text-gold-400">รวม</td>
+            {cols.map(([k]) => cell(data.total, k))}
+            {overdue && <td className={`py-2 px-2 text-center ${overdue._total ? 'text-red-400 font-bold' : 'text-gray-600'}`}>{overdue._total || 0}</td>}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function AIReportPage() {
   const { user, token } = useAuth();
@@ -14,12 +64,13 @@ export default function AIReportPage() {
   const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
   const [branch, setBranch] = useState('');
   const [work, setWork] = useState('');   // '' ทั้งหมด · MAINTENANCE ช่าง · IT ไอที
+  const s0 = startDate <= endDate ? startDate : endDate, e0 = startDate <= endDate ? endDate : startDate;
   const scopeLabel = [branch ? `สาขา ${branch}` : 'ทุกสาขา', work === 'IT' ? 'งานไอที' : work === 'MAINTENANCE' ? 'งานช่าง' : 'ช่าง+ไอที'].join(' · ');
-  const periodLabel0 = startDate === endDate ? `วันที่ ${fmt(startDate)}` : `${fmt(startDate)} – ${fmt(endDate)}`;
+  const periodLabel0 = s0 === e0 ? (s0 === today() ? `วันนี้ (${fmt(s0)})` : `วันที่ ${fmt(s0)}`) : `${fmt(s0)} – ${fmt(e0)}`;
   const periodLabel = `${periodLabel0} (${scopeLabel})`;
   const authH: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
   const [summary, setSummary] = useState('');
-  const [report, setReport] = useState<DailyReport | null>(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
@@ -32,38 +83,33 @@ export default function AIReportPage() {
   const fetchReport = async () => {
     setLoading(true); setSummary(''); setError('');
     try {
-      const s = startDate <= endDate ? startDate : endDate, e = startDate <= endDate ? endDate : startDate;
-      const q = new URLSearchParams({ start_date: s, end_date: e });
+      const q = new URLSearchParams({ start_date: s0, end_date: e0 });
       if (branch) q.set('branch', branch);
       if (work) q.set('work_type', work);
-      const res = await fetch(`/api/reports/daily?${q}`, { headers: authH });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setReport(data);
-    } catch (err) {
-      setError('ไม่สามารถโหลดข้อมูลรายงานได้');
+      const res = await fetch(`/api/reports/breakdown?${q}`, { headers: authH });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'โหลดไม่สำเร็จ');
+      setData(d);
+    } catch (err: any) {
+      setData(null);
+      setError('ไม่สามารถโหลดข้อมูลรายงานได้: ' + (err?.message || ''));
     } finally {
       setLoading(false);
     }
   };
 
   const generateSummary = async () => {
-    if (!report) return;
-    setGenerating(true);
-    setError('');
-
+    if (!data) return;
+    setGenerating(true); setError('');
     try {
       const res = await fetch('/api/ai/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authH },
-        body: JSON.stringify({ ...report, periodLabel }),
+        body: JSON.stringify({ breakdown: data, periodLabel, allBranches: !branch, startLabel: fmt(s0) }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setSummary(data.summary);
-      } else {
-        setError('การสร้างรายงานไม่สำเร็จ');
-      }
+      const d = await res.json();
+      if (res.ok) setSummary(d.summary);
+      else setError(d.error || 'การสร้างรายงานไม่สำเร็จ');
     } catch {
       setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
@@ -71,11 +117,13 @@ export default function AIReportPage() {
     }
   };
 
+  const od = data ? { ...data.overdue.byBranch, _total: data.overdue.total } : undefined;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 fade-in">
+    <div className="max-w-5xl mx-auto space-y-5 fade-in">
       <div>
         <h2 className="text-2xl font-bold text-ink">AI รายงานวิเคราะห์</h2>
-        <p className="text-gray-400 mt-1">สร้างรายงานสรุปด้วย AI จากข้อมูลการแจ้งซ่อม — เลือกวันหรือช่วงวันที่ได้</p>
+        <p className="text-gray-400 mt-1">แยกงานที่แจ้งในช่วงที่เลือก กับงานค้างยกมาจากวันก่อน · ครบทุกสถานะ · เลือกทุกสาขาจะแยกรายสาขาให้</p>
       </div>
 
       <div className="card p-3 flex flex-wrap items-end gap-2" data-t="ai-date">
@@ -93,7 +141,7 @@ export default function AIReportPage() {
         ))}
         <label className="flex flex-col text-xs text-gray-400">สาขา
           <select value={branch} onChange={e => setBranch(e.target.value)} className="select-field mt-1 py-1.5 text-sm" data-t="ai-branch">
-            <option value="">ทุกสาขา</option>
+            <option value="">ทุกสาขา (แยกรายสาขา)</option>
             {BRANCHES.map(b => <option key={b.branch_code} value={b.branch_code}>{b.branch_code} — {b.branch_name}</option>)}
           </select>
         </label>
@@ -113,69 +161,72 @@ export default function AIReportPage() {
       </div>
 
       {loading ? (
-        <div className="card">
-          <div className="skeleton h-6 w-48 mb-4" />
-          <div className="skeleton h-4 w-full mb-2" />
-          <div className="skeleton h-4 w-3/4 mb-2" />
-          <div className="skeleton h-4 w-5/6" />
-        </div>
-      ) : report ? (
+        <div className="card flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>
+      ) : data ? (
         <>
-          <div className="card">
-            <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-gold-500" />
-              ข้อมูล {periodLabel}
+          {/* 1) งานที่แจ้งในช่วงที่เลือก */}
+          <div className="card" data-t="sec-period">
+            <h3 className="text-lg font-semibold text-ink mb-1 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-gold-500" /> 📅 งานที่แจ้งเข้ามา {periodLabel0}
             </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">จำนวนงานทั้งหมด</p>
-                <p className="text-2xl font-bold text-ink">{report.total}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">เสร็จสิ้น</p>
-                <p className="text-2xl font-bold text-green-400">{report.completed}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">รอดำเนินการ</p>
-                <p className="text-2xl font-bold text-yellow-400">{report.pending}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">กำลังดำเนินการ</p>
-                <p className="text-2xl font-bold text-purple-400">{report.inProgress}</p>
-              </div>
-            </div>
-
-            <button
-              onClick={generateSummary}
-              disabled={generating}
-              className="btn-primary mt-6 flex items-center gap-2"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  กำลังสร้างรายงาน...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  สร้างรายงานด้วย AI
-                </>
-              )}
-            </button>
+            <p className="text-xs text-gray-500 mb-3">{scopeLabel} · สถานะ ณ ตอนนี้</p>
+            <Table cols={COLS_PERIOD} data={data.period} branches={data.branches} showBranches={!branch} />
           </div>
+
+          {/* 2) งานค้างยกมาจากวันก่อน */}
+          <div className="card" data-t="sec-carried">
+            <h3 className="text-lg font-semibold text-ink mb-1">📦 งานค้างยกมา (แจ้งก่อน {fmt(s0)} และยังไม่ปิด)</h3>
+            <p className="text-xs text-gray-500 mb-3">“เกิน SLA” = งานที่ยังไม่ปิดและเลยเวลาแล้ว (ทั้งของช่วงนี้และค้างเก่า)</p>
+            <Table cols={COLS_CARRIED} data={data.carried} branches={data.branches} showBranches={!branch} overdue={od} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* 3) งานที่พักอยู่ */}
+            <div className="card" data-t="sec-paused">
+              <h3 className="font-semibold text-ink mb-2">⏸️ งานที่พักอยู่ ({data.paused.length})</h3>
+              {data.paused.length === 0 ? <p className="text-gray-500 text-sm">ไม่มี</p> : (
+                <ul className="space-y-1.5 text-sm max-h-72 overflow-y-auto">
+                  {data.paused.map((t: any) => (
+                    <li key={t.ticket_id}>
+                      <Link href={`/dashboard/${t.ticket_id}`} className="text-gold-400 hover:underline font-mono">{t.ticket_number}</Link>
+                      <span className="text-gray-300"> · {t.branch_code} · {t.location_detail}</span>
+                      <p className="text-xs text-orange-400">รอบที่ {t.rounds || 1} · {t.paused_reason} · ครบ {t.due ? fmt(t.due) : '-'}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {/* 4) ใบที่ถูกยกเลิกในช่วงนี้ */}
+            <div className="card" data-t="sec-cancelled">
+              <h3 className="font-semibold text-ink mb-2">❌ ใบงานที่ถูกยกเลิกในช่วงนี้ ({data.cancelled.length})</h3>
+              {data.cancelled.length === 0 ? <p className="text-gray-500 text-sm">ไม่มี</p> : (
+                <ul className="space-y-1.5 text-sm max-h-72 overflow-y-auto">
+                  {data.cancelled.map((t: any) => (
+                    <li key={t.ticket_id}>
+                      <Link href={`/dashboard/${t.ticket_id}`} className="text-gold-400 hover:underline font-mono">{t.ticket_number}</Link>
+                      <span className="text-gray-300"> · {t.branch_code} · {t.location_detail}</span>
+                      <p className="text-xs text-gray-400">{t.reason || 'ไม่ระบุเหตุผล'}{t.by_name ? ` — ${t.by_name}` : ''}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <button onClick={generateSummary} disabled={generating} className="btn-primary flex items-center gap-2" data-t="ai-generate">
+            {generating ? <><Loader2 className="w-5 h-5 animate-spin" /> กำลังสร้างรายงาน...</> : <><Sparkles className="w-5 h-5" /> สร้างรายงานด้วย AI</>}
+          </button>
 
           {error && (
             <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {error}
+              <AlertCircle className="w-4 h-4" /> {error}
             </div>
           )}
 
           {summary && (
             <div className="card border-gold-500/30 fade-in">
               <h3 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-gold-500" />
-                AI รายงานสรุป
+                <Sparkles className="w-5 h-5 text-gold-500" /> AI รายงานสรุป · {periodLabel}
               </h3>
               <div className="text-gray-300 whitespace-pre-wrap leading-relaxed" data-t="ai-summary">
                 {/* แสดง **ตัวหนา** ของ AI เป็นตัวหนาจริง (ไม่โชว์ดอกจัน) */}
