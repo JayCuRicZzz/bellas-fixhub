@@ -31,6 +31,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0 });
   const [todayStats, setTodayStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0 });
   const [cancelReqs, setCancelReqs] = useState<any[]>([]);
+  const [toRate, setToRate] = useState<any[]>([]);       // ใบที่ฉันแจ้ง อนุมัติแล้ว ยังไม่ให้คะแนน
+  const [toApprove, setToApprove] = useState(0);         // หัวหน้า: งานรออนุมัติ
   const [deptStats, setDeptStats] = useState<{ name: string; count: number }[]>([]);
 
   // Filters
@@ -105,6 +107,19 @@ export default function DashboardPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, branchFilter, deptFilter, startDate, endDate]);
+
+  // ผู้แจ้ง: งานอนุมัติแล้วรอให้คะแนน · หัวหน้า: จำนวนงานรออนุมัติ
+  useEffect(() => {
+    if (!user) return;
+    const h: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch('/api/tickets?status=APPROVED&limit=200', { headers: h }).then(r => r.json())
+      .then(d => setToRate((Array.isArray(d) ? d : []).filter((t: any) => t.reporter_id === user.id && !t.kpi_rating)))
+      .catch(() => {});
+    if (['sup', 'supit', 'admin', 'gm'].includes(user.role)) {
+      fetch('/api/tickets?status=RESOLVED&limit=200', { headers: h }).then(r => r.json())
+        .then(d => setToApprove(Array.isArray(d) ? d.length : 0)).catch(() => {});
+    }
+  }, [user, token]);
 
   // GM / Admin: คำขอยกเลิกที่รออนุมัติ
   useEffect(() => {
@@ -184,6 +199,28 @@ export default function DashboardPage() {
 
       {/* แจ้งเตือนบนมือถือ — ทุกตำแหน่ง (ข้อความต่างกันตามหน้าที่) */}
       {user && <PushToggle token={token} role={user.role} />}
+
+      {toApprove > 0 && (
+        <Link href="/dashboard/approvals" className="card border-2 border-green-600/60 bg-green-600/10 flex items-center justify-between gap-3 hover:border-green-500" data-t="dash-approvals">
+          <span className="text-green-500 font-bold">✅ {x('menuApprovals').replace('✅ ', '')}</span>
+          <span className="text-3xl font-black text-green-500">{toApprove}</span>
+        </Link>
+      )}
+
+      {toRate.length > 0 && (
+        <div className="card border-2 border-gold-500/60 bg-gold-500/10" data-t="dash-to-rate">
+          <h3 className="text-gold-400 font-bold mb-2">{x('rt_dash')} ({toRate.length})</h3>
+          <div className="space-y-2">
+            {toRate.slice(0, 10).map((t: any) => (
+              <Link key={t.ticket_id} href={`/dashboard/${t.ticket_id}`}
+                className="block rounded-lg bg-navy-800/80 border border-navy-600 px-3 py-2 hover:border-gold-500">
+                <p className="text-sm text-ink font-medium">{t.ticket_number} · {t.location_detail}</p>
+                <p className="text-xs text-gray-400 truncate">{t.description}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {cancelReqs.length > 0 && (
         <div className="card border-2 border-amber-500/60 bg-amber-500/10" data-t="cancel-requests">

@@ -24,6 +24,7 @@ import {
   QrCode,
   Package,
   PauseCircle,
+  CheckSquare,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -62,6 +63,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { href: '/ai', label: t.nav.aiAssistant, icon: Bot },
     { href: '/ai/report', label: t.nav.aiReport, icon: FileText },
   ];
+
+  // รออนุมัติ — หัวหน้าช่าง/หัวหน้าไอที/GM/แอดมิน (คิวอนุมัติต่อเนื่อง)
+  if (['sup', 'supit', 'admin', 'gm'].includes(user?.role || '')) {
+    navItems.push({ href: '/dashboard/approvals', label: x('menuApprovals'), icon: CheckSquare });
+  }
 
   // งานที่พัก — ทุกคน (เห็นตามสาขา/แผนกที่มีสิทธิ์)
   navItems.push({ href: '/dashboard/paused', label: x('menuPaused'), icon: PauseCircle });

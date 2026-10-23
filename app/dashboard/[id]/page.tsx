@@ -502,6 +502,28 @@ export default function TicketDetailPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 fade-in">
       {/* Back button + Print/Copy */}
+      {/* ผู้แจ้ง: งานอนุมัติแล้ว → ให้คะแนน = ปิดงาน (ขึ้นบนสุด กดดาวได้ทันที) */}
+      {ticket.status === 'APPROVED' && ticket.reporter_id === user?.id && (
+        <div className={`card border-2 no-print ${kpiRating > 0 ? 'border-green-500/50 bg-green-500/10' : 'border-gold-500 bg-gold-500/10'}`} data-t="rate-banner">
+          {kpiRating > 0 ? (
+            <p className="text-green-500 font-semibold">{x('rt_done')} {'⭐'.repeat(kpiRating)}</p>
+          ) : (
+            <>
+              <p className="text-gold-400 font-bold">{x('rt_title')}</p>
+              <div className="flex items-center gap-1 mt-2">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button key={star} onClick={() => handleKpiRate(star)} data-t={`rate-${star}`}
+                    onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)}
+                    className="p-1.5 transition-transform hover:scale-125" title={`${star} ${x('d_stars')}`}>
+                    <Star className={`w-9 h-9 ${star <= hoverRating ? 'text-gold-500 fill-gold-500' : 'text-gray-500'}`} />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {isNew && (
         <div className="card border-2 border-green-500/60 bg-green-500/10 no-print" data-t="new-ticket-banner">
           <div className="flex flex-wrap items-center justify-between gap-2">

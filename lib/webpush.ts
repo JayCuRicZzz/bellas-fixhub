@@ -83,9 +83,11 @@ export async function gmsFor(branchCode: string, excludeUserId?: string) {
 
 /** แจ้งผู้แจ้งเมื่อสถานะใบของตัวเองเปลี่ยน (สองภาษา เพราะพนักงานหลายสัญชาติ) — ไม่ throw */
 export async function notifyReporter(t: { ticket_id: number; ticket_number: string; reporter_id?: string; location_detail?: string },
-                                     kind: 'accepted' | 'resolved', actorId: string, actorName: string) {
+                                     kind: 'accepted' | 'resolved' | 'approved', actorId: string, actorName: string) {
   if (!t.reporter_id || t.reporter_id === actorId) return;
-  const head = kind === 'accepted' ? '👷 มีช่างรับงานแล้ว · Job accepted' : '✅ ซ่อมเสร็จแล้ว · Repair done';
+  const head = kind === 'accepted' ? '👷 มีช่างรับงานแล้ว · Job accepted'
+    : kind === 'approved' ? '⭐ งานเสร็จแล้ว กดปิดงาน + ให้คะแนน · Please rate the repair'
+    : '✅ ซ่อมเสร็จแล้ว · Repair done';
   await sendPushToUsers([t.reporter_id], {
     title: `${head}`,
     body: `${t.ticket_number} · ${t.location_detail || ''} · ${actorName}`.slice(0, 160),

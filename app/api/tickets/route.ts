@@ -59,15 +59,18 @@ export async function GET(req: NextRequest) {
 
     const ticketIds = rows.map((r: any) => r.ticket_id);
     const imageMap: Record<number, string[]> = {};
+    const typedMap: Record<number, { url: string; type: string }[]> = {};
     if (ticketIds.length > 0) {
       const images = await sql`
-        select ticket_id, image_url from fixhub.ticket_images
+        select ticket_id, image_url, image_type from fixhub.ticket_images
         where ticket_id = any(${ticketIds}) order by uploaded_at asc`;
       for (const img of images) {
         (imageMap[img.ticket_id] ||= []).push(img.image_url);
+        (typedMap[img.ticket_id] ||= []).push({ url: img.image_url, type: img.image_type || 'report' });
       }
     }
-    const result = rows.map((r: any) => ({ ...r, images: imageMap[r.ticket_id] || [] }));
+    // images = เดิม (ลิงก์ล้วน) · image_items = มีชนิดรูป (report = ก่อนซ่อม, อื่น ๆ = หลังซ่อม) ใช้ในหน้าอนุมัติ
+    const result = rows.map((r: any) => ({ ...r, images: imageMap[r.ticket_id] || [], image_items: typedMap[r.ticket_id] || [] }));
     return NextResponse.json(result);
   } catch (err: any) {
     console.error('[Tickets] Error:', err.message);

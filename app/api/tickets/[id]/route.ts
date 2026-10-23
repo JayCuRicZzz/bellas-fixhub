@@ -205,6 +205,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         where ticket_id = ${ticketId} and status = 'RESOLVED' returning ticket_id`;
       if (!rows.length) return conflict();
       await logActivity(ticketId, 'APPROVED', st, 'APPROVED', user);
+      // แจ้งผู้แจ้ง: งานเสร็จและอนุมัติแล้ว → เข้าไปกดปิดงาน/ให้คะแนน
+      await notifyReporter(current as any, 'approved', userId, user.full_name || user.username);
       slaInfo = { approved_by: userId, difficulty: diff };
 
     } else if (status === 'REJECTED') {
