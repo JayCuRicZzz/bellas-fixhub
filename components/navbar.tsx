@@ -57,9 +57,12 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll every 30s
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // ทุก 60 วิ และเฉพาะตอนแท็บเปิดอยู่บนจอ — พนักงานเปิดค้างไว้หลายแท็บ/หลายเครื่อง
+    // เดิม 30 วิ ทุกแท็บ = /api/tickets เป็นคำขอที่มากที่สุดของระบบ (5.9K/12 ชม.)
+    const interval = setInterval(() => { if (!document.hidden) fetchNotifications(); }, 60000);
+    const onVisible = () => { if (!document.hidden) fetchNotifications(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
   }, [fetchNotifications]);
 
   // Mark all as seen when bell is opened
